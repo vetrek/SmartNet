@@ -34,7 +34,7 @@ struct ContentView: View {
 //        request?.cancel()
 //    }
     
-    let endpoints: [EndpointWrapper<Data>] = [
+    let endpoints: [EndpointWrapper<Void>] = [
         EndpointWrapper(
             endpoint: Endpoint(
                 path: "entries",
@@ -122,9 +122,8 @@ class Test {
     
     var subscriptions = Set<AnyCancellable>()
     
-    func asd<E>(endpoint: E) where E : Requestable, E.Response == Data {
+    func asd<E>(endpoint: E) where E : Requestable, E.Response == Void {
         network.request(with: endpoint)?
-            .receive(on: DispatchQueue.main)
             .sink(
                 receiveCompletion: { (response) in
                     switch response {
@@ -135,9 +134,10 @@ class Test {
                     }
                 },
                 receiveValue: { (response) in
-                    print(String(data: response, encoding: .utf8)!)
+                    print(response)
                 }
             )
             .store(in: &subscriptions)
+        
     }
 }
