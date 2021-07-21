@@ -1,0 +1,396 @@
+//
+//  EasyNetworking.swift
+//  EasyNetworking
+//
+//  Created by Valerio Sebastianelli on 7/19/21.
+//
+
+import Foundation
+import Combine
+
+//public class NetworkPublisher<Value>: Publisher {
+//    public func receive<S>(subscriber: S) where S : Subscriber, Self.Failure == S.Failure, Self.Output == S.Input {
+//        <#code#>
+//    }
+//
+//    public typealias Output = Result<Value>
+//
+//    public typealias Failure = Never
+//
+//
+//}
+
+public protocol NetworkCancellable {
+    func cancel()
+}
+
+extension URLSessionTask: NetworkCancellable { }
+
+public typealias CompletionHandler<T> = (Result<T>) -> Void
+
+public protocol NetworkingRequests {
+    func request<D: Decodable, E: Requestable>(
+        with endpoint: E,
+        decoder: JSONDecoder,
+        queue: DispatchQueue,
+        completion: @escaping CompletionHandler<E.Response>
+    ) -> NetworkCancellable? where E.Response == D
+    
+    func request<E: Requestable>(
+        with endpoint: E,
+        decoder: JSONDecoder,
+        queue: DispatchQueue,
+        completion: @escaping CompletionHandler<E.Response>
+    ) -> NetworkCancellable? where E.Response == Void
+    
+    func request<E: Requestable>(
+        with endpoint: E,
+        decoder: JSONDecoder,
+        queue: DispatchQueue,
+        completion: @escaping CompletionHandler<E.Response>
+    ) -> NetworkCancellable? where E.Response == String
+    
+    func request<E: Requestable>(
+        with endpoint: E,
+        decoder: JSONDecoder,
+        queue: DispatchQueue,
+        completion: @escaping CompletionHandler<E.Response>
+    ) -> NetworkCancellable? where E.Response == Data
+    
+}
+
+public final class EasyNetwork: NSObject {
+    
+    /// Network Session Configuration
+    public let config: NetworkConfigurable
+    
+    /// Session
+    private var session: URLSession?
+    
+    public init(config: NetworkConfigurable) {
+        self.config = config
+        super.init()
+        
+        let sessionConfig = URLSessionConfiguration.default
+        sessionConfig.timeoutIntervalForRequest = config.requestTimeout
+        
+        self.session = URLSession(
+            configuration: sessionConfig,
+            delegate: self,
+            delegateQueue: .main
+        )
+    }
+    
+    /// Prevent Retain cycle problem while using the URLSession delegate = self
+    func destroy() {
+        session = nil
+    }
+}
+
+extension EasyNetwork: NetworkingRequests {
+    @discardableResult public func request<D, E>(
+        with endpoint: E,
+        decoder: JSONDecoder = .default,
+        queue: DispatchQueue = .main,
+        completion: @escaping (Result<E.Response>) -> Void
+    ) -> NetworkCancellable? where D : Decodable, D == E.Response, E : Requestable {
+        guard
+            let request = try? endpoint.urlRequest(with: config)
+        else {
+            completion(.failure(.urlGeneration))
+            return nil
+        }
+        
+        let task = session?.dataTask(
+            with: request
+        ) { (data, response, error) in
+            queue.async {
+                if let networkError = self.getRequestError(
+                    data: data,
+                    response: response,
+                    requestError: error
+                ) {
+                    completion(.failure(networkError))
+                    return
+                }
+                
+                guard
+                    let data = data
+                else {
+                    completion(.failure(.emptyResponse))
+                    return
+                }
+                
+                guard
+                    let responseObject = try? decoder.decode(D.self, from: data)
+                else {
+                    completion(.failure(.parsingFailed))
+                    return
+                }
+                completion(.success(responseObject))
+            }
+        }
+        task?.resume()
+        return task
+    }
+    
+    @discardableResult public func request<E>(
+        with endpoint: E,
+        decoder: JSONDecoder = .default,
+        queue: DispatchQueue = .main,
+        completion: @escaping (Result<E.Response>) -> Void
+    ) -> NetworkCancellable? where E : Requestable, E.Response == Void {
+        guard
+            let request = try? endpoint.urlRequest(with: config)
+        else {
+            completion(.failure(.urlGeneration))
+            return nil
+        }
+        
+        let task = session?.dataTask(
+            with: request
+        ) { (data, response, error) in
+            queue.async {
+                if let networkError = self.getRequestError(
+                    data: data,
+                    response: response,
+                    requestError: error
+                ) {
+                    completion(.failure(networkError))
+                    return
+                }
+                
+                completion(.success(()))
+            }
+        }
+        task?.resume()
+        return task
+    }
+    
+    @discardableResult public func request<E>(
+        with endpoint: E,
+        decoder: JSONDecoder = .default,
+        queue: DispatchQueue = .main,
+        completion: @escaping (Result<E.Response>) -> Void
+    ) -> NetworkCancellable? where E : Requestable, E.Response == String {
+        guard
+            let request = try? endpoint.urlRequest(with: config)
+        else {
+            completion(.failure(.urlGeneration))
+            return nil
+        }
+        
+        let task = session?.dataTask(
+            with: request
+        ) { (data, response, error) in
+            queue.async {
+                if let networkError = self.getRequestError(
+                    data: data,
+                    response: response,
+                    requestError: error
+                ) {
+                    completion(.failure(networkError))
+                    return
+                }
+                
+                guard
+                    let data = data
+                else {
+                    completion(.failure(.emptyResponse))
+                    return
+                }
+                
+                guard
+                    let string = String(data: data, encoding: .utf8)
+                else {
+                    completion(.failure(.dataToStringFailure(data: data)))
+                    return
+                }
+                
+                completion(.success(string))
+            }
+        }
+        task?.resume()
+        return task
+    }
+    
+    @discardableResult public func request<E>(
+        with endpoint: E,
+        decoder: JSONDecoder = .default,
+        queue: DispatchQueue = .main,
+        completion: @escaping (Result<E.Response>) -> Void
+    ) -> NetworkCancellable? where E : Requestable, E.Response == Data {
+        guard
+            let request = try? endpoint.urlRequest(with: config)
+        else {
+            completion(.failure(.urlGeneration))
+            return nil
+        }
+        
+        let task = session?.dataTask(
+            with: request
+        ) { (data, response, error) in
+            queue.async {
+                if let networkError = self.getRequestError(
+                    data: data,
+                    response: response,
+                    requestError: error
+                ) {
+                    completion(.failure(networkError))
+                    return
+                }
+                
+                guard
+                    let data = data
+                else {
+                    completion(.failure(.emptyResponse))
+                    return
+                }
+                
+                completion(.success(data))
+            }
+        }
+        task?.resume()
+        return task
+    }
+    
+}
+
+// MARK: - Combine
+extension EasyNetwork {
+    
+    /// Perform a Network request to an `Endpoint`which should return a JSON object
+    /// - Parameters:
+    ///   - endpoint: The service `Endpoint`
+    ///   - decoder: Json Decoder
+    /// - Returns: Return a **Combine Publisher** containing the **Object** or the Error if anything fails.
+    public func request<D, E>(
+        with endpoint: E,
+        decoder: JSONDecoder = .default
+    ) -> AnyPublisher<D, NetworkError>? where D : Decodable, D == E.Response, E : Requestable {
+        guard
+            let request = try? endpoint.urlRequest(with: config)
+        else {
+            return AnyPublisher(
+                Fail<D, NetworkError>(error: NetworkError.urlGeneration)
+            )
+        }
+        
+        return session?.dataTaskPublisher(for: request)
+            .tryMap { output in
+                // throw an error if response is nil
+                guard output.response is HTTPURLResponse else {
+                    throw NetworkError.networkFailure
+                }
+                guard !output.data.isEmpty else {
+                    throw NetworkError.emptyResponse
+                }
+                return output.data
+            }
+            .decode(type: D.self, decoder: decoder)
+            .mapError { error in
+                // return error if json decoding fails
+                NetworkError.parsingFailed
+            }
+            .receive(on: DispatchQueue.main)
+            .eraseToAnyPublisher()
+    }
+    
+    /// Perform a Network request to an `Endpoint`and just want the `Data` back
+    /// - Parameters:
+    ///   - endpoint: The service `Endpoint`
+    ///   - decoder: Json Decoder
+    /// - Returns: Return a **Combine Publisher** containing the **Object** or the Error if anything fails.
+    public func request<E>(
+        with endpoint: E,
+        decoder: JSONDecoder = .default
+    ) -> AnyPublisher<E.Response, NetworkError>? where E : Requestable, E.Response == Data {
+        guard
+            let request = try? endpoint.urlRequest(with: config)
+        else {
+            return AnyPublisher(
+                Fail<E.Response, NetworkError>(error: NetworkError.urlGeneration)
+            )
+        }
+        
+        return session?.dataTaskPublisher(for: request)
+            .tryMap { output in
+                // throw an error if response is nil
+                guard output.response is HTTPURLResponse else {
+                    throw NetworkError.networkFailure
+                }
+                guard !output.data.isEmpty else {
+                    throw NetworkError.emptyResponse
+                }
+                return output.data
+            }
+            .mapError { error in
+                // return error if json decoding fails
+                NetworkError.generic(error)
+            }
+            .receive(on: DispatchQueue.main)
+            .eraseToAnyPublisher()
+    }
+    
+}
+
+// MARK: - Errors handling
+
+private extension EasyNetwork {
+    func resolve(error: Error) -> NetworkError {
+        let code = URLError.Code(rawValue: (error as NSError).code)
+        switch code {
+        case .notConnectedToInternet:
+            return .networkFailure
+        case .cancelled:
+            return .cancelled
+        default:
+            return .generic(error)
+        }
+    }
+    
+    func getRequestError(
+        data: Data?,
+        response: URLResponse?,
+        requestError: Error?
+    ) -> NetworkError? {
+        guard let requestError = requestError else { return nil }
+        if let response = response as? HTTPURLResponse {
+            return .error(statusCode: response.statusCode, data: data)
+        } else {
+            return self.resolve(error: requestError)
+        }
+    }
+}
+
+// MARK: - URLSessionDelegate
+
+extension EasyNetwork: URLSessionDelegate {
+    public func urlSession(
+        _ session: URLSession,
+        didReceive challenge: URLAuthenticationChallenge,
+        completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
+    ) {
+        // 1. The challenge type is server trust, and not some other kind of challenge.
+        // 2. Makes sure the protection space’s host is within the trusted domains
+        let protectionSpace = challenge.protectionSpace
+        guard
+            protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
+            config.trustedDomains.contains(where: { $0 == challenge.protectionSpace.host })
+        else {
+            completionHandler(.performDefaultHandling, nil)
+            return
+        }
+        
+        // Evaluate the Credential in the Challenge
+        guard let serverTrust = protectionSpace.serverTrust else {
+            completionHandler(.performDefaultHandling, nil)
+            return
+        }
+        
+        let credential = URLCredential(trust: serverTrust)
+        completionHandler(.useCredential, credential)
+        
+    }
+}
+
