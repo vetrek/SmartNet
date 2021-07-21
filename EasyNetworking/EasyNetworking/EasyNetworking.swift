@@ -88,6 +88,7 @@ public final class EasyNetwork: NSObject {
 }
 
 extension EasyNetwork: NetworkingRequests {
+   
     @discardableResult public func request<D, E>(
         with endpoint: E,
         decoder: JSONDecoder = .default,
@@ -259,11 +260,11 @@ extension EasyNetwork: NetworkingRequests {
 // MARK: - Combine
 extension EasyNetwork {
     
-    /// Perform a Network request to an `Endpoint`which should return a JSON object
+    /// Perform a Network request to an `Endpoint` and return the Response **Object**
     /// - Parameters:
     ///   - endpoint: The service `Endpoint`
     ///   - decoder: Json Decoder
-    /// - Returns: Return a **Combine Publisher** containing the **Object** or the Error if anything fails.
+    /// - Returns: Return a **Combine Publisher** containing the **Object**
     public func request<D, E>(
         with endpoint: E,
         decoder: JSONDecoder = .default
@@ -289,18 +290,52 @@ extension EasyNetwork {
             }
             .decode(type: D.self, decoder: decoder)
             .mapError { error in
-                // return error if json decoding fails
-                NetworkError.parsingFailed
+                self.resolve(error: error)
             }
             .receive(on: DispatchQueue.main)
             .eraseToAnyPublisher()
     }
     
-    /// Perform a Network request to an `Endpoint`and just want the `Data` back
+    /// Perform a Network request to an `Endpoint`and only care if succeeded
     /// - Parameters:
     ///   - endpoint: The service `Endpoint`
     ///   - decoder: Json Decoder
-    /// - Returns: Return a **Combine Publisher** containing the **Object** or the Error if anything fails.
+    /// - Returns: Return a **Combine Publisher** with a `Void` output
+    public func request<E>(
+        with endpoint: E,
+        decoder: JSONDecoder = .default
+    ) -> AnyPublisher<E.Response, NetworkError>? where E : Requestable, E.Response == Void {
+        guard
+            let request = try? endpoint.urlRequest(with: config)
+        else {
+            return AnyPublisher(
+                Fail<E.Response, NetworkError>(error: NetworkError.urlGeneration)
+            )
+        }
+        
+        return session?.dataTaskPublisher(for: request)
+            .tryMap { output in
+                // throw an error if response is nil
+                guard output.response is HTTPURLResponse else {
+                    throw NetworkError.networkFailure
+                }
+                guard !output.data.isEmpty else {
+                    throw NetworkError.emptyResponse
+                }
+                return ()
+            }
+            .mapError { error in
+                self.resolve(error: error)
+            }
+            .receive(on: DispatchQueue.main)
+            .eraseToAnyPublisher()
+    }
+    
+    /// Perform a Network request to an `Endpoint`and return the Response **Data**
+    /// - Parameters:
+    ///   - endpoint: The service `Endpoint`
+    ///   - decoder: Json Decoder
+    /// - Returns: Return a **Combine Publisher** containing the Response **Data**
     public func request<E>(
         with endpoint: E,
         decoder: JSONDecoder = .default
@@ -325,8 +360,47 @@ extension EasyNetwork {
                 return output.data
             }
             .mapError { error in
-                // return error if json decoding fails
-                NetworkError.generic(error)
+                self.resolve(error: error)
+            }
+            .receive(on: DispatchQueue.main)
+            .eraseToAnyPublisher()
+    }
+    
+    /// Perform a Network request to an `Endpoint`and return the Response **String**
+    /// - Parameters:
+    ///   - endpoint: The service `Endpoint`
+    ///   - decoder: Json Decoder
+    /// - Returns: Return a **Combine Publisher** containing the Response **String**
+    public func request<E>(
+        with endpoint: E,
+        decoder: JSONDecoder = .default
+    ) -> AnyPublisher<E.Response, NetworkError>? where E : Requestable, E.Response == String {
+        guard
+            let request = try? endpoint.urlRequest(with: config)
+        else {
+            return AnyPublisher(
+                Fail<E.Response, NetworkError>(error: NetworkError.urlGeneration)
+            )
+        }
+        
+        return session?.dataTaskPublisher(for: request)
+            .tryMap { output in
+                // throw an error if response is nil
+                guard output.response is HTTPURLResponse else {
+                    throw NetworkError.networkFailure
+                }
+                guard !output.data.isEmpty else {
+                    throw NetworkError.emptyResponse
+                }
+                
+                guard let string = String(data: output.data, encoding: .utf8) else {
+                    throw NetworkError.dataToStringFailure(data: output.data)
+                }
+                
+                return string
+            }
+            .mapError { error in
+                self.resolve(error: error)
             }
             .receive(on: DispatchQueue.main)
             .eraseToAnyPublisher()
@@ -334,10 +408,14 @@ extension EasyNetwork {
     
 }
 
-// MARK: - Errors handling
+// MARK: - Errors Handling
 
 private extension EasyNetwork {
     func resolve(error: Error) -> NetworkError {
+        guard
+            (error as? NetworkError) == nil
+        else { return (error as! NetworkError) }
+        
         let code = URLError.Code(rawValue: (error as NSError).code)
         switch code {
         case .notConnectedToInternet:
@@ -393,4 +471,3 @@ extension EasyNetwork: URLSessionDelegate {
         
     }
 }
-
