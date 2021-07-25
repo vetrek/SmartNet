@@ -82,18 +82,18 @@ network.request(with: endpoint) { (response) in
 
 ```swift
 network.request(with: endpoint)?
-	.sink(
-		receiveCompletion: { (response) in
-			switch response {
-			case .failure(let error):
-				print(error.localizedDescription)
-			case .finished:
-				print("Done")
-			}
-		},
-		receiveValue: { (response) in
-			print(response)
-		}
-	)
-	.store(in: &subscriptions)
+    .sink(
+        receiveCompletion: { (response) in
+            switch response {
+            case .failure(let error):
+                print(error.localizedDescription)
+            case .finished:
+                print("Done")
+            }
+        },
+        receiveValue: { (response) in
+                print(response)
+        }
+    )
+    .store(in: &subscriptions)
 ```
