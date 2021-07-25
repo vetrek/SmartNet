@@ -139,5 +139,16 @@ class Test {
             )
             .store(in: &subscriptions)
         
+        let endpoint2 = Endpoint<Person>(
+            path: "person",
+            method: .post,
+            body: HTTPBody(encodable: PersonRequest(name: "Jhon", age: 18))
+        )
     }
+}
+
+struct Person {}
+struct PersonRequest {
+    let name: String
+    let age: Int
 }
