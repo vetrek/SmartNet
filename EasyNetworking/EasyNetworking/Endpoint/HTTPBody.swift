@@ -14,11 +14,11 @@ public protocol EasyNetworkingBody {
 public struct HTTPBody: EasyNetworkingBody {
     public let data: Data?
 
-    init(dictionary: [String: Any], bodyEncoding: BodyEncoding) throws {
+    public init(dictionary: [String: Any], bodyEncoding: BodyEncoding) throws {
         self.data = try HTTPBody.getData(from: dictionary, using: bodyEncoding)
     }
     
-    init(encodable: Encodable, bodyEncoding: BodyEncoding) throws {
+    public init(encodable: Encodable, bodyEncoding: BodyEncoding) throws {
         guard
             let dictionary = try encodable.toDictionary()
         else {
@@ -27,7 +27,7 @@ public struct HTTPBody: EasyNetworkingBody {
         self.data = try HTTPBody.getData(from: dictionary, using: bodyEncoding)
     }
     
-    init(string: String) {
+    public init(string: String) {
         guard
             let data = string.data(using: .utf8)
         else {
