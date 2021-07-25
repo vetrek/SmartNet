@@ -138,17 +138,5 @@ class Test {
                 }
             )
             .store(in: &subscriptions)
-        
-        let endpoint2 = Endpoint<Person>(
-            path: "person",
-            method: .post,
-            body: try? HTTPBody(encodable: PersonRequest(name: "Jhon", age: 18), bodyEncoding: .json)
-        )
     }
-}
-
-struct Person {}
-struct PersonRequest: Encodable {
-    let name: String
-    let age: Int
 }
