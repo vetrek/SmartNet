@@ -54,7 +54,7 @@ Equivalent of https://api.example.com/person with body equal to:
 
 **API CALL**
 
-- Using Completion
+- With Completion
 
 ```swift
 let config = NetworkConfiguration(baseURL: URL(string: "https://api.example.com")!)
@@ -78,7 +78,7 @@ network.request(with: endpoint) { (response) in
 }
 ```
 
-- Using Combine
+- With Combine
 
 ```swift
 network.request(with: endpoint)?
