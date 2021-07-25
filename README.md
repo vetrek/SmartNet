@@ -27,9 +27,9 @@ let network = EasyNetwork(config: config)
 ```swift
 let endpoint = Endpoint<Person>(
     path: "person",
-	queryParameters: QueryParameters(
-		parameters: ["name": "Jhon", "age": 18]
-	)
+    queryParameters: QueryParameters(
+      parameters: ["name": "Jhon", "age": 18]
+    )
 )
 ```
 Equivalent of https://api.example.com/person?name=Jhon&age=18
@@ -39,16 +39,16 @@ Equivalent of https://api.example.com/person?name=Jhon&age=18
 ```swift
 let endpoint = Endpoint<Person>(
     path: "person",
-	method: .post,
-	body: try? HTTPBody(encodable: PersonRequest(name: "Jhon", age: 18), bodyEncoding: .json)
+    method: .post,
+    body: HTTPBody(encodable: PersonRequst(name: "Jhon", age: 18), bodyEncoding: .json)
 )
 ```
 Equivalent of https://api.example.com/person with body equal to:
 
 ```json
 {
-	"name": "Jhon",
-	"age": 18
+    "name": "Jhon",
+    "age": 18
 }
 ```
 
@@ -62,19 +62,19 @@ let network = EasyNetwork(config: config)
 
 let endpoint = Endpoint<Person>(
     path: "person",
-	method: .post,
-	queryParameters: QueryParameters(
-		parameters: ["name": "Jhon", "age": 18]
-	)
+    method: .post,
+    queryParameters: QueryParameters(
+      parameters: ["name": "Jhon", "age": 18]
+    )
 )
 
 network.request(with: endpoint) { (response) in
-	switch response {
-	case .success(let person):
-		print("Success! \(person.name)")
-	case .failure(let error):
-		print(error.localizedDescription)
-	}
+    switch response {
+    case .success(let person):
+      print("Success! \(person.name)")
+    case .failure(let error):
+      print(error.localizedDescription)
+    }
 }
 ```
 
