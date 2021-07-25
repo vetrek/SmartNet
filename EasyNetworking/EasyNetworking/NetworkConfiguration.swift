@@ -15,6 +15,8 @@ public protocol NetworkConfigurable {
     var requestTimeout: TimeInterval { get set }
 }
 
+
+/// Service Network default configuration
 public final class NetworkConfiguration: NetworkConfigurable {
     /// Service base URL
     public var baseURL: URL

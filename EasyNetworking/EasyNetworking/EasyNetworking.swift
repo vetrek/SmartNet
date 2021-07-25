@@ -497,7 +497,9 @@ extension EasyNetwork: URLSessionDelegate {
         }
         
         // Evaluate the Credential in the Challenge
-        guard let serverTrust = protectionSpace.serverTrust else {
+        guard
+            let serverTrust = protectionSpace.serverTrust
+        else {
             completionHandler(.performDefaultHandling, nil)
             return
         }

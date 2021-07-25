@@ -7,6 +7,8 @@
 
 import Foundation
 
+
+/// HTTPRequest Result
 public enum Result<Value> {
     case success(Value)
     case failure(NetworkError)
@@ -22,9 +24,7 @@ public enum Result<Value> {
     }
     
     /// Returns `true` if the result is a failure, `false` otherwise.
-    public var isFailure: Bool {
-        return !isSuccess
-    }
+    public var isFailure: Bool { !isSuccess }
     
     /// Returns the associated value if the result is a success, `nil` otherwise.
     public var value: Value? {
