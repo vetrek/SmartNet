@@ -16,6 +16,10 @@ Greatly inspired by SENetworking (https://github.com/kudoleh/SENetworking).
 
 - ### Network Default Configuration
 
+**NetworkConfiguration** is used to define defaults settings that are going to be used in every call. 
+
+If the Endpoint is initialized with "***useEndpointHeaderOnly: true***" the NetworkConfiguration headers are going to be ignored.
+
 Base
 ```swift
 let config = NetworkConfiguration(baseURL: URL(string: "https://api.example.com")!)
@@ -34,7 +38,7 @@ let config = NetworkConfiguration(
 let network = EasyNetwork(config: config)
 ```
 
-- ### Endpoint configuration
+- ### Create an Endpoint
 
 #### GET
 
@@ -79,20 +83,6 @@ Equivalent of https://api.example.com/person with body equal to:
 - Using Closures
 
 ```swift
-let config = NetworkConfiguration(baseURL: URL(string: "https://api.example.com")!)
-let network = EasyNetwork(config: config)
-
-let endpoint = Endpoint<Person>(
-    path: "person",
-    method: .post,
-    queryParameters: QueryParameters(
-        parameters: [
-            "name": "Jhon",
-            "age": 18
-        ]
-    )
-)
-
 network.request(with: endpoint) { (response) in
     switch response {
     case .success(let person):
