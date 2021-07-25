@@ -76,7 +76,7 @@ Equivalent of https://api.example.com/person with body equal to:
 
 **API CALL**
 
-- Using Completion
+- Using Closures
 
 ```swift
 let config = NetworkConfiguration(baseURL: URL(string: "https://api.example.com")!)
