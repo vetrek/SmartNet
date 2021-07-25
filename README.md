@@ -28,7 +28,7 @@ let network = EasyNetwork(config: config)
 let endpoint = Endpoint<Person>(
     path: "person",
     queryParameters: QueryParameters(
-      parameters: ["name": "Jhon", "age": 18]
+        parameters: ["name": "Jhon", "age": 18]
     )
 )
 ```
@@ -64,16 +64,16 @@ let endpoint = Endpoint<Person>(
     path: "person",
     method: .post,
     queryParameters: QueryParameters(
-      parameters: ["name": "Jhon", "age": 18]
+        parameters: ["name": "Jhon", "age": 18]
     )
 )
 
 network.request(with: endpoint) { (response) in
     switch response {
     case .success(let person):
-      print("Success! \(person.name)")
+        print("Success! \(person.name)")
     case .failure(let error):
-      print(error.localizedDescription)
+        print(error.localizedDescription)
     }
 }
 ```
