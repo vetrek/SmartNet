@@ -142,7 +142,7 @@ class Test {
         let endpoint2 = Endpoint<Person>(
             path: "person",
             method: .post,
-            body: HTTPBody(encodable: PersonRequest(name: "Jhon", age: 18), bodyEncoding: .json)
+            body: try? HTTPBody(encodable: PersonRequest(name: "Jhon", age: 18), bodyEncoding: .json)
         )
     }
 }

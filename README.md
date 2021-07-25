@@ -40,7 +40,7 @@ Equivalent of https://api.example.com/person?name=Jhon&age=18
 let endpoint = Endpoint<Person>(
     path: "person",
 	method: .post,
-	body: HTTPBody(encodable: PersonRequest(name: "Jhon", age: 18), bodyEncoding: .json)
+	body: try? HTTPBody(encodable: PersonRequest(name: "Jhon", age: 18), bodyEncoding: .json)
 )
 ```
 Equivalent of https://api.example.com/person with body equal to:
