@@ -2,10 +2,10 @@
 HTTP Networking Library which primary scope is to make Networking as easy as possible.
 Greatly inspired by SENetworking (https://github.com/kudoleh/SENetworking).
 
-### Features
+## Features
 
-- [Easy configuration](#config)
-- Supported Requests:  [**Encodable**](#requests_encodable), [**Dictionary**](#RequestsDictionary), [**String**](#requests_string)
+- [Easy configuration](#network-configuration)
+- Supported Requests:  [**Encodable**](#endpoint-configuration), [**Dictionary**](#RequestsDictionary), [**String**](#requests_string)
 - [Supported Response Types: [**Decodable**](#response_decodable), [**String**](#response_string), [**Data**](#response_data), [**Void**](#response_void)
 - Supported QueryParameters: [**Encodable**](#query_encodable), [**Dictionary**](#query_dictionary)
 - iOS 13+ **Combine** Support
@@ -14,15 +14,15 @@ Greatly inspired by SENetworking (https://github.com/kudoleh/SENetworking).
 
 ## Examples
 
-**Network configuration**:
+### Network configuration
 ```swift
 let config = NetworkConfiguration(baseURL: URL(string: "https://api.example.com")!)
 let network = EasyNetwork(config: config)
 ```
 
-**Endpoint configuration**:
+### Endpoint configuration
 
-***GET***
+#### GET
 
 ```swift
 let endpoint = Endpoint<Person>(
