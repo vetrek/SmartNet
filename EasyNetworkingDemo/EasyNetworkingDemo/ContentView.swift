@@ -126,11 +126,8 @@ class Test {
         network.request(with: endpoint)?
             .sink(
                 receiveCompletion: { (response) in
-                    switch response {
-                    case .failure(let error):
+                    if case .failure(let error) = response {
                         print(error.localizedDescription)
-                    case .finished:
-                        print("Done")
                     }
                 },
                 receiveValue: { (response) in
