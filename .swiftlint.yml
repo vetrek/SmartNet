@@ -1,6 +1,6 @@
 included:
-  - EasyNetworking
-  - EasyNetworkingDemo
+  - Source
+  - Tests
 
 disabled_rules:
   - type_body_length

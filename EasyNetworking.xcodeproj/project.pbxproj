@@ -71,8 +71,8 @@
 		B925A9F926A5B1D7006312D5 = {
 			isa = PBXGroup;
 			children = (
-				B925AA0526A5B1D7006312D5 /* EasyNetworking */,
-				B925AA1026A5B1D7006312D5 /* EasyNetworkingTests */,
+				B925AA0526A5B1D7006312D5 /* Source */,
+				B925AA1026A5B1D7006312D5 /* Tests */,
 				B925AA0426A5B1D7006312D5 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -86,7 +86,7 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		B925AA0526A5B1D7006312D5 /* EasyNetworking */ = {
+		B925AA0526A5B1D7006312D5 /* Source */ = {
 			isa = PBXGroup;
 			children = (
 				B925AA5F26A6D094006312D5 /* Utils */,
@@ -97,16 +97,16 @@
 				B925AA2126A5B204006312D5 /* EasyNetworking.swift */,
 				B925AA4526A5C293006312D5 /* NetworkConfiguration.swift */,
 			);
-			path = EasyNetworking;
+			path = Source;
 			sourceTree = "<group>";
 		};
-		B925AA1026A5B1D7006312D5 /* EasyNetworkingTests */ = {
+		B925AA1026A5B1D7006312D5 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
 				B925AA1126A5B1D7006312D5 /* EasyNetworkingTests.swift */,
 				B925AA1326A5B1D7006312D5 /* Info.plist */,
 			);
-			path = EasyNetworkingTests;
+			path = Tests;
 			sourceTree = "<group>";
 		};
 		B925AA2926A5B72A006312D5 /* Extensions */ = {
@@ -265,7 +265,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if which swiftlint >/dev/null; then\n  cd ..\n  swiftlint\nelse\n  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi\n";
+			shellScript = "if which swiftlint >/dev/null; then\n  swiftlint\nelse\n  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -438,7 +438,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				INFOPLIST_FILE = EasyNetworking/Info.plist;
+				INFOPLIST_FILE = Source/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -465,7 +465,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				INFOPLIST_FILE = EasyNetworking/Info.plist;
+				INFOPLIST_FILE = Source/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				LD_RUNPATH_SEARCH_PATHS = (
