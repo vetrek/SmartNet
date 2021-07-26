@@ -89,13 +89,12 @@
 		B925AA0526A5B1D7006312D5 /* Source */ = {
 			isa = PBXGroup;
 			children = (
-				B925AA5F26A6D094006312D5 /* Utils */,
-				B925AA5826A6D036006312D5 /* Response */,
+				B925AA0726A5B1D7006312D5 /* Info.plist */,
+				B9E70D4A26AEE01D00AB20D7 /* Core */,
 				B925AA3626A5BF03006312D5 /* Endpoint */,
 				B925AA2926A5B72A006312D5 /* Extensions */,
-				B925AA0726A5B1D7006312D5 /* Info.plist */,
-				B925AA2126A5B204006312D5 /* EasyNetworking.swift */,
-				B925AA4526A5C293006312D5 /* NetworkConfiguration.swift */,
+				B925AA5826A6D036006312D5 /* Response */,
+				B925AA5F26A6D094006312D5 /* Utils */,
 			);
 			path = Source;
 			sourceTree = "<group>";
@@ -143,6 +142,15 @@
 				B925AA6026A6D0A7006312D5 /* NetworkError.swift */,
 			);
 			path = Utils;
+			sourceTree = "<group>";
+		};
+		B9E70D4A26AEE01D00AB20D7 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				B925AA2126A5B204006312D5 /* EasyNetworking.swift */,
+				B925AA4526A5C293006312D5 /* NetworkConfiguration.swift */,
+			);
+			path = Core;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
