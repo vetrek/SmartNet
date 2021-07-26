@@ -4,7 +4,6 @@ Pod::Spec.new do |s|
   s.license = 'MIT'
   s.summary = 'Easy HTTP Networking in Swift'
   s.homepage = 'https://github.com/Valerio69/EasyNetworking'
-  s.authors = { 'Alamofire Software Foundation' => 'info@alamofire.org' }
   s.source = { :git => 'https://github.com/Valerio69/EasyNetworking.git', :tag => s.version }
   # s.documentation_url = ''
 
