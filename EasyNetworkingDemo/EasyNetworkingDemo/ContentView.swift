@@ -9,15 +9,14 @@ import SwiftUI
 import EasyNetworking
 import Combine
 
-
 struct EndpointWrapper<Value>: Hashable {
     let uid = UUID()
     let endpoint: Endpoint<Value>
-    
+
     func hash(into hasher: inout Hasher) {
         hasher.combine(uid)
     }
-    
+
     static func == (lhs: EndpointWrapper<Value>, rhs: EndpointWrapper<Value>) -> Bool {
         lhs.uid == rhs.uid
     }
@@ -33,7 +32,7 @@ struct ContentView: View {
 //        }
 //        request?.cancel()
 //    }
-    
+
     let endpoints: [EndpointWrapper<Void>] = [
         EndpointWrapper(
             endpoint: Endpoint(
@@ -51,23 +50,23 @@ struct ContentView: View {
                     parameters: ["description": "cat"]
                 )
             )
-        ),
+        )
     ]
-    
+
     let network = EasyNetwork(
         config: NetworkConfiguration(
             baseURL: URL(string: "https://api.publicapis.org")!,
             trustedDomains: ["api.publicapis.org"]
         )
     )
-    
+
     let test = Test()
-    
+
     var body: some View {
-        ScrollView(/*@START_MENU_TOKEN@*/.vertical/*@END_MENU_TOKEN@*/, showsIndicators: /*@START_MENU_TOKEN@*/true/*@END_MENU_TOKEN@*/) {
-            LazyVStack(alignment: /*@START_MENU_TOKEN@*/.center/*@END_MENU_TOKEN@*/, spacing: /*@START_MENU_TOKEN@*/nil/*@END_MENU_TOKEN@*/, pinnedViews: /*@START_MENU_TOKEN@*/[]/*@END_MENU_TOKEN@*/) {
+        ScrollView(/*@START_MENU_TOKEN@*/.vertical/*@END_MENU_TOKEN@*/, showsIndicators: true/*@END_MENU_TOKEN@*/) {
+            LazyVStack(alignment: .center/*@END_MENU_TOKEN@*/, spacing: nil/*@END_MENU_TOKEN@*/, pinnedViews: []/*@END_MENU_TOKEN@*/) {
                 ForEach(endpoints, id: \.uid) { endpoint in
-                    HStack(alignment: /*@START_MENU_TOKEN@*/.center/*@END_MENU_TOKEN@*/, spacing: /*@START_MENU_TOKEN@*/nil/*@END_MENU_TOKEN@*/) {
+                    HStack(alignment: .center/*@END_MENU_TOKEN@*/, spacing: nil/*@END_MENU_TOKEN@*/) {
                         Button {
                             test.asd(endpoint: endpoint.endpoint)
 //                            network.request(
@@ -91,7 +90,6 @@ struct ContentView_Previews: PreviewProvider {
     }
 }
 
-
 class Test {
     let endpoints: [EndpointWrapper<Data>] = [
         EndpointWrapper(
@@ -110,19 +108,19 @@ class Test {
                     parameters: ["description": "cat"]
                 )
             )
-        ),
+        )
     ]
-    
+
     let network = EasyNetwork(
         config: NetworkConfiguration(
             baseURL: URL(string: "https://api.publicapis.org")!,
             trustedDomains: ["api.publicapis.org"]
         )
     )
-    
+
     var subscriptions = Set<AnyCancellable>()
-    
-    func asd<E>(endpoint: E) where E : Requestable, E.Response == Void {
+
+    func asd<E>(endpoint: E) where E: Requestable, E.Response == Void {
         network.request(with: endpoint)?
             .sink(
                 receiveCompletion: { (response) in

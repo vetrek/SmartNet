@@ -15,24 +15,23 @@ public protocol NetworkConfigurable {
     var requestTimeout: TimeInterval { get set }
 }
 
-
 /// Service Network default configuration
 public final class NetworkConfiguration: NetworkConfigurable {
     /// Service base URL
     public var baseURL: URL
-    
+
     /// Default HTTPRequest Headers
     public var headers: [String: String] = [:]
-    
+
     /// Default HTTPRequest query parameters
     public var queryParameters: [String: String] = [:]
-    
+
     /// Unsecure trusted domains
     public var trustedDomains: [String]
-    
+
     /// Default HTTPRequest timeout
     public var requestTimeout: TimeInterval
-    
+
     public init(
         baseURL: URL,
         headers: [String: String] = [:],

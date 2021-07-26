@@ -7,18 +7,17 @@
 
 import Foundation
 
-
 public protocol EasyNetworkingParameters {
     var parameters: [String: Any] { get }
 }
 
 public struct QueryParameters: EasyNetworkingParameters {
-    public let parameters: [String : Any]
-    
+    public let parameters: [String: Any]
+
     public init(parameters: [String: Any]) {
         self.parameters = parameters
     }
-    
+
     public init(encodable: Encodable) throws {
         guard
             let parameters = try encodable.toDictionary()

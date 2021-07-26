@@ -16,7 +16,7 @@ public enum NetworkError: Error, CustomStringConvertible {
     case urlGeneration
     case dataToStringFailure(data: Data)
     case generic(Error)
-    
+
     public var description: String {
         switch self {
         case .error(let statusCode, _):

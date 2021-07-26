@@ -1,0 +1,21 @@
+included:
+  - EasyNetworking
+  - EasyNetworkingDemo
+
+disabled_rules:
+  - type_body_length
+  - identifier_name
+  - large_tuple
+  - force_cast
+  - statement_position
+  - nesting
+  #- function_parameter_count
+  - line_length
+  - file_length
+
+cyclomatic_complexity:
+  ignores_case_statements: true
+
+# line_length: 190
+# file_length: 800
+# function_body_length: 70

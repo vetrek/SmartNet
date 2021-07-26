@@ -23,67 +23,67 @@ public protocol NetworkingRequests {
         queue: DispatchQueue,
         completion: @escaping CompletionHandler<E.Response>
     ) -> NetworkCancellable? where E.Response == D
-    
+
     func request<E: Requestable>(
         with endpoint: E,
         queue: DispatchQueue,
         completion: @escaping CompletionHandler<E.Response>
     ) -> NetworkCancellable? where E.Response == Data
-    
+
     func request<E: Requestable>(
         with endpoint: E,
         queue: DispatchQueue,
         completion: @escaping CompletionHandler<E.Response>
     ) -> NetworkCancellable? where E.Response == String
-    
+
     func request<E: Requestable>(
         with endpoint: E,
         queue: DispatchQueue,
         completion: @escaping CompletionHandler<E.Response>
     ) -> NetworkCancellable? where E.Response == Void
-    
+
     // MARK: - Combine Publishers
-    
+
     func request<D, E>(
         with endpoint: E,
         decoder: JSONDecoder
-    ) -> AnyPublisher<D, NetworkError>? where D : Decodable, D == E.Response, E : Requestable
-    
+    ) -> AnyPublisher<D, NetworkError>? where D: Decodable, D == E.Response, E: Requestable
+
     func request<E>(
         with endpoint: E
-    ) -> AnyPublisher<E.Response, NetworkError>? where E : Requestable, E.Response == Data
-    
+    ) -> AnyPublisher<E.Response, NetworkError>? where E: Requestable, E.Response == Data
+
     func request<E>(
         with endpoint: E
-    ) -> AnyPublisher<E.Response, NetworkError>? where E : Requestable, E.Response == String
-    
+    ) -> AnyPublisher<E.Response, NetworkError>? where E: Requestable, E.Response == String
+
     func request<E>(
         with endpoint: E
-    ) -> AnyPublisher<E.Response, NetworkError>? where E : Requestable, E.Response == Void
+    ) -> AnyPublisher<E.Response, NetworkError>? where E: Requestable, E.Response == Void
 }
 
 public final class EasyNetwork: NSObject {
-    
+
     /// Network Session Configuration
     public let config: NetworkConfigurable
-    
+
     /// Session
     private var session: URLSession?
-    
+
     public init(config: NetworkConfigurable) {
         self.config = config
         super.init()
-        
+
         let sessionConfig = URLSessionConfiguration.default
         sessionConfig.timeoutIntervalForRequest = config.requestTimeout
-        
+
         self.session = URLSession(
             configuration: sessionConfig,
             delegate: self,
             delegateQueue: .main
         )
     }
-    
+
     /// Prevent Retain cycle problem while using the URLSession delegate = self
     func destroy() {
         session = nil
@@ -91,7 +91,7 @@ public final class EasyNetwork: NSObject {
 }
 
 extension EasyNetwork: NetworkingRequests {
-    
+
     /// Create a request and convert the reponse `Data` to a `Decodable` object
     /// - Parameters:
     ///   - endpoint: The service `Endpoint`
@@ -105,14 +105,14 @@ extension EasyNetwork: NetworkingRequests {
         decoder: JSONDecoder = .default,
         queue: DispatchQueue = .main,
         completion: @escaping (Result<E.Response>) -> Void
-    ) -> NetworkCancellable? where D : Decodable, D == E.Response, E : Requestable {
+    ) -> NetworkCancellable? where D: Decodable, D == E.Response, E: Requestable {
         guard
             let request = try? endpoint.urlRequest(with: config)
         else {
             completion(.failure(.urlGeneration))
             return nil
         }
-        
+
         let task = session?.dataTask(
             with: request
         ) { (data, response, error) in
@@ -125,14 +125,14 @@ extension EasyNetwork: NetworkingRequests {
                     completion(.failure(networkError))
                     return
                 }
-                
+
                 guard
                     let data = data
                 else {
                     completion(.failure(.emptyResponse))
                     return
                 }
-                
+
                 guard
                     let responseObject = try? decoder.decode(D.self, from: data)
                 else {
@@ -145,7 +145,7 @@ extension EasyNetwork: NetworkingRequests {
         task?.resume()
         return task
     }
-    
+
     /// Create a request which ignore the response `Data`
     /// - Parameters:
     ///   - endpoint: The service `Endpoint`
@@ -157,14 +157,14 @@ extension EasyNetwork: NetworkingRequests {
         with endpoint: E,
         queue: DispatchQueue = .main,
         completion: @escaping (Result<E.Response>) -> Void
-    ) -> NetworkCancellable? where E : Requestable, E.Response == Data {
+    ) -> NetworkCancellable? where E: Requestable, E.Response == Data {
         guard
             let request = try? endpoint.urlRequest(with: config)
         else {
             completion(.failure(.urlGeneration))
             return nil
         }
-        
+
         let task = session?.dataTask(
             with: request
         ) { (data, response, error) in
@@ -177,21 +177,21 @@ extension EasyNetwork: NetworkingRequests {
                     completion(.failure(networkError))
                     return
                 }
-                
+
                 guard
                     let data = data
                 else {
                     completion(.failure(.emptyResponse))
                     return
                 }
-                
+
                 completion(.success(data))
             }
         }
         task?.resume()
         return task
     }
-    
+
     /// Create a request and convert the reponse `Data` to `String`
     /// - Parameters:
     ///   - endpoint: The service `Endpoint`
@@ -203,14 +203,14 @@ extension EasyNetwork: NetworkingRequests {
         with endpoint: E,
         queue: DispatchQueue = .main,
         completion: @escaping (Result<E.Response>) -> Void
-    ) -> NetworkCancellable? where E : Requestable, E.Response == String {
+    ) -> NetworkCancellable? where E: Requestable, E.Response == String {
         guard
             let request = try? endpoint.urlRequest(with: config)
         else {
             completion(.failure(.urlGeneration))
             return nil
         }
-        
+
         let task = session?.dataTask(
             with: request
         ) { (data, response, error) in
@@ -223,28 +223,28 @@ extension EasyNetwork: NetworkingRequests {
                     completion(.failure(networkError))
                     return
                 }
-                
+
                 guard
                     let data = data
                 else {
                     completion(.failure(.emptyResponse))
                     return
                 }
-                
+
                 guard
                     let string = String(data: data, encoding: .utf8)
                 else {
                     completion(.failure(.dataToStringFailure(data: data)))
                     return
                 }
-                
+
                 completion(.success(string))
             }
         }
         task?.resume()
         return task
     }
-    
+
     /// Create a request which ignore the response `Data`
     /// - Parameters:
     ///   - endpoint: The service `Endpoint`
@@ -256,14 +256,14 @@ extension EasyNetwork: NetworkingRequests {
         with endpoint: E,
         queue: DispatchQueue = .main,
         completion: @escaping (Result<E.Response>) -> Void
-    ) -> NetworkCancellable? where E : Requestable, E.Response == Void {
+    ) -> NetworkCancellable? where E: Requestable, E.Response == Void {
         guard
             let request = try? endpoint.urlRequest(with: config)
         else {
             completion(.failure(.urlGeneration))
             return nil
         }
-        
+
         let task = session?.dataTask(
             with: request
         ) { (data, response, error) in
@@ -276,20 +276,20 @@ extension EasyNetwork: NetworkingRequests {
                     completion(.failure(networkError))
                     return
                 }
-                
+
                 completion(.success(()))
             }
         }
         task?.resume()
         return task
     }
-    
+
 }
 
 // MARK: - Combine
 
 extension EasyNetwork {
-    
+
     /// Create a request and convert the reponse `Data` to a `Decodable` object
     /// - Parameters:
     ///   - endpoint: The service `Endpoint`
@@ -298,7 +298,7 @@ extension EasyNetwork {
     public func request<D, E>(
         with endpoint: E,
         decoder: JSONDecoder = .default
-    ) -> AnyPublisher<D, NetworkError>? where D : Decodable, D == E.Response, E : Requestable {
+    ) -> AnyPublisher<D, NetworkError>? where D: Decodable, D == E.Response, E: Requestable {
         guard
             let request = try? endpoint.urlRequest(with: config)
         else {
@@ -306,7 +306,7 @@ extension EasyNetwork {
                 Fail<D, NetworkError>(error: NetworkError.urlGeneration)
             )
         }
-        
+
         return session?.dataTaskPublisher(for: request)
             .tryMap { output in
                 // throw an error if response is nil
@@ -325,14 +325,14 @@ extension EasyNetwork {
             .receive(on: DispatchQueue.main)
             .eraseToAnyPublisher()
     }
-    
+
     /// Create a request and get the reponse `Data`
     /// - Parameters:
     ///   - endpoint: The service `Endpoint`
     /// - Returns: Return a `Publisher` containing the **Data** response
     public func request<E>(
         with endpoint: E
-    ) -> AnyPublisher<E.Response, NetworkError>? where E : Requestable, E.Response == Data {
+    ) -> AnyPublisher<E.Response, NetworkError>? where E: Requestable, E.Response == Data {
         guard
             let request = try? endpoint.urlRequest(with: config)
         else {
@@ -340,7 +340,7 @@ extension EasyNetwork {
                 Fail<E.Response, NetworkError>(error: NetworkError.urlGeneration)
             )
         }
-        
+
         return session?.dataTaskPublisher(for: request)
             .tryMap { output in
                 // throw an error if response is nil
@@ -358,14 +358,14 @@ extension EasyNetwork {
             .receive(on: DispatchQueue.main)
             .eraseToAnyPublisher()
     }
-    
+
     /// Create a request and convert the reponse `Data` to `String`
     /// - Parameters:
     ///   - endpoint: The service `Endpoint`
     /// - Returns: Return a `Publisher` containing the **String** response
     public func request<E>(
         with endpoint: E
-    ) -> AnyPublisher<E.Response, NetworkError>? where E : Requestable, E.Response == String {
+    ) -> AnyPublisher<E.Response, NetworkError>? where E: Requestable, E.Response == String {
         guard
             let request = try? endpoint.urlRequest(with: config)
         else {
@@ -373,7 +373,7 @@ extension EasyNetwork {
                 Fail<E.Response, NetworkError>(error: NetworkError.urlGeneration)
             )
         }
-        
+
         return session?.dataTaskPublisher(for: request)
             .tryMap { output in
                 // throw an error if response is nil
@@ -383,11 +383,11 @@ extension EasyNetwork {
                 guard !output.data.isEmpty else {
                     throw NetworkError.emptyResponse
                 }
-                
+
                 guard let string = String(data: output.data, encoding: .utf8) else {
                     throw NetworkError.dataToStringFailure(data: output.data)
                 }
-                
+
                 return string
             }
             .mapError { error in
@@ -396,14 +396,14 @@ extension EasyNetwork {
             .receive(on: DispatchQueue.main)
             .eraseToAnyPublisher()
     }
-    
+
     /// Create a request which ignore the response `Data`
     /// - Parameters:
     ///   - endpoint: The service `Endpoint`
     /// - Returns: Return a `Publisher` containing **Void**
     public func request<E>(
         with endpoint: E
-    ) -> AnyPublisher<E.Response, NetworkError>? where E : Requestable, E.Response == Void {
+    ) -> AnyPublisher<E.Response, NetworkError>? where E: Requestable, E.Response == Void {
         guard
             let request = try? endpoint.urlRequest(with: config)
         else {
@@ -411,7 +411,7 @@ extension EasyNetwork {
                 Fail<E.Response, NetworkError>(error: NetworkError.urlGeneration)
             )
         }
-        
+
         return session?.dataTaskPublisher(for: request)
             .tryMap { output in
                 // throw an error if response is nil
@@ -429,13 +429,13 @@ extension EasyNetwork {
             .receive(on: DispatchQueue.main)
             .eraseToAnyPublisher()
     }
-    
+
 }
 
 // MARK: - Errors Handling
 
 private extension EasyNetwork {
-    
+
     /// Convert Error to `NetworkError`
     /// - Parameter error: Error
     /// - Returns: NetworkError
@@ -443,7 +443,7 @@ private extension EasyNetwork {
         guard
             (error as? NetworkError) == nil
         else { return (error as! NetworkError) }
-        
+
         let code = URLError.Code(rawValue: (error as NSError).code)
         switch code {
         case .notConnectedToInternet:
@@ -454,7 +454,7 @@ private extension EasyNetwork {
             return .generic(error)
         }
     }
-    
+
     /// Check if the Response contains any error
     /// - Parameters:
     ///   - data: Response data
@@ -479,7 +479,6 @@ private extension EasyNetwork {
 
 extension EasyNetwork: URLSessionDelegate {
     /// Allow Trusted Domains.
-    /// TODO: Allow multiple Authentication options.
     public func urlSession(
         _ session: URLSession,
         didReceive challenge: URLAuthenticationChallenge,
@@ -495,7 +494,7 @@ extension EasyNetwork: URLSessionDelegate {
             completionHandler(.performDefaultHandling, nil)
             return
         }
-        
+
         // Evaluate the Credential in the Challenge
         guard
             let serverTrust = protectionSpace.serverTrust
@@ -503,9 +502,9 @@ extension EasyNetwork: URLSessionDelegate {
             completionHandler(.performDefaultHandling, nil)
             return
         }
-        
+
         let credential = URLCredential(trust: serverTrust)
         completionHandler(.useCredential, credential)
-        
+
     }
 }
