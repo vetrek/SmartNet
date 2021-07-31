@@ -7,8 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		B925AA5526A61EC7006312D5 /* EasyNetworking.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B925AA5426A61EC7006312D5 /* EasyNetworking.framework */; };
-		B925AA5626A61EC7006312D5 /* EasyNetworking.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = B925AA5426A61EC7006312D5 /* EasyNetworking.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		B921C66026B57BD30058D5DC /* SmartNet.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B921C65F26B57BD30058D5DC /* SmartNet.framework */; };
+		B921C66126B57BD30058D5DC /* SmartNet.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = B921C65F26B57BD30058D5DC /* SmartNet.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		B9A2316426A5B1820078E143 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9A2316326A5B1820078E143 /* AppDelegate.swift */; };
 		B9A2316626A5B1820078E143 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9A2316526A5B1820078E143 /* SceneDelegate.swift */; };
 		B9A2316826A5B1820078E143 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9A2316726A5B1820078E143 /* ContentView.swift */; };
@@ -18,13 +18,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		B925AA5726A61EC7006312D5 /* Embed Frameworks */ = {
+		B921C66226B57BD30058D5DC /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				B925AA5626A61EC7006312D5 /* EasyNetworking.framework in Embed Frameworks */,
+				B921C66126B57BD30058D5DC /* SmartNet.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -32,6 +32,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		B921C65F26B57BD30058D5DC /* SmartNet.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SmartNet.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		B925AA5426A61EC7006312D5 /* EasyNetworking.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = EasyNetworking.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		B9A2316026A5B1820078E143 /* SmartNetDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SmartNetDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B9A2316326A5B1820078E143 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -48,7 +49,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B925AA5526A61EC7006312D5 /* EasyNetworking.framework in Frameworks */,
+				B921C66026B57BD30058D5DC /* SmartNet.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -58,6 +59,7 @@
 		B925AA5326A61EC7006312D5 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				B921C65F26B57BD30058D5DC /* SmartNet.framework */,
 				B925AA5426A61EC7006312D5 /* EasyNetworking.framework */,
 			);
 			name = Frameworks;
@@ -112,14 +114,14 @@
 				B9A2315C26A5B1820078E143 /* Sources */,
 				B9A2315D26A5B1820078E143 /* Frameworks */,
 				B9A2315E26A5B1820078E143 /* Resources */,
-				B925AA5726A61EC7006312D5 /* Embed Frameworks */,
+				B921C66226B57BD30058D5DC /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			name = SmartNetDemo;
-			productName = EasyNetworkingDemo;
+			productName = SmartNetDemo;
 			productReference = B9A2316026A5B1820078E143 /* SmartNetDemo.app */;
 			productType = "com.apple.product-type.application";
 		};

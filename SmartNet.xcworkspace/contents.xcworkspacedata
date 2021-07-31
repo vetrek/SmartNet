@@ -5,6 +5,6 @@
       location = "group:/Users/Valerio/Project/Libraries/EasyNetworking/SmartNet.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:/Users/Valerio/Project/Libraries/EasyNetworking/EasyNetworkingDemo/SmartNetDemo.xcodeproj">
+      location = "group:Example/SmartNetDemo.xcodeproj">
    </FileRef>
 </Workspace>
