@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name = 'EasyNetworking'
-  s.version = '1.0.0'
+  s.version = '0.0.1'
   s.license = 'MIT'
   s.summary = 'Easy HTTP Networking in Swift'
   s.homepage = 'https://github.com/Valerio69/EasyNetworking'
