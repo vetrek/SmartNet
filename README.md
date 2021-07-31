@@ -1,4 +1,4 @@
-# EasyNetworking
+# SmartNet
 HTTP Networking Library which primary scope is to make Networking as easy as possible.
 Greatly inspired by SENetworking (https://github.com/kudoleh/SENetworking).
 
@@ -23,7 +23,7 @@ If the Endpoint is initialized with "***useEndpointHeaderOnly: true***" the Netw
 Base
 ```swift
 let config = NetworkConfiguration(baseURL: URL(string: "https://api.example.com")!)
-let network = EasyNetwork(config: config)
+let network = SmartNet(config: config)
 ```
 
 Advanced
@@ -35,7 +35,7 @@ let config = NetworkConfiguration(
     trustedDomains: ["api.publicapis.org"],
     requestTimeout: 120
 )
-let network = EasyNetwork(config: config)
+let network = SmartNet(config: config)
 ```
 
 - ### Create an Endpoint
