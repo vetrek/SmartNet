@@ -1,17 +1,17 @@
 //
 //  HTTPBody.swift
-//  EasyNetworking
+//  SmartNet
 //
 //  Created by Valerio Sebastianelli on 7/19/21.
 //
 
 import Foundation
 
-public protocol EasyNetworkingBody {
+public protocol SmartNetBody {
     var data: Data? { get }
 }
 
-public struct HTTPBody: EasyNetworkingBody {
+public struct HTTPBody: SmartNetBody {
     public let data: Data?
 
     public init(dictionary: [String: Any], bodyEncoding: BodyEncoding) throws {

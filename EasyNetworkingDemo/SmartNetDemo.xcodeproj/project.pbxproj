@@ -33,7 +33,7 @@
 
 /* Begin PBXFileReference section */
 		B925AA5426A61EC7006312D5 /* EasyNetworking.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = EasyNetworking.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		B9A2316026A5B1820078E143 /* EasyNetworkingDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EasyNetworkingDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B9A2316026A5B1820078E143 /* SmartNetDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SmartNetDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B9A2316326A5B1820078E143 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		B9A2316526A5B1820078E143 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		B9A2316726A5B1820078E143 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -66,7 +66,7 @@
 		B9A2315726A5B1820078E143 = {
 			isa = PBXGroup;
 			children = (
-				B9A2316226A5B1820078E143 /* EasyNetworkingDemo */,
+				B9A2316226A5B1820078E143 /* SmartNetDemo */,
 				B9A2316126A5B1820078E143 /* Products */,
 				B925AA5326A61EC7006312D5 /* Frameworks */,
 			);
@@ -75,12 +75,12 @@
 		B9A2316126A5B1820078E143 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				B9A2316026A5B1820078E143 /* EasyNetworkingDemo.app */,
+				B9A2316026A5B1820078E143 /* SmartNetDemo.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		B9A2316226A5B1820078E143 /* EasyNetworkingDemo */ = {
+		B9A2316226A5B1820078E143 /* SmartNetDemo */ = {
 			isa = PBXGroup;
 			children = (
 				B9A2316326A5B1820078E143 /* AppDelegate.swift */,
@@ -91,7 +91,7 @@
 				B9A2317126A5B1830078E143 /* Info.plist */,
 				B9A2316B26A5B1830078E143 /* Preview Content */,
 			);
-			path = EasyNetworkingDemo;
+			path = SmartNetDemo;
 			sourceTree = "<group>";
 		};
 		B9A2316B26A5B1830078E143 /* Preview Content */ = {
@@ -105,9 +105,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		B9A2315F26A5B1820078E143 /* EasyNetworkingDemo */ = {
+		B9A2315F26A5B1820078E143 /* SmartNetDemo */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = B9A2317426A5B1830078E143 /* Build configuration list for PBXNativeTarget "EasyNetworkingDemo" */;
+			buildConfigurationList = B9A2317426A5B1830078E143 /* Build configuration list for PBXNativeTarget "SmartNetDemo" */;
 			buildPhases = (
 				B9A2315C26A5B1820078E143 /* Sources */,
 				B9A2315D26A5B1820078E143 /* Frameworks */,
@@ -118,9 +118,9 @@
 			);
 			dependencies = (
 			);
-			name = EasyNetworkingDemo;
+			name = SmartNetDemo;
 			productName = EasyNetworkingDemo;
-			productReference = B9A2316026A5B1820078E143 /* EasyNetworkingDemo.app */;
+			productReference = B9A2316026A5B1820078E143 /* SmartNetDemo.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -137,7 +137,7 @@
 					};
 				};
 			};
-			buildConfigurationList = B9A2315B26A5B1820078E143 /* Build configuration list for PBXProject "EasyNetworkingDemo" */;
+			buildConfigurationList = B9A2315B26A5B1820078E143 /* Build configuration list for PBXProject "SmartNetDemo" */;
 			compatibilityVersion = "Xcode 9.3";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -150,7 +150,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				B9A2315F26A5B1820078E143 /* EasyNetworkingDemo */,
+				B9A2315F26A5B1820078E143 /* SmartNetDemo */,
 			);
 		};
 /* End PBXProject section */
@@ -315,15 +315,15 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_ASSET_PATHS = "\"EasyNetworkingDemo/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "\"SmartNetDemo/Preview Content\"";
 				DEVELOPMENT_TEAM = BTMR9V3S6L;
 				ENABLE_PREVIEWS = YES;
-				INFOPLIST_FILE = EasyNetworkingDemo/Info.plist;
+				INFOPLIST_FILE = SmartNetDemo/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = valerio.EasyNetworkingDemo;
+				PRODUCT_BUNDLE_IDENTIFIER = valerio.SmartNetDemo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -336,15 +336,15 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_ASSET_PATHS = "\"EasyNetworkingDemo/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "\"SmartNetDemo/Preview Content\"";
 				DEVELOPMENT_TEAM = BTMR9V3S6L;
 				ENABLE_PREVIEWS = YES;
-				INFOPLIST_FILE = EasyNetworkingDemo/Info.plist;
+				INFOPLIST_FILE = SmartNetDemo/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = valerio.EasyNetworkingDemo;
+				PRODUCT_BUNDLE_IDENTIFIER = valerio.SmartNetDemo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -354,7 +354,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		B9A2315B26A5B1820078E143 /* Build configuration list for PBXProject "EasyNetworkingDemo" */ = {
+		B9A2315B26A5B1820078E143 /* Build configuration list for PBXProject "SmartNetDemo" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				B9A2317226A5B1830078E143 /* Debug */,
@@ -363,7 +363,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		B9A2317426A5B1830078E143 /* Build configuration list for PBXNativeTarget "EasyNetworkingDemo" */ = {
+		B9A2317426A5B1830078E143 /* Build configuration list for PBXNativeTarget "SmartNetDemo" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				B9A2317526A5B1830078E143 /* Debug */,

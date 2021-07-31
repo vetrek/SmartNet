@@ -1,14 +1,14 @@
 //
-//  EasyNetworkingTests.swift
-//  EasyNetworkingTests
+//  SmartNet.swift
+//  SmartNet
 //
 //  Created by Valerio Sebastianelli on 7/19/21.
 //
 
 import XCTest
-@testable import EasyNetworking
+@testable import SmartNet
 
-class EasyNetworkingTests: XCTestCase {
+class SmartNetTests: XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.

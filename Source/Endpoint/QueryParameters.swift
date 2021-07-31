@@ -1,17 +1,17 @@
 //
 //  QueryParameters.swift
-//  EasyNetworking
+//  SmartNet
 //
 //  Created by Valerio Sebastianelli on 7/19/21.
 //
 
 import Foundation
 
-public protocol EasyNetworkingParameters {
+public protocol SmartNetParameters {
     var parameters: [String: Any] { get }
 }
 
-public struct QueryParameters: EasyNetworkingParameters {
+public struct QueryParameters: SmartNetParameters {
     public let parameters: [String: Any]
 
     public init(parameters: [String: Any]) {

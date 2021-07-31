@@ -2,9 +2,9 @@
 <Workspace
    version = "1.0">
    <FileRef
-      location = "group:EasyNetworking.xcodeproj">
+      location = "group:/Users/Valerio/Project/Libraries/EasyNetworking/SmartNet.xcodeproj">
    </FileRef>
    <FileRef
-      location = "group:EasyNetworkingDemo/EasyNetworkingDemo.xcodeproj">
+      location = "group:/Users/Valerio/Project/Libraries/EasyNetworking/EasyNetworkingDemo/SmartNetDemo.xcodeproj">
    </FileRef>
 </Workspace>

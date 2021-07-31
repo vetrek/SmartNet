@@ -1,11 +1,11 @@
 Pod::Spec.new do |s|
-  s.name = 'EasyNetworking'
+  s.name = 'SmartNet'
   s.version = '0.0.1'
   s.license = 'MIT'
-  s.summary = 'Easy HTTP Networking in Swift'
-  s.homepage = 'https://github.com/Valerio69/EasyNetworking'
+  s.summary = 'Smart and easy HTTP Networking library in Swift'
+  s.homepage = 'https://github.com/Valerio69/SmartNet'
   s.authors = 'Valerio69'
-  s.source = { :git => 'https://github.com/Valerio69/EasyNetworking.git', :tag => s.version }
+  s.source = { :git => 'https://github.com/Valerio69/SmartNet.git', :tag => s.version }
   # s.documentation_url = ''
 
   s.ios.deployment_target = '13.0'

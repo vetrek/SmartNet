@@ -1,6 +1,6 @@
 //
-//  EasyNetworking.swift
-//  EasyNetworking
+//  SmartNet.swift
+//  SmartNet
 //
 //  Created by Valerio Sebastianelli on 7/19/21.
 //
@@ -62,7 +62,7 @@ public protocol NetworkingRequests {
     ) -> AnyPublisher<E.Response, NetworkError>? where E: Requestable, E.Response == Void
 }
 
-public final class EasyNetwork: NSObject {
+public final class SmartNet: NSObject {
 
     /// Network Session Configuration
     public let config: NetworkConfigurable
@@ -90,7 +90,7 @@ public final class EasyNetwork: NSObject {
     }
 }
 
-extension EasyNetwork: NetworkingRequests {
+extension SmartNet: NetworkingRequests {
 
     /// Create a request and convert the reponse `Data` to a `Decodable` object
     /// - Parameters:
@@ -288,7 +288,7 @@ extension EasyNetwork: NetworkingRequests {
 
 // MARK: - Combine
 
-extension EasyNetwork {
+extension SmartNet {
 
     /// Create a request and convert the reponse `Data` to a `Decodable` object
     /// - Parameters:
@@ -434,7 +434,7 @@ extension EasyNetwork {
 
 // MARK: - Errors Handling
 
-private extension EasyNetwork {
+private extension SmartNet {
 
     /// Convert Error to `NetworkError`
     /// - Parameter error: Error
@@ -477,7 +477,7 @@ private extension EasyNetwork {
 
 // MARK: - URLSessionDelegate
 
-extension EasyNetwork: URLSessionDelegate {
+extension SmartNet: URLSessionDelegate {
     /// Allow Trusted Domains.
     public func urlSession(
         _ session: URLSession,

@@ -1,6 +1,6 @@
 //
 //  Endpoint.swift
-//  EasyNetworking
+//  SmartNet
 //
 //  Created by Valerio Sebastianelli on 7/19/21.
 //

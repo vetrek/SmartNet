@@ -1,12 +1,12 @@
 //
 //  ContentView.swift
-//  EasyNetworkingDemo
+//  SmartNetDemo
 //
 //  Created by Valerio Sebastianelli on 7/19/21.
 //
 
 import SwiftUI
-import EasyNetworking
+import SmartNet
 import Combine
 
 struct EndpointWrapper<Value>: Hashable {
@@ -25,7 +25,7 @@ struct EndpointWrapper<Value>: Hashable {
 struct ContentView: View {
 //
 //    init() {
-//        let network = EasyNetwork(config: NetworkConfiguration(baseURL: URL(string: "https://example.com")!))
+//        let network = SmartNet(config: NetworkConfiguration(baseURL: URL(string: "https://example.com")!))
 //        let endpoint = Endpoint<String>(path: "")
 //        let request = network.request(with: endpoint) { (response) in
 //            print(response)
@@ -53,7 +53,7 @@ struct ContentView: View {
         )
     ]
 
-    let network = EasyNetwork(
+    let network = SmartNet(
         config: NetworkConfiguration(
             baseURL: URL(string: "https://api.publicapis.org")!,
             trustedDomains: ["api.publicapis.org"]
@@ -111,7 +111,7 @@ class Test {
         )
     ]
 
-    let network = EasyNetwork(
+    let network = SmartNet(
         config: NetworkConfiguration(
             baseURL: URL(string: "https://api.publicapis.org")!,
             trustedDomains: ["api.publicapis.org"]

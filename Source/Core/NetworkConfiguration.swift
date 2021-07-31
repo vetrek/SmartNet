@@ -1,6 +1,6 @@
 //
-//  EasyNetworkConfiguration.swift
-//  EasyNetworking
+//  SmartNet.swift
+//  SmartNet
 //
 //  Created by Valerio Sebastianelli on 7/19/21.
 //

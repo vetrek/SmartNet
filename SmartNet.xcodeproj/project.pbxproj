@@ -7,9 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		B925AA0D26A5B1D7006312D5 /* EasyNetworking.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B925AA0326A5B1D7006312D5 /* EasyNetworking.framework */; };
-		B925AA1226A5B1D7006312D5 /* EasyNetworkingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B925AA1126A5B1D7006312D5 /* EasyNetworkingTests.swift */; };
-		B925AA2226A5B204006312D5 /* EasyNetworking.swift in Sources */ = {isa = PBXBuildFile; fileRef = B925AA2126A5B204006312D5 /* EasyNetworking.swift */; };
+		B925AA0D26A5B1D7006312D5 /* SmartNet.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B925AA0326A5B1D7006312D5 /* SmartNet.framework */; };
+		B925AA1226A5B1D7006312D5 /* SmartNetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B925AA1126A5B1D7006312D5 /* SmartNetTests.swift */; };
+		B925AA2226A5B204006312D5 /* SmartNet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B925AA2126A5B204006312D5 /* SmartNet.swift */; };
 		B925AA2626A5B4E9006312D5 /* Endpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = B925AA2526A5B4E9006312D5 /* Endpoint.swift */; };
 		B925AA2B26A5B740006312D5 /* Encodable+.swift in Sources */ = {isa = PBXBuildFile; fileRef = B925AA2A26A5B740006312D5 /* Encodable+.swift */; };
 		B925AA3826A5BF20006312D5 /* HTTPBody.swift in Sources */ = {isa = PBXBuildFile; fileRef = B925AA3726A5BF20006312D5 /* HTTPBody.swift */; };
@@ -32,12 +32,12 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		B925AA0326A5B1D7006312D5 /* EasyNetworking.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = EasyNetworking.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		B925AA0326A5B1D7006312D5 /* SmartNet.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = SmartNet.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		B925AA0726A5B1D7006312D5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		B925AA0C26A5B1D7006312D5 /* EasyNetworkingTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EasyNetworkingTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		B925AA1126A5B1D7006312D5 /* EasyNetworkingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EasyNetworkingTests.swift; sourceTree = "<group>"; };
+		B925AA0C26A5B1D7006312D5 /* SmartNetTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SmartNetTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B925AA1126A5B1D7006312D5 /* SmartNetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartNetTests.swift; sourceTree = "<group>"; };
 		B925AA1326A5B1D7006312D5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		B925AA2126A5B204006312D5 /* EasyNetworking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EasyNetworking.swift; sourceTree = "<group>"; };
+		B925AA2126A5B204006312D5 /* SmartNet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartNet.swift; sourceTree = "<group>"; };
 		B925AA2526A5B4E9006312D5 /* Endpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Endpoint.swift; sourceTree = "<group>"; };
 		B925AA2A26A5B740006312D5 /* Encodable+.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Encodable+.swift"; sourceTree = "<group>"; };
 		B925AA3726A5BF20006312D5 /* HTTPBody.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPBody.swift; sourceTree = "<group>"; };
@@ -61,7 +61,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B925AA0D26A5B1D7006312D5 /* EasyNetworking.framework in Frameworks */,
+				B925AA0D26A5B1D7006312D5 /* SmartNet.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -80,8 +80,8 @@
 		B925AA0426A5B1D7006312D5 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				B925AA0326A5B1D7006312D5 /* EasyNetworking.framework */,
-				B925AA0C26A5B1D7006312D5 /* EasyNetworkingTests.xctest */,
+				B925AA0326A5B1D7006312D5 /* SmartNet.framework */,
+				B925AA0C26A5B1D7006312D5 /* SmartNetTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -102,7 +102,7 @@
 		B925AA1026A5B1D7006312D5 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
-				B925AA1126A5B1D7006312D5 /* EasyNetworkingTests.swift */,
+				B925AA1126A5B1D7006312D5 /* SmartNetTests.swift */,
 				B925AA1326A5B1D7006312D5 /* Info.plist */,
 			);
 			path = Tests;
@@ -147,7 +147,7 @@
 		B9E70D4A26AEE01D00AB20D7 /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				B925AA2126A5B204006312D5 /* EasyNetworking.swift */,
+				B925AA2126A5B204006312D5 /* SmartNet.swift */,
 				B925AA4526A5C293006312D5 /* NetworkConfiguration.swift */,
 			);
 			path = Core;
@@ -166,9 +166,9 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
-		B925AA0226A5B1D7006312D5 /* EasyNetworking */ = {
+		B925AA0226A5B1D7006312D5 /* SmartNet */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = B925AA1726A5B1D7006312D5 /* Build configuration list for PBXNativeTarget "EasyNetworking" */;
+			buildConfigurationList = B925AA1726A5B1D7006312D5 /* Build configuration list for PBXNativeTarget "SmartNet" */;
 			buildPhases = (
 				B925A9FE26A5B1D7006312D5 /* Headers */,
 				B925A9FF26A5B1D7006312D5 /* Sources */,
@@ -180,14 +180,14 @@
 			);
 			dependencies = (
 			);
-			name = EasyNetworking;
+			name = SmartNet;
 			productName = EasyNetworking;
-			productReference = B925AA0326A5B1D7006312D5 /* EasyNetworking.framework */;
+			productReference = B925AA0326A5B1D7006312D5 /* SmartNet.framework */;
 			productType = "com.apple.product-type.framework";
 		};
-		B925AA0B26A5B1D7006312D5 /* EasyNetworkingTests */ = {
+		B925AA0B26A5B1D7006312D5 /* SmartNetTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = B925AA1A26A5B1D7006312D5 /* Build configuration list for PBXNativeTarget "EasyNetworkingTests" */;
+			buildConfigurationList = B925AA1A26A5B1D7006312D5 /* Build configuration list for PBXNativeTarget "SmartNetTests" */;
 			buildPhases = (
 				B925AA0826A5B1D7006312D5 /* Sources */,
 				B925AA0926A5B1D7006312D5 /* Frameworks */,
@@ -198,9 +198,9 @@
 			dependencies = (
 				B925AA0F26A5B1D7006312D5 /* PBXTargetDependency */,
 			);
-			name = EasyNetworkingTests;
+			name = SmartNetTests;
 			productName = EasyNetworkingTests;
-			productReference = B925AA0C26A5B1D7006312D5 /* EasyNetworkingTests.xctest */;
+			productReference = B925AA0C26A5B1D7006312D5 /* SmartNetTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
@@ -221,7 +221,7 @@
 					};
 				};
 			};
-			buildConfigurationList = B925A9FD26A5B1D7006312D5 /* Build configuration list for PBXProject "EasyNetworking" */;
+			buildConfigurationList = B925A9FD26A5B1D7006312D5 /* Build configuration list for PBXProject "SmartNet" */;
 			compatibilityVersion = "Xcode 9.3";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -234,8 +234,8 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				B925AA0226A5B1D7006312D5 /* EasyNetworking */,
-				B925AA0B26A5B1D7006312D5 /* EasyNetworkingTests */,
+				B925AA0226A5B1D7006312D5 /* SmartNet */,
+				B925AA0B26A5B1D7006312D5 /* SmartNetTests */,
 			);
 		};
 /* End PBXProject section */
@@ -284,7 +284,7 @@
 			files = (
 				B925AA5A26A6D06F006312D5 /* Result.swift in Sources */,
 				B925AA2626A5B4E9006312D5 /* Endpoint.swift in Sources */,
-				B925AA2226A5B204006312D5 /* EasyNetworking.swift in Sources */,
+				B925AA2226A5B204006312D5 /* SmartNet.swift in Sources */,
 				B925AA2B26A5B740006312D5 /* Encodable+.swift in Sources */,
 				B925AA4626A5C293006312D5 /* NetworkConfiguration.swift in Sources */,
 				B925AA4E26A612B5006312D5 /* JSONDecoder.swift in Sources */,
@@ -299,7 +299,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B925AA1226A5B1D7006312D5 /* EasyNetworkingTests.swift in Sources */,
+				B925AA1226A5B1D7006312D5 /* SmartNetTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -308,7 +308,7 @@
 /* Begin PBXTargetDependency section */
 		B925AA0F26A5B1D7006312D5 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = B925AA0226A5B1D7006312D5 /* EasyNetworking */;
+			target = B925AA0226A5B1D7006312D5 /* SmartNet */;
 			targetProxy = B925AA0E26A5B1D7006312D5 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -454,7 +454,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = valerio.EasyNetworking;
+				PRODUCT_BUNDLE_IDENTIFIER = valerio.SmartNet;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -481,7 +481,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = valerio.EasyNetworking;
+				PRODUCT_BUNDLE_IDENTIFIER = valerio.SmartNet;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.0;
@@ -495,13 +495,13 @@
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = BTMR9V3S6L;
-				INFOPLIST_FILE = EasyNetworkingTests/Info.plist;
+				INFOPLIST_FILE = Tests/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = valerio.EasyNetworkingTests;
+				PRODUCT_BUNDLE_IDENTIFIER = valerio.SmartNetTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -514,13 +514,13 @@
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = BTMR9V3S6L;
-				INFOPLIST_FILE = EasyNetworkingTests/Info.plist;
+				INFOPLIST_FILE = Tests/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = valerio.EasyNetworkingTests;
+				PRODUCT_BUNDLE_IDENTIFIER = valerio.SmartNetTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -530,7 +530,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		B925A9FD26A5B1D7006312D5 /* Build configuration list for PBXProject "EasyNetworking" */ = {
+		B925A9FD26A5B1D7006312D5 /* Build configuration list for PBXProject "SmartNet" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				B925AA1526A5B1D7006312D5 /* Debug */,
@@ -539,7 +539,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		B925AA1726A5B1D7006312D5 /* Build configuration list for PBXNativeTarget "EasyNetworking" */ = {
+		B925AA1726A5B1D7006312D5 /* Build configuration list for PBXNativeTarget "SmartNet" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				B925AA1826A5B1D7006312D5 /* Debug */,
@@ -548,7 +548,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		B925AA1A26A5B1D7006312D5 /* Build configuration list for PBXNativeTarget "EasyNetworkingTests" */ = {
+		B925AA1A26A5B1D7006312D5 /* Build configuration list for PBXNativeTarget "SmartNetTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				B925AA1B26A5B1D7006312D5 /* Debug */,
