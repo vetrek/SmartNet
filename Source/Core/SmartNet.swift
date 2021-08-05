@@ -33,53 +33,55 @@ extension URLSessionTask: NetworkCancellable { }
 
 public typealias CompletionHandler<T> = (Result<T>) -> Void
 
-public protocol NetworkingRequests {
+public protocol NetworkingClosure {
     func request<D: Decodable, E: Requestable>(
         with endpoint: E,
         decoder: JSONDecoder,
         queue: DispatchQueue,
         completion: @escaping CompletionHandler<E.Response>
     ) -> NetworkCancellable? where E.Response == D
-
+    
     func request<E: Requestable>(
         with endpoint: E,
         queue: DispatchQueue,
         completion: @escaping CompletionHandler<E.Response>
     ) -> NetworkCancellable? where E.Response == Data
-
+    
     func request<E: Requestable>(
         with endpoint: E,
         queue: DispatchQueue,
         completion: @escaping CompletionHandler<E.Response>
     ) -> NetworkCancellable? where E.Response == String
-
+    
     func request<E: Requestable>(
         with endpoint: E,
         queue: DispatchQueue,
         completion: @escaping CompletionHandler<E.Response>
     ) -> NetworkCancellable? where E.Response == Void
+}
 
-    // MARK: - Combine Publishers
-
+public protocol NetworkingCombine {
     func request<D, E>(
         with endpoint: E,
         decoder: JSONDecoder
     ) -> AnyPublisher<D, NetworkError>? where D: Decodable, D == E.Response, E: Requestable
-
+    
     func request<E>(
         with endpoint: E
     ) -> AnyPublisher<E.Response, NetworkError>? where E: Requestable, E.Response == Data
-
+    
     func request<E>(
         with endpoint: E
     ) -> AnyPublisher<E.Response, NetworkError>? where E: Requestable, E.Response == String
-
+    
     func request<E>(
         with endpoint: E
     ) -> AnyPublisher<E.Response, NetworkError>? where E: Requestable, E.Response == Void
 }
 
-public final class SmartNet: NSObject {
+public protocol Networking: NetworkingCombine, NetworkingClosure { }
+
+public final class SmartNet: NSObject, Networking {
 
     /// Network Session Configuration
     public let config: NetworkConfigurable
@@ -105,9 +107,12 @@ public final class SmartNet: NSObject {
     func destroy() {
         session = nil
     }
+    
 }
 
-extension SmartNet: NetworkingRequests {
+// MARK: - Networking Closure
+
+extension SmartNet {
 
     /// Create a request and convert the reponse `Data` to a `Decodable` object
     /// - Parameters:
@@ -303,7 +308,7 @@ extension SmartNet: NetworkingRequests {
 
 }
 
-// MARK: - Combine
+// MARK: - Networking Combine
 
 extension SmartNet {
 
