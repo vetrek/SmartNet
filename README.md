@@ -12,6 +12,14 @@ Greatly inspired by SENetworking (https://github.com/kudoleh/SENetworking).
 - Light and easy Networking Interface
 - "Truested Domains" list to bypass SSL Authentication Challenge (**not recommended**)
 
+## Installation
+
+### CocoaPods
+
+```ruby
+pod 'SmartNet'
+```
+
 ## Examples
 
 - ### Network Default Configuration
