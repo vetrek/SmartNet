@@ -40,19 +40,19 @@ public protocol NetworkingClosure {
         queue: DispatchQueue,
         completion: @escaping CompletionHandler<E.Response>
     ) -> NetworkCancellable? where E.Response == D
-    
+
     func request<E: Requestable>(
         with endpoint: E,
         queue: DispatchQueue,
         completion: @escaping CompletionHandler<E.Response>
     ) -> NetworkCancellable? where E.Response == Data
-    
+
     func request<E: Requestable>(
         with endpoint: E,
         queue: DispatchQueue,
         completion: @escaping CompletionHandler<E.Response>
     ) -> NetworkCancellable? where E.Response == String
-    
+
     func request<E: Requestable>(
         with endpoint: E,
         queue: DispatchQueue,
@@ -65,15 +65,15 @@ public protocol NetworkingCombine {
         with endpoint: E,
         decoder: JSONDecoder
     ) -> AnyPublisher<D, NetworkError>? where D: Decodable, D == E.Response, E: Requestable
-    
+
     func request<E>(
         with endpoint: E
     ) -> AnyPublisher<E.Response, NetworkError>? where E: Requestable, E.Response == Data
-    
+
     func request<E>(
         with endpoint: E
     ) -> AnyPublisher<E.Response, NetworkError>? where E: Requestable, E.Response == String
-    
+
     func request<E>(
         with endpoint: E
     ) -> AnyPublisher<E.Response, NetworkError>? where E: Requestable, E.Response == Void
@@ -107,7 +107,7 @@ public final class SmartNet: NSObject, Networking {
     func destroy() {
         session = nil
     }
-    
+
 }
 
 // MARK: - Networking Closure
