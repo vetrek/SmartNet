@@ -26,6 +26,7 @@ import Foundation
 
 public enum NetworkError: Error, CustomStringConvertible {
     case error(statusCode: Int, data: Data?)
+    case parsedError(error: Decodable)
     case parsingFailed
     case emptyResponse
     case cancelled
@@ -52,6 +53,8 @@ public enum NetworkError: Error, CustomStringConvertible {
             return "Unable to convert response data to string"
         case .generic(let error):
             return "Generic error \(error.localizedDescription)"
+        case .parsedError(let error):
+            return "Generic error \(error)"
         }
     }
 }

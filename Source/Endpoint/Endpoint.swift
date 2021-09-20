@@ -44,6 +44,7 @@ public enum BodyEncoding {
     case json
     case formUrlEncodedAscii
     case plainText
+    case multiPartFormData
 }
 
 public protocol Requestable {
@@ -69,6 +70,8 @@ public protocol Requestable {
 
     /// Body
     var body: HTTPBody? { get }
+    
+    var form: MultipartFormData? { get }
 
     /// Return the `URLRequest` from the Requestable
     func urlRequest(with config: NetworkConfigurable) throws -> URLRequest
@@ -86,9 +89,10 @@ extension Requestable {
             path :
             path[1..<path.count]
 
-        let endpoint = (isFullPath ?
-                            path :
-                            baseURL.appending(finalPath))
+        let endpoint = isFullPath ?
+            path :
+            baseURL.appending(finalPath)
+        
         let escapedEndpoint = endpoint.addingPercentEncoding(
             withAllowedCharacters: .urlQueryAllowed
         ) ?? String()
@@ -133,6 +137,11 @@ extension Requestable {
             // Add the network configuration headers, but do not override current values
             allHeaders.merge(config.headers) { (current, _) in current }
         }
+        
+        if let form = form {
+            // Make sure this header is always set for multipart form  data uploads
+            allHeaders["Content-Type"] = "multipart/form-data; boundary=\(form.boundary)"
+        }
 
         // Set the HttpRequest headers
         urlRequest.allHTTPHeaderFields = allHeaders
@@ -141,7 +150,7 @@ extension Requestable {
         guard method != .get else { return urlRequest }
 
         // Set HttpRequest Body based on the bodyEncoding
-        urlRequest.httpBody = body?.data
+        urlRequest.httpBody = body?.data ?? form?.data
 
         return urlRequest
     }
@@ -149,6 +158,7 @@ extension Requestable {
 }
 
 public struct Endpoint<Value>: Requestable {
+    
     public typealias Response = Value
 
     public var path: String
@@ -158,6 +168,7 @@ public struct Endpoint<Value>: Requestable {
     public var useEndpointHeaderOnly: Bool
     public var queryParameters: QueryParameters?
     public var body: HTTPBody?
+    public var form: MultipartFormData?
 
     public init(
         path: String,
@@ -175,6 +186,25 @@ public struct Endpoint<Value>: Requestable {
         self.useEndpointHeaderOnly = useEndpointHeaderOnly
         self.queryParameters = queryParameters
         self.body = body
+        self.form = nil
+    }
+    
+    public init(
+        path: String,
+        isFullPath: Bool = false,
+        headers: [String: String] = [:],
+        useEndpointHeaderOnly: Bool = false,
+        queryParameters: QueryParameters? = nil,
+        form: MultipartFormData
+    ) {
+        self.path = path
+        self.isFullPath = isFullPath
+        self.method = .post
+        self.headers = headers
+        self.useEndpointHeaderOnly = useEndpointHeaderOnly
+        self.queryParameters = queryParameters
+        self.body = nil
+        self.form = form
     }
 
 }

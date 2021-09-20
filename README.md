@@ -14,7 +14,7 @@ Greatly inspired by SENetworking (https://github.com/kudoleh/SENetworking).
 
 ## Installation
 
-### CocoaPods
+### Swift Package Manager
 
 ```ruby
 pod 'SmartNet'
