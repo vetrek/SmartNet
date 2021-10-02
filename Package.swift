@@ -26,7 +26,7 @@ let package = Package(
             name: "SmartNet",
             dependencies: [],
             path: "Source",
-            exclude: ["Info.plist", "Example"]
+            exclude: ["Info.plist"]
         ),
         .testTarget(
             name: "SmartNetTests",
