@@ -31,25 +31,25 @@ public protocol SmartNetBody {
 public struct HTTPBody: SmartNetBody {
     public let data: Data?
 
-    public init(dictionary: [String: Any], bodyEncoding: BodyEncoding) throws {
-        self.data = try HTTPBody.getData(from: dictionary, using: bodyEncoding)
-    }
-
-    public init(encodable: Encodable, bodyEncoding: BodyEncoding) throws {
+    public init?(dictionary: [String: Any], bodyEncoding: BodyEncoding) {
         guard
-            let dictionary = try encodable.toDictionary()
-        else {
-            fatalError("Unable to convert Encodable to Dictionary")
-        }
-        self.data = try HTTPBody.getData(from: dictionary, using: bodyEncoding)
+            let data = try? HTTPBody.getData(from: dictionary, using: bodyEncoding)
+        else { return nil }
+        self.data = data
     }
 
-    public init(string: String) {
+    public init?(encodable: Encodable, bodyEncoding: BodyEncoding) throws {
+        guard
+            let dictionary = try encodable.toDictionary(),
+            let data = try? HTTPBody.getData(from: dictionary, using: bodyEncoding)
+        else { return nil }
+        self.data = data
+    }
+
+    public init?(string: String) {
         guard
             let data = string.data(using: .utf8)
-        else {
-            fatalError("Unable to convert String \(string) to Data")
-        }
+        else { return nil }
         self.data = data
     }
 
