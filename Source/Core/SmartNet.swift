@@ -84,7 +84,7 @@ public protocol Networking: NetworkingCombine, NetworkingClosure { }
 public final class SmartNet: NSObject, Networking {
 
     /// Network Session Configuration
-    public let config: NetworkConfigurable
+    public private(set) var config: NetworkConfigurable
 
     /// Session
     private var session: URLSession?
@@ -108,6 +108,25 @@ public final class SmartNet: NSObject, Networking {
         session = nil
     }
 
+}
+
+// MARK: - Headers Methods
+public extension SmartNet {
+    func updateHeaders(_ headers: [String: String]) {
+        config.headers.merge(headers) { $1 }
+    }
+    
+    func setHeaders(_ headers: [String: String]) {
+        config.headers = headers
+    }
+    
+    func cleanHeaders() {
+        config.headers = [:]
+    }
+    
+    func removeHeaders(keys: [String]) {
+        keys.forEach { config.headers.removeValue(forKey: $0) }
+    }
 }
 
 // MARK: - Networking Closure
