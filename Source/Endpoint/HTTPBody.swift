@@ -38,9 +38,9 @@ public struct HTTPBody: SmartNetBody {
         self.data = data
     }
 
-    public init?(encodable: Encodable, bodyEncoding: BodyEncoding) throws {
+    public init?(encodable: Encodable, bodyEncoding: BodyEncoding) {
         guard
-            let dictionary = try encodable.toDictionary(),
+            let dictionary = try? encodable.toDictionary(),
             let data = try? HTTPBody.getData(from: dictionary, using: bodyEncoding)
         else { return nil }
         self.data = data
