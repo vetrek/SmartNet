@@ -31,7 +31,7 @@ public protocol NetworkCancellable {
 
 extension URLSessionTask: NetworkCancellable { }
 
-public typealias CompletionHandler<T> = (Result<T>) -> Void
+public typealias CompletionHandler<T> = (Response<T>) -> Void
 
 public protocol NetworkingClosure {
     func request<D: Decodable, E: Requestable>(
@@ -145,42 +145,43 @@ extension SmartNet {
         with endpoint: E,
         decoder: JSONDecoder = .default,
         queue: DispatchQueue = .main,
-        completion: @escaping (Result<E.Response>) -> Void
+        completion: @escaping (Response<E.Response>) -> Void
     ) -> NetworkCancellable? where D: Decodable, D == E.Response, E: Requestable {
         guard
             let request = try? endpoint.urlRequest(with: config)
         else {
-            completion(.failure(.urlGeneration))
+            completion(Response(result: .failure(.urlGeneration), session: session, request: nil))
             return nil
         }
 
         let task = session?.dataTask(
             with: request
-        ) { (data, response, error) in
+        ) { [weak self] (data, response, error) in
+            guard let self = self else { return }
             queue.async {
                 if let networkError = self.getRequestError(
                     data: data,
                     response: response,
                     requestError: error
                 ) {
-                    completion(.failure(networkError))
+                    completion(Response(result: .failure(networkError), session: self.session, request: request))
                     return
                 }
 
                 guard
                     let data = data
                 else {
-                    completion(.failure(.emptyResponse))
+                    completion(Response(result: .failure(.emptyResponse), session: self.session, request: request))
                     return
                 }
 
                 guard
                     let responseObject = try? decoder.decode(D.self, from: data)
                 else {
-                    completion(.failure(.parsingFailed))
+                    completion(Response(result: .failure(.parsingFailed), session: self.session, request: request))
                     return
                 }
-                completion(.success(responseObject))
+                completion(Response(result: .success(responseObject), session: self.session, request: request))
             }
         }
         task?.resume()
@@ -197,36 +198,37 @@ extension SmartNet {
     public func request<E>(
         with endpoint: E,
         queue: DispatchQueue = .main,
-        completion: @escaping (Result<E.Response>) -> Void
+        completion: @escaping (Response<E.Response>) -> Void
     ) -> NetworkCancellable? where E: Requestable, E.Response == Data {
         guard
             let request = try? endpoint.urlRequest(with: config)
         else {
-            completion(.failure(.urlGeneration))
+            completion(Response(result: .failure(.urlGeneration), session: session, request: nil))
             return nil
         }
 
         let task = session?.dataTask(
             with: request
-        ) { (data, response, error) in
+        ) { [weak self] (data, response, error) in
+            guard let self = self else { return }
             queue.async {
                 if let networkError = self.getRequestError(
                     data: data,
                     response: response,
                     requestError: error
                 ) {
-                    completion(.failure(networkError))
+                    completion(Response(result: .failure(networkError), session: self.session, request: request))
                     return
                 }
 
                 guard
                     let data = data
                 else {
-                    completion(.failure(.emptyResponse))
+                    completion(Response(result: .failure(.emptyResponse), session: self.session, request: request))
                     return
                 }
 
-                completion(.success(data))
+                completion(Response(result: .success(data), session: self.session, request: request))
             }
         }
         task?.resume()
@@ -243,43 +245,44 @@ extension SmartNet {
     public func request<E>(
         with endpoint: E,
         queue: DispatchQueue = .main,
-        completion: @escaping (Result<E.Response>) -> Void
+        completion: @escaping (Response<E.Response>) -> Void
     ) -> NetworkCancellable? where E: Requestable, E.Response == String {
         guard
             let request = try? endpoint.urlRequest(with: config)
         else {
-            completion(.failure(.urlGeneration))
+            completion(Response(result: .failure(.urlGeneration), session: session, request: nil))
             return nil
         }
 
         let task = session?.dataTask(
             with: request
-        ) { (data, response, error) in
+        ) { [weak self] (data, response, error) in
+            guard let self = self else { return }
             queue.async {
                 if let networkError = self.getRequestError(
                     data: data,
                     response: response,
                     requestError: error
                 ) {
-                    completion(.failure(networkError))
+                    completion(Response(result: .failure(networkError), session: self.session, request: request))
                     return
                 }
 
                 guard
                     let data = data
                 else {
-                    completion(.failure(.emptyResponse))
+                    completion(Response(result: .failure(.emptyResponse), session: self.session, request: request))
                     return
                 }
 
                 guard
                     let string = String(data: data, encoding: .utf8)
                 else {
-                    completion(.failure(.dataToStringFailure(data: data)))
+                    completion(Response(result: .failure(.dataToStringFailure(data: data)), session: self.session, request: request))
                     return
                 }
 
-                completion(.success(string))
+                completion(Response(result: .success(string), session: self.session, request: request))
             }
         }
         task?.resume()
@@ -296,29 +299,29 @@ extension SmartNet {
     public func request<E>(
         with endpoint: E,
         queue: DispatchQueue = .main,
-        completion: @escaping (Result<E.Response>) -> Void
+        completion: @escaping (Response<E.Response>) -> Void
     ) -> NetworkCancellable? where E: Requestable, E.Response == Void {
         guard
             let request = try? endpoint.urlRequest(with: config)
         else {
-            completion(.failure(.urlGeneration))
+            completion(Response(result: .failure(.urlGeneration), session: session, request: nil))
             return nil
         }
 
         let task = session?.dataTask(
             with: request
-        ) { (data, response, error) in
+        ) { [weak self] (data, response, error) in
+            guard let self = self else { return }
             queue.async {
                 if let networkError = self.getRequestError(
                     data: data,
                     response: response,
                     requestError: error
                 ) {
-                    completion(.failure(networkError))
+                    completion(Response(result: .failure(networkError), session: self.session, request: request))
                     return
                 }
-
-                completion(.success(()))
+                completion(Response(result: .success(()), session: self.session, request: request))
             }
         }
         task?.resume()
