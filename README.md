@@ -26,7 +26,7 @@ pod 'SmartNet'
 
 **NetworkConfiguration** is used to define defaults settings that are going to be used in every call. 
 
-If the Endpoint is initialized with "***useEndpointHeaderOnly: true***" the NetworkConfiguration headers are going to be ignored.
+If the Endpoint is initialized with "***useEndpointHeaderOnly: true***" the NetworkConfiguration headers will be ignored.
 
 Base
 ```swift
