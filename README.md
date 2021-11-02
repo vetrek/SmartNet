@@ -1,5 +1,5 @@
 # SmartNet
-HTTP Networking Library which primary scope is to make Networking as easy as possible.
+HTTP Networking Library that aims to make Networking as easy as possible.
 Greatly inspired by SENetworking (https://github.com/kudoleh/SENetworking).
 
 ## Features
