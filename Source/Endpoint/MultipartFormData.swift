@@ -89,8 +89,7 @@ public struct MultipartFormData {
 
 extension NSMutableData {
     func append(_ string: String) {
-        if let data = string.data(using: .utf8) {
-            self.append(data)
-        }
+        guard let data = string.data(using: .utf8) else { return }
+        self.append(data)
     }
 }

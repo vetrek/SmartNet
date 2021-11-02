@@ -87,7 +87,11 @@ public final class SmartNet: NSObject, Networking {
     public private(set) var config: NetworkConfigurable
 
     /// Session
-    private var session: URLSession?
+    private(set) var session: URLSession?
+    
+    // MARK: - Internal properties
+    
+    var downloadsTasks: Set<DownloadTask> = []
 
     public init(config: NetworkConfigurable) {
         self.config = config
@@ -104,14 +108,19 @@ public final class SmartNet: NSObject, Networking {
     }
 
     /// Prevent Retain cycle problem while using the URLSession delegate = self
-    func destroy() {
+    public func destroy() {
+        downloadsTasks.forEach { $0.task.cancel() }
+        downloadsTasks.removeAll()
         session = nil
     }
 
 }
 
-// MARK: - Headers Methods
+// MARK: - Public Utility Methods
+
 public extension SmartNet {
+    
+    // MARK: - Network configuration Headers utility
     func updateHeaders(_ headers: [String: String]) {
         config.headers.merge(headers) { $1 }
     }
@@ -131,7 +140,7 @@ public extension SmartNet {
 
 // MARK: - Networking Closure
 
-extension SmartNet {
+public extension SmartNet {
 
     /// Create a request and convert the reponse `Data` to a `Decodable` object
     /// - Parameters:
@@ -141,7 +150,7 @@ extension SmartNet {
     ///   - completion: response completion
     /// - Returns: Return a cancellable Network Request
     @discardableResult
-    public func request<D, E>(
+    func request<D, E>(
         with endpoint: E,
         decoder: JSONDecoder = .default,
         queue: DispatchQueue = .main,
@@ -150,7 +159,13 @@ extension SmartNet {
         guard
             let request = try? endpoint.urlRequest(with: config)
         else {
-            completion(Response(result: .failure(.urlGeneration), session: session, request: nil))
+            completion(
+                Response(
+                    result: .failure(.urlGeneration),
+                    session: session,
+                    request: nil
+                )
+            )
             return nil
         }
 
@@ -159,29 +174,61 @@ extension SmartNet {
         ) { [weak self] (data, response, error) in
             guard let self = self else { return }
             queue.async {
+                if self.config.printCurl,
+                   let session = self.session {
+                    SmartNet.printCurl(
+                        session: session,
+                        request: request
+                    )
+                }
+                
                 if let networkError = self.getRequestError(
                     data: data,
                     response: response,
                     requestError: error
                 ) {
-                    completion(Response(result: .failure(networkError), session: self.session, request: request))
+                    completion(
+                        Response(
+                            result: .failure(networkError),
+                            session: self.session,
+                            request: request
+                        )
+                    )
                     return
                 }
 
                 guard
                     let data = data
                 else {
-                    completion(Response(result: .failure(.emptyResponse), session: self.session, request: request))
+                    completion(
+                        Response(
+                            result: .failure(.emptyResponse),
+                            session: self.session,
+                            request: request
+                        )
+                    )
                     return
                 }
 
                 guard
                     let responseObject = try? decoder.decode(D.self, from: data)
                 else {
-                    completion(Response(result: .failure(.parsingFailed), session: self.session, request: request))
+                    completion(
+                        Response(
+                            result: .failure(.parsingFailed),
+                            session: self.session,
+                            request: request
+                        )
+                    )
                     return
                 }
-                completion(Response(result: .success(responseObject), session: self.session, request: request))
+                completion(
+                    Response(
+                        result: .success(responseObject),
+                        session: self.session,
+                        request: request
+                    )
+                )
             }
         }
         task?.resume()
@@ -195,7 +242,7 @@ extension SmartNet {
     ///   - completion: response completion
     /// - Returns: Return a cancellable Network Request
     @discardableResult
-    public func request<E>(
+    func request<E>(
         with endpoint: E,
         queue: DispatchQueue = .main,
         completion: @escaping (Response<E.Response>) -> Void
@@ -203,7 +250,13 @@ extension SmartNet {
         guard
             let request = try? endpoint.urlRequest(with: config)
         else {
-            completion(Response(result: .failure(.urlGeneration), session: session, request: nil))
+            completion(
+                Response(
+                    result: .failure(.urlGeneration),
+                    session: session,
+                    request: nil
+                )
+            )
             return nil
         }
 
@@ -212,23 +265,49 @@ extension SmartNet {
         ) { [weak self] (data, response, error) in
             guard let self = self else { return }
             queue.async {
+                if self.config.printCurl,
+                   let session = self.session {
+                    SmartNet.printCurl(
+                        session: session,
+                        request: request
+                    )
+                }
+                
                 if let networkError = self.getRequestError(
                     data: data,
                     response: response,
                     requestError: error
                 ) {
-                    completion(Response(result: .failure(networkError), session: self.session, request: request))
+                    completion(
+                        Response(
+                            result: .failure(networkError),
+                            session: self.session,
+                            request: request
+                        )
+                    )
                     return
                 }
 
                 guard
                     let data = data
                 else {
-                    completion(Response(result: .failure(.emptyResponse), session: self.session, request: request))
+                    completion(
+                        Response(
+                            result: .failure(.emptyResponse),
+                            session: self.session,
+                            request: request
+                        )
+                    )
                     return
                 }
 
-                completion(Response(result: .success(data), session: self.session, request: request))
+                completion(
+                    Response(
+                        result: .success(data),
+                        session: self.session,
+                        request: request
+                    )
+                )
             }
         }
         task?.resume()
@@ -242,7 +321,7 @@ extension SmartNet {
     ///   - completion: response completion
     /// - Returns: Return a cancellable Network Request
     @discardableResult
-    public func request<E>(
+    func request<E>(
         with endpoint: E,
         queue: DispatchQueue = .main,
         completion: @escaping (Response<E.Response>) -> Void
@@ -250,7 +329,13 @@ extension SmartNet {
         guard
             let request = try? endpoint.urlRequest(with: config)
         else {
-            completion(Response(result: .failure(.urlGeneration), session: session, request: nil))
+            completion(
+                Response(
+                    result: .failure(.urlGeneration),
+                    session: session,
+                    request: nil
+                )
+            )
             return nil
         }
 
@@ -259,30 +344,62 @@ extension SmartNet {
         ) { [weak self] (data, response, error) in
             guard let self = self else { return }
             queue.async {
+                if self.config.printCurl,
+                   let session = self.session {
+                    SmartNet.printCurl(
+                        session: session,
+                        request: request
+                    )
+                }
+                
                 if let networkError = self.getRequestError(
                     data: data,
                     response: response,
                     requestError: error
                 ) {
-                    completion(Response(result: .failure(networkError), session: self.session, request: request))
+                    completion(
+                        Response(
+                            result: .failure(networkError),
+                            session: self.session,
+                            request: request
+                        )
+                    )
                     return
                 }
 
                 guard
                     let data = data
                 else {
-                    completion(Response(result: .failure(.emptyResponse), session: self.session, request: request))
+                    completion(
+                        Response(
+                            result: .failure(.emptyResponse),
+                            session: self.session,
+                            request: request
+                        )
+                    )
                     return
                 }
 
                 guard
                     let string = String(data: data, encoding: .utf8)
                 else {
-                    completion(Response(result: .failure(.dataToStringFailure(data: data)), session: self.session, request: request))
+                    completion(
+                        Response(
+                            result: .failure(.dataToStringFailure(data: data)),
+                            session: self.session,
+                            request: request
+                        )
+                    )
                     return
                 }
 
-                completion(Response(result: .success(string), session: self.session, request: request))
+                completion(
+                    Response(
+                        result: .success(string),
+                        session: self.session,
+                        request: request
+                    )
+                )
             }
         }
         task?.resume()
@@ -296,7 +413,7 @@ extension SmartNet {
     ///   - completion: response completion
     /// - Returns: Return a cancellable Network Request
     @discardableResult
-    public func request<E>(
+    func request<E>(
         with endpoint: E,
         queue: DispatchQueue = .main,
         completion: @escaping (Response<E.Response>) -> Void
@@ -304,7 +421,13 @@ extension SmartNet {
         guard
             let request = try? endpoint.urlRequest(with: config)
         else {
-            completion(Response(result: .failure(.urlGeneration), session: session, request: nil))
+            completion(
+                Response(
+                    result: .failure(.urlGeneration),
+                    session: session,
+                    request: nil
+                )
+            )
             return nil
         }
 
@@ -313,15 +436,35 @@ extension SmartNet {
         ) { [weak self] (data, response, error) in
             guard let self = self else { return }
             queue.async {
+                if self.config.printCurl,
+                   let session = self.session {
+                    SmartNet.printCurl(
+                        session: session,
+                        request: request
+                    )
+                }
+                
                 if let networkError = self.getRequestError(
                     data: data,
                     response: response,
                     requestError: error
                 ) {
-                    completion(Response(result: .failure(networkError), session: self.session, request: request))
+                    completion(
+                        Response(
+                            result: .failure(networkError),
+                            session: self.session,
+                            request: request
+                        )
+                    )
                     return
                 }
-                completion(Response(result: .success(()), session: self.session, request: request))
+                completion(
+                    Response(
+                        result: .success(()),
+                        session: self.session,
+                        request: request
+                    )
+                )
             }
         }
         task?.resume()
@@ -332,14 +475,14 @@ extension SmartNet {
 
 // MARK: - Networking Combine
 
-extension SmartNet {
+public extension SmartNet {
 
     /// Create a request and convert the reponse `Data` to a `Decodable` object
     /// - Parameters:
     ///   - endpoint: The service `Endpoint`
     ///   - decoder: Json Decoder
     /// - Returns: Return a `Publisher` containing the **Object** response
-    public func request<D, E>(
+    func request<D, E>(
         with endpoint: E,
         decoder: JSONDecoder = .default
     ) -> AnyPublisher<D, NetworkError>? where D: Decodable, D == E.Response, E: Requestable {
@@ -374,7 +517,7 @@ extension SmartNet {
     /// - Parameters:
     ///   - endpoint: The service `Endpoint`
     /// - Returns: Return a `Publisher` containing the **Data** response
-    public func request<E>(
+    func request<E>(
         with endpoint: E
     ) -> AnyPublisher<E.Response, NetworkError>? where E: Requestable, E.Response == Data {
         guard
@@ -407,7 +550,7 @@ extension SmartNet {
     /// - Parameters:
     ///   - endpoint: The service `Endpoint`
     /// - Returns: Return a `Publisher` containing the **String** response
-    public func request<E>(
+    func request<E>(
         with endpoint: E
     ) -> AnyPublisher<E.Response, NetworkError>? where E: Requestable, E.Response == String {
         guard
@@ -445,7 +588,7 @@ extension SmartNet {
     /// - Parameters:
     ///   - endpoint: The service `Endpoint`
     /// - Returns: Return a `Publisher` containing **Void**
-    public func request<E>(
+    func request<E>(
         with endpoint: E
     ) -> AnyPublisher<E.Response, NetworkError>? where E: Requestable, E.Response == Void {
         guard
@@ -476,10 +619,9 @@ extension SmartNet {
 
 }
 
-// MARK: - Errors Handling
+// MARK: - Errors Handlers
 
-private extension SmartNet {
-
+extension SmartNet {
     /// Convert Error to `NetworkError`
     /// - Parameter error: Error
     /// - Returns: NetworkError
@@ -552,3 +694,4 @@ extension SmartNet: URLSessionDelegate {
 
     }
 }
+

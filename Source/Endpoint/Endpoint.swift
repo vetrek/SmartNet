@@ -71,6 +71,7 @@ public protocol Requestable {
     /// Body
     var body: HTTPBody? { get }
     
+    /// Multipart Form Data Form
     var form: MultipartFormData? { get }
 
     /// Return the `URLRequest` from the Requestable
