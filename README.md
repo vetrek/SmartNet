@@ -77,7 +77,7 @@ let endpoint = Endpoint<Person>(
     )
 )
 ```
-Equivalent of https://api.example.com/person with body equal to:
+Equivalent of https://api.example.com/person with the following body:
 
 ```json
 {
