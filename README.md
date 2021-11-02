@@ -92,7 +92,7 @@ Equivalent of https://api.example.com/person with body equal to:
 
 ```swift
 network.request(with: endpoint) { (response) in
-    switch response {
+    switch response.result {
     case .success(let person):
         print("Success! \(person.name)")
     case .failure(let error):
