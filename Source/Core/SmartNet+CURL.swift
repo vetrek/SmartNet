@@ -16,8 +16,7 @@ extension SmartNet {
         let tag = "🟡 SmartNet - cUrl 🟡"
         
         guard
-            let url = request.url,
-            let host = url.host
+            let url = request.url
         else {
             print(tag, "$ curl command could not be created")
             return
@@ -27,7 +26,8 @@ extension SmartNet {
             components.append("-X \(httpMethod)")
         }
         
-//        if let credentialStorage = session.configuration.urlCredentialStorage {
+        
+//        if let host = url.host  let credentialStorage = session.configuration.urlCredentialStorage {
 //            let protectionSpace = URLProtectionSpace(
 //                host: host,
 //                port: url.port ?? 0,
@@ -35,7 +35,7 @@ extension SmartNet {
 //                realm: host,
 //                authenticationMethod: NSURLAuthenticationMethodHTTPBasic
 //            )
-//
+//            
 //            if let credentials = credentialStorage.credentials(for: protectionSpace)?.values {
 //                for credential in credentials {
 //                    guard let user = credential.user, let password = credential.password else { continue }
