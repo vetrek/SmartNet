@@ -308,6 +308,7 @@
 				DEVELOPMENT_TEAM = BTMR9V3S6L;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = SmartNetDemo/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -329,6 +330,7 @@
 				DEVELOPMENT_TEAM = BTMR9V3S6L;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = SmartNetDemo/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

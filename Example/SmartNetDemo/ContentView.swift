@@ -39,62 +39,78 @@ struct EndpointWrapper<Value>: Hashable {
     }
 }
 
-struct ContentView: View {
-//
-//    init() {
-//        let network = SmartNet(config: NetworkConfiguration(baseURL: URL(string: "https://example.com")!))
-//        let endpoint = Endpoint<String>(path: "")
-//        let request = network.request(with: endpoint) { (response) in
-//            print(response)
-//        }
-//        request?.cancel()
-//    }
-
-    let endpoints: [EndpointWrapper<Void>] = [
-        EndpointWrapper(
-            endpoint: Endpoint(
-                path: "entries",
-                queryParameters: QueryParameters(
-                    parameters: ["description": "cat"]
-                )
-            )
-        ),
-        EndpointWrapper(
-            endpoint: Endpoint(
-                path: "entries",
-                method: .post,
-                queryParameters: QueryParameters(
-                    parameters: ["description": "cat"]
-                )
+let endpoints: [EndpointWrapper<Void>] = [
+    EndpointWrapper(
+        endpoint: Endpoint(
+            path: "entries",
+            queryParameters: QueryParameters(
+                parameters: ["description": "cat"]
             )
         )
-    ]
-
-    let network = SmartNet(
-        config: NetworkConfiguration(
-            baseURL: URL(string: "https://api.publicapis.org")!,
-            trustedDomains: ["api.publicapis.org"]
+    ),
+    EndpointWrapper(
+        endpoint: Endpoint(
+            path: "entries",
+            method: .post,
+            queryParameters: QueryParameters(
+                parameters: ["description": "cat"]
+            )
         )
     )
+]
 
-    let test = Test()
+let network = SmartNet(
+    config: NetworkConfiguration(
+        baseURL: URL(string: "https://api.publicapis.org")!,
+        headers: ["ASD": "aaa"],
+        trustedDomains: ["api.publicapis.org"]
+    )
+)
+
+let test = Test()
+
+var downloadTask: DownloadTask?
+
+struct ContentView: View {
 
     var body: some View {
-        ScrollView(/*@START_MENU_TOKEN@*/.vertical/*@END_MENU_TOKEN@*/, showsIndicators: true/*@END_MENU_TOKEN@*/) {
-            LazyVStack(alignment: .center/*@END_MENU_TOKEN@*/, spacing: nil/*@END_MENU_TOKEN@*/, pinnedViews: []/*@END_MENU_TOKEN@*/) {
+        ScrollView(.vertical, showsIndicators: true) {
+            VStack(alignment: .center, spacing: nil) {
                 ForEach(endpoints, id: \.uid) { endpoint in
-                    HStack(alignment: .center/*@END_MENU_TOKEN@*/, spacing: nil/*@END_MENU_TOKEN@*/) {
+                    HStack(alignment: .center, spacing: nil) {
                         Button {
-                            test.asd(endpoint: endpoint.endpoint)
+//                            test.asd(endpoint: endpoint.endpoint)
 //                            network.request(
 //                                with: endpoint.endpoint
 //                            ) { (response) in
-//                                print(String(data: response.value!, encoding: .utf8))
+//                                print(response)
 //                            }
+                            downloadTask = network.download(url: URL(string: "https://jsoncompare.org/LearningContainer/SampleFiles/Video/MP4/Sample-Video-File-For-Testing.mp4")!)?
+                                .downloadProgress { progress, fileSize in
+                                    print("[Download - Progress]", progress.fractionCompleted, fileSize)
+                                }
+                                .response { response in
+                                    print("[Download - Response]", response.result)
+                                }
+                            
                         } label: {
                             Text(endpoint.endpoint.method.rawValue)
                         }
                     }.padding()
+                }
+                
+                HStack(alignment: .center, spacing: 30) {
+                    Button {
+                        downloadTask?.pause()
+                    } label: {
+                        Text("PAUSE")
+                    }
+                    
+                    Button {
+                        downloadTask?.resume()
+                    } label: {
+                        Text("RESUME")
+                    }
                 }
             }
         }

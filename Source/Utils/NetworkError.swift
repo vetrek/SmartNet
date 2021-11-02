@@ -29,6 +29,8 @@ public enum NetworkError: Error, CustomStringConvertible {
     case parsedError(error: Decodable)
     case parsingFailed
     case emptyResponse
+    case invalidDownloadUrl
+    case invalidDownloadFileData
     case cancelled
     case networkFailure
     case urlGeneration
@@ -55,6 +57,10 @@ public enum NetworkError: Error, CustomStringConvertible {
             return "Generic error \(error.localizedDescription)"
         case .parsedError(let error):
             return "Generic error \(error)"
+        case .invalidDownloadUrl:
+            return "Invalid download URL"
+        case .invalidDownloadFileData:
+            return "Invalid download File Data"
         }
     }
 }
