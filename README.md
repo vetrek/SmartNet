@@ -21,7 +21,7 @@ dependencies: [
     .package(url: "https://github.com/Valerio69/SmartNet.git")
 ]
 ```
-### Cocoapod
+### CocoaPods
 
 ```ruby
 pod 'SmartNet'
