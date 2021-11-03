@@ -16,6 +16,13 @@ Greatly inspired by SENetworking (https://github.com/kudoleh/SENetworking).
 
 ### Swift Package Manager
 
+```swift
+dependencies: [
+    .package(url: "https://github.com/Valerio69/SmartNet.git")
+]
+```
+### Cocoapod
+
 ```ruby
 pod 'SmartNet'
 ```
