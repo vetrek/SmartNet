@@ -1,5 +1,5 @@
 # SmartNet
-HTTP Networking Library which primary scope is to make Networking as easy as possible.
+HTTP Networking Library that aims to make Networking as easy as possible.
 Greatly inspired by SENetworking (https://github.com/kudoleh/SENetworking).
 
 ## Features
@@ -26,7 +26,7 @@ pod 'SmartNet'
 
 **NetworkConfiguration** is used to define defaults settings that are going to be used in every call. 
 
-If the Endpoint is initialized with "***useEndpointHeaderOnly: true***" the NetworkConfiguration headers are going to be ignored.
+If the Endpoint is initialized with "***useEndpointHeaderOnly: true***" the NetworkConfiguration headers will be ignored.
 
 Base
 ```swift
@@ -77,7 +77,7 @@ let endpoint = Endpoint<Person>(
     )
 )
 ```
-Equivalent of https://api.example.com/person with body equal to:
+Equivalent of https://api.example.com/person with the following body:
 
 ```json
 {
@@ -92,7 +92,7 @@ Equivalent of https://api.example.com/person with body equal to:
 
 ```swift
 network.request(with: endpoint) { (response) in
-    switch response {
+    switch response.result {
     case .success(let person):
         print("Success! \(person.name)")
     case .failure(let error):
