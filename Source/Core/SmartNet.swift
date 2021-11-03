@@ -121,6 +121,7 @@ public final class SmartNet: NSObject, Networking {
 public extension SmartNet {
     
     // MARK: - Network configuration Headers utility
+    
     func updateHeaders(_ headers: [String: String]) {
         config.headers.merge(headers) { $1 }
     }
@@ -136,6 +137,7 @@ public extension SmartNet {
     func removeHeaders(keys: [String]) {
         keys.forEach { config.headers.removeValue(forKey: $0) }
     }
+    
 }
 
 // MARK: - Networking Closure
@@ -694,4 +696,3 @@ extension SmartNet: URLSessionDelegate {
 
     }
 }
-

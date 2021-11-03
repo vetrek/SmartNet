@@ -72,19 +72,19 @@ let test = Test()
 var downloadTask: DownloadTask?
 
 struct ContentView: View {
-
+    
     var body: some View {
         ScrollView(.vertical, showsIndicators: true) {
             VStack(alignment: .center, spacing: nil) {
                 ForEach(endpoints, id: \.uid) { endpoint in
                     HStack(alignment: .center, spacing: nil) {
                         Button {
-//                            test.asd(endpoint: endpoint.endpoint)
-//                            network.request(
-//                                with: endpoint.endpoint
-//                            ) { (response) in
-//                                print(response)
-//                            }
+
+                            network.request(
+                                with: endpoint.endpoint
+                            ) { (response) in
+                                print(response)
+                            }
                             downloadTask = network.download(url: URL(string: "https://jsoncompare.org/LearningContainer/SampleFiles/Video/MP4/Sample-Video-File-For-Testing.mp4")!)?
                                 .downloadProgress { progress, fileSize in
                                     print("[Download - Progress]", progress.fractionCompleted, fileSize)
@@ -115,6 +115,7 @@ struct ContentView: View {
             }
         }
     }
+    
 }
 
 struct ContentView_Previews: PreviewProvider {

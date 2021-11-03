@@ -50,6 +50,7 @@ public final class NetworkConfiguration: NetworkConfigurable {
     /// Default HTTPRequest timeout
     public var requestTimeout: TimeInterval
     
+    /// Usefull when debugging 
     public var printCurl: Bool
 
     public init(
