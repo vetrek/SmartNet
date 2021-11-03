@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name      = 'SmartNet'
-  s.version   = '0.0.10'
+  s.version   = '0.0.11'
   s.summary   = 'Smart and easy HTTP Networking library in Swift'
   s.homepage  = 'https://github.com/Valerio69/SmartNet'
   s.license   = { :type => 'MIT', :file => 'LICENSE' }
