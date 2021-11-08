@@ -17,8 +17,9 @@ Greatly inspired by SENetworking (https://github.com/kudoleh/SENetworking).
 ### Swift Package Manager
 The [Swift Package Manager](https://swift.org/package-manager/) is a tool for automating the distribution of Swift code and is integrated into the `swift` compiler.
 
-    In Xcode 11+ select File > Packages > Add Package Dependency
-    Enter this project's URL: https://github.com/Valerio69/SmartNet.git
+In Xcode 11+ select File > Packages > Add Package Dependency > Enter this project's URL:
+    
+    https://github.com/Valerio69/SmartNet.git
 
 
 ### CocoaPods
