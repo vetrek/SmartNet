@@ -165,7 +165,8 @@ public extension SmartNet {
                 Response(
                     result: .failure(.urlGeneration),
                     session: session,
-                    request: nil
+                    request: nil,
+                    response: nil
                 )
             )
             return nil
@@ -193,7 +194,8 @@ public extension SmartNet {
                         Response(
                             result: .failure(networkError),
                             session: self.session,
-                            request: request
+                            request: request,
+                            response: response
                         )
                     )
                     return
@@ -206,7 +208,8 @@ public extension SmartNet {
                         Response(
                             result: .failure(.emptyResponse),
                             session: self.session,
-                            request: request
+                            request: request,
+                            response: response
                         )
                     )
                     return
@@ -219,7 +222,8 @@ public extension SmartNet {
                         Response(
                             result: .failure(.parsingFailed),
                             session: self.session,
-                            request: request
+                            request: request,
+                            response: response
                         )
                     )
                     return
@@ -228,7 +232,8 @@ public extension SmartNet {
                     Response(
                         result: .success(responseObject),
                         session: self.session,
-                        request: request
+                        request: request,
+                        response: response
                     )
                 )
             }
@@ -256,7 +261,8 @@ public extension SmartNet {
                 Response(
                     result: .failure(.urlGeneration),
                     session: session,
-                    request: nil
+                    request: nil,
+                    response: nil
                 )
             )
             return nil
@@ -284,7 +290,8 @@ public extension SmartNet {
                         Response(
                             result: .failure(networkError),
                             session: self.session,
-                            request: request
+                            request: request,
+                            response: response
                         )
                     )
                     return
@@ -297,7 +304,8 @@ public extension SmartNet {
                         Response(
                             result: .failure(.emptyResponse),
                             session: self.session,
-                            request: request
+                            request: request,
+                            response: response
                         )
                     )
                     return
@@ -307,7 +315,8 @@ public extension SmartNet {
                     Response(
                         result: .success(data),
                         session: self.session,
-                        request: request
+                        request: request,
+                        response: response
                     )
                 )
             }
@@ -335,7 +344,8 @@ public extension SmartNet {
                 Response(
                     result: .failure(.urlGeneration),
                     session: session,
-                    request: nil
+                    request: nil,
+                    response: nil
                 )
             )
             return nil
@@ -363,7 +373,8 @@ public extension SmartNet {
                         Response(
                             result: .failure(networkError),
                             session: self.session,
-                            request: request
+                            request: request,
+                            response: response
                         )
                     )
                     return
@@ -376,7 +387,8 @@ public extension SmartNet {
                         Response(
                             result: .failure(.emptyResponse),
                             session: self.session,
-                            request: request
+                            request: request,
+                            response: response
                         )
                     )
                     return
@@ -389,7 +401,8 @@ public extension SmartNet {
                         Response(
                             result: .failure(.dataToStringFailure(data: data)),
                             session: self.session,
-                            request: request
+                            request: request,
+                            response: response
                         )
                     )
                     return
@@ -399,7 +412,8 @@ public extension SmartNet {
                     Response(
                         result: .success(string),
                         session: self.session,
-                        request: request
+                        request: request,
+                        response: response
                     )
                 )
             }
@@ -427,7 +441,8 @@ public extension SmartNet {
                 Response(
                     result: .failure(.urlGeneration),
                     session: session,
-                    request: nil
+                    request: nil,
+                    response: nil
                 )
             )
             return nil
@@ -455,7 +470,8 @@ public extension SmartNet {
                         Response(
                             result: .failure(networkError),
                             session: self.session,
-                            request: request
+                            request: request,
+                            response: response
                         )
                     )
                     return
@@ -464,7 +480,8 @@ public extension SmartNet {
                     Response(
                         result: .success(()),
                         session: self.session,
-                        request: request
+                        request: request,
+                        response: response
                     )
                 )
             }
@@ -655,12 +672,13 @@ extension SmartNet {
         requestError: Error?
     ) -> NetworkError? {
         guard let requestError = requestError else { return nil }
-        if let response = response as? HTTPURLResponse {
-            return .error(statusCode: response.statusCode, data: data)
+        if let statusCode = response?.statusCode {
+            return .error(statusCode: statusCode, data: data)
         } else {
             return self.resolve(error: requestError)
         }
     }
+
 }
 
 // MARK: - URLSessionDelegate
@@ -694,5 +712,11 @@ extension SmartNet: URLSessionDelegate {
         let credential = URLCredential(trust: serverTrust)
         completionHandler(.useCredential, credential)
 
+    }
+}
+
+extension URLResponse {
+    var statusCode: Int? {
+        (self as? HTTPURLResponse)?.statusCode
     }
 }

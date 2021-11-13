@@ -11,6 +11,7 @@ public struct Response<Value> {
     public let result: Result<Value>
     var session: URLSession?
     var request: URLRequest?
+    var response: URLResponse?
     
     public init(result: Result<Value>) {
         self.result = result
@@ -18,10 +19,11 @@ public struct Response<Value> {
         self.request = nil
     }
     
-    init(result: Result<Value>, session: URLSession?, request: URLRequest?) {
+    init(result: Result<Value>, session: URLSession?, request: URLRequest?, response: URLResponse?) {
         self.result = result
         self.session = session
         self.request = request
+        self.response = response
     }
     
     // Original source: https://github.com/Alamofire/Alamofire/blob/c039ac798b5acb91830dc64e8fe5de96970a4478/Source/Request.swift#L962
@@ -31,6 +33,10 @@ public struct Response<Value> {
             let request = self.request
         else { return }
         SmartNet.printCurl(session: session, request: request)
+    }
+    
+    var statusCode: Int {
+        (response as? HTTPURLResponse)?.statusCode ?? -1
     }
 }
 
