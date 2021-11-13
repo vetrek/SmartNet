@@ -35,7 +35,7 @@ public struct Response<Value> {
         SmartNet.printCurl(session: session, request: request)
     }
     
-    var statusCode: Int {
+    public var statusCode: Int {
         (response as? HTTPURLResponse)?.statusCode ?? -1
     }
 }
