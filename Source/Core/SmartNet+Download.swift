@@ -7,6 +7,8 @@
 
 import Foundation
 
+
+
 public final class DownloadTask: NetworkCancellable, Hashable {
     
     public typealias ProgressCompletion = (_ progress: Progress, _ remoteFileSize: Int64) -> Void
@@ -52,7 +54,13 @@ public final class DownloadTask: NetworkCancellable, Hashable {
     
     // MARK: - Lifecycle
     
-    public init(session: URLSession, url: URL) {
+    init(session: URLSession, endpoint: DownloadEndpoint, config: NetworkConfigurable) throws {
+        self.session = session
+        self.remoteURL = try endpoint.url(with: config)
+        startDownload()
+    }
+    
+    init(session: URLSession, url: URL) {
         self.session = session
         self.remoteURL = url
         startDownload()
@@ -171,6 +179,17 @@ public final class DownloadTask: NetworkCancellable, Hashable {
 }
 
 public extension SmartNet {
+    func download(
+        with endpoint: DownloadEndpoint
+    ) -> DownloadTask? {
+        guard
+            let session = session,
+            let downloadTask = try? DownloadTask(session: session, endpoint: endpoint, config: config)
+        else { return nil }
+        downloadsTasks.insert(downloadTask)
+        return downloadTask
+    }
+    
     func download(
         url: URL
     ) -> DownloadTask? {

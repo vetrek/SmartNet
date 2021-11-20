@@ -209,3 +209,34 @@ public struct Endpoint<Value>: Requestable {
     }
 
 }
+
+public struct DownloadEndpoint: Requestable {
+    public typealias Response = Void
+    
+    public var path: String
+    public var isFullPath: Bool
+    public var method: HTTPMethod
+    public var headers: [String: String]
+    public var useEndpointHeaderOnly: Bool
+    public var queryParameters: QueryParameters?
+    public let body: HTTPBody?
+    public let form: MultipartFormData?
+    
+    public init(
+        path: String,
+        isFullPath: Bool = false,
+        method: HTTPMethod = .get,
+        headers: [String: String] = [:],
+        useEndpointHeaderOnly: Bool = false,
+        queryParameters: QueryParameters? = nil
+    ) {
+        self.path = path
+        self.isFullPath = isFullPath
+        self.method = method
+        self.headers = headers
+        self.useEndpointHeaderOnly = useEndpointHeaderOnly
+        self.queryParameters = queryParameters
+        self.body = nil
+        self.form = nil
+    }
+}
