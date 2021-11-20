@@ -31,6 +31,7 @@ public enum NetworkError: Error, CustomStringConvertible {
     case emptyResponse
     case invalidDownloadUrl
     case invalidDownloadFileData
+    case unableToSaveFile(_ currentURL: URL?)
     case cancelled
     case networkFailure
     case urlGeneration
@@ -61,6 +62,8 @@ public enum NetworkError: Error, CustomStringConvertible {
             return "Invalid download URL"
         case .invalidDownloadFileData:
             return "Invalid download File Data"
+        case .unableToSaveFile:
+            return "Unable to save file to the custom Destination folder"
         }
     }
 }

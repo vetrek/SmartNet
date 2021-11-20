@@ -7,8 +7,6 @@
 
 import Foundation
 
-
-
 public final class DownloadTask: NetworkCancellable, Hashable {
     
     public typealias ProgressCompletion = (_ progress: Progress, _ remoteFileSize: Int64) -> Void
@@ -17,6 +15,11 @@ public final class DownloadTask: NetworkCancellable, Hashable {
     public struct DownloadResult {
         var fileData: Data
         var localURL: URL
+    }
+    
+    public struct DownloadFileDestination {
+        public let url: URL
+        public let removePreviousFile: Bool
     }
     
     public enum DownloadState {
@@ -43,6 +46,7 @@ public final class DownloadTask: NetworkCancellable, Hashable {
     private var remoteURL: URL
     private var progressObserver: NSKeyValueObservation?
     private var resumedData: Data?
+    private var downloadDestination: DownloadFileDestination?
     
     // MARK: - Public Properties
     public var state: DownloadState = .waitingStart
@@ -54,13 +58,22 @@ public final class DownloadTask: NetworkCancellable, Hashable {
     
     // MARK: - Lifecycle
     
-    init(session: URLSession, endpoint: DownloadEndpoint, config: NetworkConfigurable) throws {
+    init(
+        session: URLSession, 
+        endpoint: DownloadEndpoint, 
+        config: NetworkConfigurable,
+        destination: DownloadFileDestination?
+    ) throws {
         self.session = session
         self.remoteURL = try endpoint.url(with: config)
+        self.downloadDestination = destination
         startDownload()
     }
     
-    init(session: URLSession, url: URL) {
+    init(
+        session: URLSession,
+        url: URL
+    ) {
         self.session = session
         self.remoteURL = url
         startDownload()
@@ -113,6 +126,16 @@ public final class DownloadTask: NetworkCancellable, Hashable {
             return
         }
         
+        // Try to move the file to the new URL
+        var url = localURL
+        if let downloadDestination = downloadDestination {
+            guard moveFile(at: url, to: downloadDestination.url, shouldReplace: downloadDestination.removePreviousFile) else {
+                response.queue.async { response.closure(Response(result: .failure(.unableToSaveFile(url)))) }
+                return
+            }
+            url = downloadDestination.url
+        }
+        
         let result = DownloadResult(fileData: data, localURL: localURL)
         response.queue.async {
             response.closure(Response(result: .success(result)))
@@ -152,7 +175,7 @@ public final class DownloadTask: NetworkCancellable, Hashable {
     
     @discardableResult
     public func downloadProgress(
-        queue: DispatchQueue = .main,
+        queue: DispatchQueue = .global(qos: .background),
         completion: @escaping ProgressCompletion
     ) -> Self {
         downloadProgress = (completion, queue)
@@ -176,15 +199,43 @@ public final class DownloadTask: NetworkCancellable, Hashable {
         lhs.task.taskIdentifier == rhs.task.taskIdentifier
     }
     
+    private func moveFile(at currentURL: URL, to destinationURL: URL, shouldReplace: Bool) -> Bool {
+        let fileManager = FileManager.default
+        let targetURL = destinationURL.deletingLastPathComponent()
+        
+        do {
+            // Create directory if needed
+            if !fileManager.fileExists(atPath: targetURL.path) {
+                try fileManager.createDirectory(at: targetURL, withIntermediateDirectories: true, attributes: nil)
+            }
+            
+            if fileManager.fileExists(atPath: destinationURL.path) {
+                guard shouldReplace else { return true }
+                _ = try fileManager.replaceItemAt(destinationURL, withItemAt: currentURL)
+            } else {
+                try fileManager.moveItem(at: currentURL, to: destinationURL)
+            }
+        }
+        catch { return false }
+        
+        return true
+    }
+
 }
 
 public extension SmartNet {
     func download(
-        with endpoint: DownloadEndpoint
+        with endpoint: DownloadEndpoint,
+        destination: DownloadTask.DownloadFileDestination? = nil
     ) -> DownloadTask? {
         guard
             let session = session,
-            let downloadTask = try? DownloadTask(session: session, endpoint: endpoint, config: config)
+            let downloadTask = try? DownloadTask(
+                session: session,
+                endpoint: endpoint,
+                config: config,
+                destination: destination
+            )
         else { return nil }
         downloadsTasks.insert(downloadTask)
         return downloadTask
