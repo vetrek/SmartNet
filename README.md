@@ -1,6 +1,5 @@
 # SmartNet
-HTTP Networking Library that aims to make Networking as easy as possible.
-Greatly inspired by SENetworking (https://github.com/kudoleh/SENetworking).
+SmartNet is an HTTP networking library written in Swift that aims to make networking as easy as possible.
 
 ## Features
 
@@ -127,3 +126,6 @@ network.request(with: endpoint)?
     )
     .store(in: &subscriptions)
 ```
+
+## Info
+Project inspired by SENetworking (https://github.com/kudoleh/SENetworking).
