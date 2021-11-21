@@ -20,6 +20,11 @@ public final class DownloadTask: NetworkCancellable, Hashable {
     public struct DownloadFileDestination {
         public let url: URL
         public let removePreviousFile: Bool
+        
+        public init(url: URL, removePreviousFile: Bool) {
+            self.url = url
+            self.removePreviousFile = removePreviousFile
+        }
     }
     
     public enum DownloadState {
