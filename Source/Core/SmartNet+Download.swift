@@ -48,6 +48,7 @@ public final class DownloadTask: NetworkCancellable, Hashable {
     // MARK: - Private Properties
     
     private var session: URLSession
+    private var remoteURLRequest: URLRequest
     private var remoteURL: URL
     private var progressObserver: NSKeyValueObservation?
     private var resumedData: Data?
@@ -71,6 +72,7 @@ public final class DownloadTask: NetworkCancellable, Hashable {
     ) throws {
         self.session = session
         self.remoteURL = try endpoint.url(with: config)
+        self.remoteURLRequest = try endpoint.urlRequest(with: config)
         self.downloadDestination = destination
         startDownload()
     }
@@ -81,13 +83,14 @@ public final class DownloadTask: NetworkCancellable, Hashable {
     ) {
         self.session = session
         self.remoteURL = url
+        self.remoteURLRequest = URLRequest(url: url)
         startDownload()
     }
     
     // MARK: - Private Methods
     
     private func startDownload() {
-        task = session.downloadTask(with: remoteURL)
+        task = session.downloadTask(with: remoteURLRequest)
         observeDownloadProgress()
         task.resume()
         state = .downloading
