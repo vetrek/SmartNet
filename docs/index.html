@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>SmartNet | Swift Networking Library</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="SmartNet" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Swift Networking Library" />
+<meta property="og:description" content="Swift Networking Library" />
+<link rel="canonical" href="https://vetrek.github.io/SmartNet/" />
+<meta property="og:url" content="https://vetrek.github.io/SmartNet/" />
+<meta property="og:site_name" content="SmartNet" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="SmartNet" />
+<script type="application/ld+json">
+{"headline":"SmartNet","description":"Swift Networking Library","url":"https://vetrek.github.io/SmartNet/","@type":"WebSite","name":"SmartNet","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+    <link rel="stylesheet" href="/SmartNet/assets/css/style.css?v=75717f8137c7baa3f1f577095ab1202b639d10ea">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/SmartNet/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+  </head>
+  <body>
+    <div class="container-lg px-3 my-5 markdown-body">
+      
+
+      <h1 id="smartnet">SmartNet</h1>
+<p>SmartNet is an HTTP networking library written in Swift that aims to make networking as easy as possible.</p>
+
+<h2 id="features">Features</h2>
+
+<ul>
+  <li><a href="#network-configuration">Easy configuration</a></li>
+  <li>Supported Requests:  <strong>Encodable</strong>, <strong>Dictionary</strong>, <strong>String</strong></li>
+  <li>[Supported Response Types: <strong>Decodable</strong>, <strong>String</strong>, <strong>Data</strong>, <strong>Void</strong></li>
+  <li>Supported QueryParameters: <strong>Encodable</strong>, <strong>Dictionary</strong></li>
+  <li>iOS 13+ <strong>Combine</strong> Support</li>
+  <li>Light and easy Networking Interface</li>
+  <li>“Truested Domains” list to bypass SSL Authentication Challenge (<strong>not recommended</strong>)</li>
+</ul>
+
+<h2 id="installation">Installation</h2>
+
+<h3 id="swift-package-manager">Swift Package Manager</h3>
+<p>The <a href="https://swift.org/package-manager/">Swift Package Manager</a> is a tool for automating the distribution of Swift code and is integrated into the <code class="language-plaintext highlighter-rouge">swift</code> compiler.</p>
+
+<p>In Xcode 11+ select File &gt; Packages &gt; Add Package Dependency &gt; Enter this project’s URL:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>https://github.com/Valerio69/SmartNet.git
+</code></pre></div></div>
+
+<h3 id="cocoapods">CocoaPods</h3>
+
+<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">pod</span> <span class="s1">'SmartNet'</span>
+</code></pre></div></div>
+
+<h2 id="examples">Examples</h2>
+
+<ul>
+  <li>
+    <h3 id="network-default-configuration">Network Default Configuration</h3>
+  </li>
+</ul>
+
+<p><strong>NetworkConfiguration</strong> is used to define defaults settings that are going to be used in every call.</p>
+
+<p>If the Endpoint is initialized with “<strong><em>useEndpointHeaderOnly: true</em></strong>” the NetworkConfiguration headers will be ignored.</p>
+
+<p>Base</p>
+<div class="language-swift highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">let</span> <span class="nv">config</span> <span class="o">=</span> <span class="kt">NetworkConfiguration</span><span class="p">(</span><span class="nv">baseURL</span><span class="p">:</span> <span class="kt">URL</span><span class="p">(</span><span class="nv">string</span><span class="p">:</span> <span class="s">"https://api.example.com"</span><span class="p">)</span><span class="o">!</span><span class="p">)</span>
+<span class="k">let</span> <span class="nv">network</span> <span class="o">=</span> <span class="kt">SmartNet</span><span class="p">(</span><span class="nv">config</span><span class="p">:</span> <span class="n">config</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Advanced</p>
+<div class="language-swift highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">let</span> <span class="nv">config</span> <span class="o">=</span> <span class="kt">NetworkConfiguration</span><span class="p">(</span>
+    <span class="nv">baseURL</span><span class="p">:</span> <span class="kt">URL</span><span class="p">(</span><span class="nv">string</span><span class="p">:</span> <span class="s">"https://api.publicapis.org"</span><span class="p">)</span><span class="o">!</span><span class="p">,</span>
+    <span class="nv">headers</span><span class="p">:</span> <span class="p">[</span><span class="s">"Content-Type"</span><span class="p">:</span> <span class="s">"application/json"</span><span class="p">],</span>
+    <span class="nv">queryParameters</span><span class="p">:</span> <span class="p">[</span><span class="s">"userid"</span><span class="p">:</span> <span class="s">"xxxxxx"</span><span class="p">],</span>
+    <span class="nv">trustedDomains</span><span class="p">:</span> <span class="p">[</span><span class="s">"api.publicapis.org"</span><span class="p">],</span>
+    <span class="nv">requestTimeout</span><span class="p">:</span> <span class="mi">120</span>
+<span class="p">)</span>
+<span class="k">let</span> <span class="nv">network</span> <span class="o">=</span> <span class="kt">SmartNet</span><span class="p">(</span><span class="nv">config</span><span class="p">:</span> <span class="n">config</span><span class="p">)</span>
+</code></pre></div></div>
+
+<ul>
+  <li>
+    <h3 id="create-an-endpoint">Create an Endpoint</h3>
+  </li>
+</ul>
+
+<h4 id="get">GET</h4>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">let</span> <span class="nv">endpoint</span> <span class="o">=</span> <span class="kt">Endpoint</span><span class="o">&lt;</span><span class="kt">Person</span><span class="o">&gt;</span><span class="p">(</span>
+    <span class="nv">path</span><span class="p">:</span> <span class="s">"person"</span><span class="p">,</span>
+    <span class="nv">queryParameters</span><span class="p">:</span> <span class="kt">QueryParameters</span><span class="p">(</span>
+        <span class="nv">parameters</span><span class="p">:</span> <span class="p">[</span>
+            <span class="s">"name"</span><span class="p">:</span> <span class="s">"Jhon"</span><span class="p">,</span> 
+            <span class="s">"age"</span><span class="p">:</span> <span class="mi">18</span>
+        <span class="p">]</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+</code></pre></div></div>
+<p>Equivalent of https://api.example.com/person?name=Jhon&amp;age=18</p>
+
+<p><strong><em>POST</em></strong></p>
+<div class="language-swift highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">let</span> <span class="nv">endpoint</span> <span class="o">=</span> <span class="kt">Endpoint</span><span class="o">&lt;</span><span class="kt">Person</span><span class="o">&gt;</span><span class="p">(</span>
+    <span class="nv">path</span><span class="p">:</span> <span class="s">"person"</span><span class="p">,</span>
+    <span class="nv">method</span><span class="p">:</span> <span class="o">.</span><span class="n">post</span><span class="p">,</span>
+    <span class="nv">body</span><span class="p">:</span> <span class="kt">HTTPBody</span><span class="p">(</span>
+        <span class="nv">encodable</span><span class="p">:</span> <span class="kt">PersonRequst</span><span class="p">(</span>
+            <span class="nv">name</span><span class="p">:</span> <span class="s">"Jhon"</span><span class="p">,</span>
+            <span class="nv">age</span><span class="p">:</span> <span class="mi">18</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+</code></pre></div></div>
+<p>Equivalent of https://api.example.com/person with the following body:</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Jhon"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"age"</span><span class="p">:</span><span class="w"> </span><span class="mi">18</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p><strong>API CALL</strong></p>
+
+<ul>
+  <li>Using Closures</li>
+</ul>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">network</span><span class="o">.</span><span class="nf">request</span><span class="p">(</span><span class="nv">with</span><span class="p">:</span> <span class="n">endpoint</span><span class="p">)</span> <span class="p">{</span> <span class="p">(</span><span class="n">response</span><span class="p">)</span> <span class="k">in</span>
+    <span class="k">switch</span> <span class="n">response</span><span class="o">.</span><span class="n">result</span> <span class="p">{</span>
+    <span class="k">case</span> <span class="o">.</span><span class="nf">success</span><span class="p">(</span><span class="k">let</span> <span class="nv">person</span><span class="p">):</span>
+        <span class="nf">print</span><span class="p">(</span><span class="s">"Success! </span><span class="se">\(</span><span class="n">person</span><span class="o">.</span><span class="n">name</span><span class="se">)</span><span class="s">"</span><span class="p">)</span>
+    <span class="k">case</span> <span class="o">.</span><span class="nf">failure</span><span class="p">(</span><span class="k">let</span> <span class="nv">error</span><span class="p">):</span>
+        <span class="nf">print</span><span class="p">(</span><span class="n">error</span><span class="o">.</span><span class="n">localizedDescription</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>Using Combine</li>
+</ul>
+
+<div class="language-swift highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">var</span> <span class="nv">subscriptions</span> <span class="o">=</span> <span class="kt">Set</span><span class="o">&lt;</span><span class="kt">AnyCancellable</span><span class="o">&gt;</span><span class="p">()</span>
+
+<span class="n">network</span><span class="o">.</span><span class="nf">request</span><span class="p">(</span><span class="nv">with</span><span class="p">:</span> <span class="n">endpoint</span><span class="p">)?</span>
+    <span class="o">.</span><span class="nf">sink</span><span class="p">(</span>
+        <span class="nv">receiveCompletion</span><span class="p">:</span> <span class="p">{</span> <span class="p">(</span><span class="n">response</span><span class="p">)</span> <span class="k">in</span>
+            <span class="k">if</span> <span class="k">case</span> <span class="o">.</span><span class="nf">failure</span><span class="p">(</span><span class="k">let</span> <span class="nv">error</span><span class="p">)</span> <span class="o">=</span> <span class="n">response</span> <span class="p">{</span>
+                <span class="nf">print</span><span class="p">(</span><span class="n">error</span><span class="o">.</span><span class="n">localizedDescription</span><span class="p">)</span>
+            <span class="p">}</span>
+        <span class="p">},</span>
+        <span class="nv">receiveValue</span><span class="p">:</span> <span class="p">{</span> <span class="p">(</span><span class="n">person</span><span class="p">)</span> <span class="k">in</span>
+            <span class="nf">print</span><span class="p">(</span><span class="s">"Success! </span><span class="se">\(</span><span class="n">person</span><span class="o">.</span><span class="n">name</span><span class="se">)</span><span class="s">"</span><span class="p">)</span>
+        <span class="p">}</span>
+    <span class="p">)</span>
+    <span class="o">.</span><span class="nf">store</span><span class="p">(</span><span class="nv">in</span><span class="p">:</span> <span class="o">&amp;</span><span class="n">subscriptions</span><span class="p">)</span>
+</code></pre></div></div>
+
+<h2 id="info">Info</h2>
+<p>Project inspired by SENetworking (https://github.com/kudoleh/SENetworking).</p>
+
+
+      
+      <div class="footer border-top border-gray-light mt-5 pt-3 text-right text-gray">
+        This site is open source. <a href="https://github.com/vetrek/SmartNet/edit/master/README.md">Improve this page</a>.
+      </div>
+      
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/anchor-js/4.1.0/anchor.min.js" integrity="sha256-lZaRhKri35AyJSypXXs4o6OPFTbTmUoltBbDCbdzegg=" crossorigin="anonymous"></script>
+    <script>anchors.add();</script>
+  </body>
+</html>
