@@ -1,5 +1,3 @@
-<meta name="google-site-verification" content="rkVnVq3sZB_AVHddMGBAz_I7ZAnio2lL7eJTfQWy_T4" />
-
 # SmartNet
 SmartNet is an HTTP networking library written in Swift that aims to make networking as easy as possible.
 
