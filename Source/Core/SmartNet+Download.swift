@@ -13,8 +13,8 @@ public final class DownloadTask: NetworkCancellable, Hashable {
     public typealias ResultCompletion = (_ response: Response<DownloadResult>) -> Void
     
     public struct DownloadResult {
-        var fileData: Data
-        var localURL: URL
+        public var fileData: Data
+        public var localURL: URL
     }
     
     public struct DownloadFileDestination {
