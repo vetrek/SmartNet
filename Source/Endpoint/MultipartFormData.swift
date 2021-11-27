@@ -29,6 +29,8 @@ import Foundation
 public struct MultipartFormData {
     let boundary: String = UUID().uuidString
     private var httpBody = NSMutableData()
+    
+    public init() { }
 
     public func addTextField(
         named name: String,
@@ -47,7 +49,7 @@ public struct MultipartFormData {
         fieldString += "Content-Transfer-Encoding: 8bit\r\n"
         fieldString += "\r\n"
         fieldString += "\(value)\r\n"
-        
+
         return fieldString
     }
     
@@ -84,7 +86,7 @@ public struct MultipartFormData {
         body.append("--\(boundary)--")
         return  body as Data
     }
-
+    
 }
 
 extension NSMutableData {
