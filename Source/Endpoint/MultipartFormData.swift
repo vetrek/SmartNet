@@ -31,7 +31,7 @@ public struct MultipartFormData {
     private var httpBody = NSMutableData()
     
     public init() { }
-
+    
     public func addTextField(
         named name: String,
         value: String
@@ -49,34 +49,42 @@ public struct MultipartFormData {
         fieldString += "Content-Transfer-Encoding: 8bit\r\n"
         fieldString += "\r\n"
         fieldString += "\(value)\r\n"
-
+        
         return fieldString
     }
     
     public func addDataField(
         named name: String,
         data: Data,
-        mimeType: String
+        fileName: String?,
+        mimeType: String?
     ) {
-        httpBody.append(dataFormField(named: name, data: data, mimeType: mimeType))
+        httpBody.append(dataFormField(named: name, data: data, fileName: fileName, mimeType: mimeType))
     }
     
     private func dataFormField(
         named name: String,
         data: Data,
-        mimeType: String
+        fileName: String?,
+        mimeType: String?
     ) -> Data {
-            let fieldData = NSMutableData()
-            
-            fieldData.append("--\(boundary)\r\n")
-            fieldData.append("Content-Disposition: form-data; name=\"\(name)\"\r\n")
-            fieldData.append("Content-Type: \(mimeType)\r\n")
-            fieldData.append("\r\n")
-            fieldData.append(data)
-            fieldData.append("\r\n")
-            
-            return fieldData as Data
+        var disposition = "form-data; name=\"\(name)\""
+        if let fileName = fileName {
+            disposition += "; filename=\"\(fileName)\""
         }
+        
+        let fieldData = NSMutableData()
+        fieldData.append("--\(boundary)\r\n")
+        fieldData.append("Content-Disposition: \(disposition)\r\n")
+        if let mimeType = mimeType {
+            fieldData.append("Content-Type: \(mimeType)\r\n")
+        }
+        fieldData.append("\r\n")
+        fieldData.append(data)
+        fieldData.append("\r\n")
+        
+        return fieldData as Data
+    }
     
     var data: Data? {
         guard
