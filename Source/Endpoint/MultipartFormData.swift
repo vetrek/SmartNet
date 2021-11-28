@@ -56,8 +56,8 @@ public struct MultipartFormData {
     public func addDataField(
         named name: String,
         data: Data,
-        fileName: String?,
-        mimeType: String?
+        fileName: String? = nil,
+        mimeType: String? = nil
     ) {
         httpBody.append(dataFormField(named: name, data: data, fileName: fileName, mimeType: mimeType))
     }
@@ -65,8 +65,8 @@ public struct MultipartFormData {
     private func dataFormField(
         named name: String,
         data: Data,
-        fileName: String?,
-        mimeType: String?
+        fileName: String? = nil,
+        mimeType: String? = nil
     ) -> Data {
         var disposition = "form-data; name=\"\(name)\""
         if let fileName = fileName {
