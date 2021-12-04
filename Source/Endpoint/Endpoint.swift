@@ -123,9 +123,7 @@ extension Requestable {
     /// Crea l'oggetto `URLRequest` per la chiamata al servizio
     /// - Parameter config: La `USCNetworkConfigurable` di `USCNetwork`
     /// - Returns: Oggetto `URLRequest`
-    public func urlRequest(
-        with config: NetworkConfigurable
-    ) throws -> URLRequest {
+    public func urlRequest(with config: NetworkConfigurable) throws -> URLRequest {
 
         let url = try self.url(with: config)
         var urlRequest = URLRequest(url: url)
