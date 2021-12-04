@@ -123,6 +123,14 @@ public final class DownloadTask: NetworkCancellable, Hashable {
             return
         }
         
+        guard let httpResponse = urlResponse as? HTTPURLResponse else { return }
+            
+        guard (200..<300).contains(httpResponse.statusCode)
+        else {
+            response.queue.async { response.closure(Response(result: .failure(.error(statusCode: httpResponse.statusCode, data: nil)))) }
+            return
+        }
+        
         guard let localURL = localURL else {
             response.queue.async { response.closure(Response(result: .failure(.invalidDownloadUrl))) }
             state = .error
