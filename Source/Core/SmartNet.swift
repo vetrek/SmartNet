@@ -33,9 +33,7 @@ extension URLSessionTask: NetworkCancellable { }
 
 public typealias CompletionHandler<T> = (Response<T>) -> Void
 
-public protocol Networking: NetworkingCombine, NetworkingClosure, NetworkingAsync { }
-
-public final class SmartNet: NSObject, Networking {
+public final class SmartNet: NSObject {
     
     /// Network Session Configuration
     public private(set) var config: NetworkConfigurable

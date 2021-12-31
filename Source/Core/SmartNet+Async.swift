@@ -7,32 +7,6 @@
 
 import Foundation
 
-public protocol NetworkingAsync {
-    @available(iOS 15.0.0, *)
-    func request<D: Decodable, E: Requestable>(
-        with endpoint: E,
-        decoder: JSONDecoder
-    ) async -> Response<E.Response> where E.Response == D
-    
-    
-    @available(iOS 15.0.0, *)
-    func request<E: Requestable>(
-        with endpoint: E
-    ) async -> Response<E.Response> where E.Response == Data
-    
-    
-    @available(iOS 15.0.0, *)
-    func request<E: Requestable>(
-        with endpoint: E
-    ) async -> Response<E.Response> where E.Response == String
-    
-    
-    @available(iOS 15.0.0, *)
-    func request<E: Requestable>(
-        with endpoint: E
-    ) async -> Response<E.Response> where E.Response == Void
-}
-
 @available(iOS 15.0.0, *)
 public extension SmartNet {
     func request<D, E>(

@@ -7,33 +7,6 @@
 
 import Foundation
 
-public protocol NetworkingClosure {
-    func request<D: Decodable, E: Requestable>(
-        with endpoint: E,
-        decoder: JSONDecoder,
-        queue: DispatchQueue,
-        completion: @escaping CompletionHandler<E.Response>
-    ) -> NetworkCancellable? where E.Response == D
-    
-    func request<E: Requestable>(
-        with endpoint: E,
-        queue: DispatchQueue,
-        completion: @escaping CompletionHandler<E.Response>
-    ) -> NetworkCancellable? where E.Response == Data
-    
-    func request<E: Requestable>(
-        with endpoint: E,
-        queue: DispatchQueue,
-        completion: @escaping CompletionHandler<E.Response>
-    ) -> NetworkCancellable? where E.Response == String
-    
-    func request<E: Requestable>(
-        with endpoint: E,
-        queue: DispatchQueue,
-        completion: @escaping CompletionHandler<E.Response>
-    ) -> NetworkCancellable? where E.Response == Void
-}
-
 // MARK: - Networking Closure
 
 public extension SmartNet {

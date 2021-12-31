@@ -8,26 +8,6 @@
 import Foundation
 import Combine
 
-public protocol NetworkingCombine {
-    func request<D, E>(
-        with endpoint: E,
-        decoder: JSONDecoder
-    ) -> AnyPublisher<D, NetworkError>? where D: Decodable, D == E.Response, E: Requestable
-    
-    func request<E>(
-        with endpoint: E
-    ) -> AnyPublisher<E.Response, NetworkError>? where E: Requestable, E.Response == Data
-    
-    func request<E>(
-        with endpoint: E
-    ) -> AnyPublisher<E.Response, NetworkError>? where E: Requestable, E.Response == String
-    
-    func request<E>(
-        with endpoint: E
-    ) -> AnyPublisher<E.Response, NetworkError>? where E: Requestable, E.Response == Void
-}
-
-
 // MARK: - Networking Combine
 
 public extension SmartNet {
@@ -40,16 +20,16 @@ public extension SmartNet {
     func request<D, E>(
         with endpoint: E,
         decoder: JSONDecoder = .default
-    ) -> AnyPublisher<D, NetworkError>? where D: Decodable, D == E.Response, E: Requestable {
-        guard
-            let request = try? endpoint.urlRequest(with: config)
-        else {
-            return AnyPublisher(
-                Fail<D, NetworkError>(error: NetworkError.urlGeneration)
-            )
+    ) -> AnyPublisher<D, NetworkError> where D: Decodable, D == E.Response, E: Requestable {
+        guard let session = session else {
+            return AnyPublisher(Fail<D, NetworkError>(error: NetworkError.invalidSessions))
         }
         
-        return session?.dataTaskPublisher(for: request)
+        guard let request = try? endpoint.urlRequest(with: config) else {
+            return AnyPublisher(Fail<D, NetworkError>(error: NetworkError.urlGeneration))
+        }
+        
+        return session.dataTaskPublisher(for: request)
             .tryMap { output in
                 // throw an error if response is nil
                 guard output.response is HTTPURLResponse else {
