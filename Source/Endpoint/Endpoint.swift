@@ -136,13 +136,12 @@ extension Requestable {
             allHeaders.merge(config.headers) { (current, _) in current }
         }
         
-        defer {
+        // Set the HttpRequest Body only if the Request is not a GET
+        guard method != .get else {
             // Set the HttpRequest headers
             urlRequest.allHTTPHeaderFields = allHeaders
+            return urlRequest
         }
-        
-        // Set the HttpRequest Body only if the Request is not a GET
-        guard method != .get else { return urlRequest }
        
         if let body = body {
             // Add "Content-Type" header based on body type, but do not override current values
@@ -158,6 +157,9 @@ extension Requestable {
             // Make sure this header is always set for multipart form  data uploads
             allHeaders["Content-Type"] = "multipart/form-data; boundary=\(form.boundary)"
         }
+        
+        // Set the HttpRequest headers
+        urlRequest.allHTTPHeaderFields = allHeaders
 
         // Set HttpRequest Body based on the bodyEncoding
         urlRequest.httpBody = body?.data ?? form?.data
