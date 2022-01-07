@@ -32,7 +32,7 @@ public struct HTTPBody: SmartNetBody {
     public let data: Data?
     let bodyEncoding: BodyEncoding
 
-    public init?(dictionary: [String: Any], bodyEncoding: BodyEncoding) {
+    public init?(dictionary: [String: Any], bodyEncoding: BodyEncoding = .json) {
         guard
             let data = try? HTTPBody.getData(from: dictionary, using: bodyEncoding)
         else { return nil }
@@ -40,7 +40,7 @@ public struct HTTPBody: SmartNetBody {
         self.data = data
     }
 
-    public init?(encodable: Encodable, bodyEncoding: BodyEncoding) {
+    public init?(encodable: Encodable, bodyEncoding: BodyEncoding = .json) {
         guard
             let dictionary = try? encodable.toDictionary(),
             let data = try? HTTPBody.getData(from: dictionary, using: bodyEncoding)
