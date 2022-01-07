@@ -70,3 +70,7 @@ public enum NetworkError: Error, CustomStringConvertible {
         }
     }
 }
+
+extension NetworkError: LocalizedError {
+    public var errorDescription: String? { description }
+}
