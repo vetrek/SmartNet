@@ -82,9 +82,18 @@ public extension SmartNet {
                     return
                 }
                 
-                guard
-                    let responseObject = try? decoder.decode(D.self, from: data)
-                else {
+                do {
+                    let responseObject = try decoder.decode(D.self, from: data)
+                    completion(
+                        Response(
+                            result: .success(responseObject),
+                            session: self.session,
+                            request: request,
+                            response: response
+                        )
+                    )
+                } catch {
+                    print(error)
                     completion(
                         Response(
                             result: .failure(.parsingFailed),
@@ -93,16 +102,7 @@ public extension SmartNet {
                             response: response
                         )
                     )
-                    return
                 }
-                completion(
-                    Response(
-                        result: .success(responseObject),
-                        session: self.session,
-                        request: request,
-                        response: response
-                    )
-                )
             }
         }
         task?.resume()
