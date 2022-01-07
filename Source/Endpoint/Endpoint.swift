@@ -44,7 +44,6 @@ public enum BodyEncoding {
     case json
     case formUrlEncodedAscii
     case plainText
-    case multiPartFormData
 }
 
 public protocol Requestable {
@@ -131,22 +130,34 @@ extension Requestable {
 
         // Always Add the user defined headers
         var allHeaders = headers
-
+        
         if !useEndpointHeaderOnly {
             // Add the network configuration headers, but do not override current values
             allHeaders.merge(config.headers) { (current, _) in current }
         }
         
-        if let form = form {
+        defer {
+            // Set the HttpRequest headers
+            urlRequest.allHTTPHeaderFields = allHeaders
+        }
+        
+        // Set the HttpRequest Body only if the Request is not a GET
+        guard method != .get else { return urlRequest }
+       
+        if let body = body {
+            // Add "Content-Type" header based on body type, but do not override current values
+            switch body.bodyEncoding {
+            case .json:
+                allHeaders.merge(["Content-Type": "application/json"]) { (current, _) in current }
+            case .formUrlEncodedAscii:
+                allHeaders.merge(["Content-Type": "application/x-www-form-urlencoded"]) { (current, _) in current }
+            case .plainText:
+                allHeaders.merge(["Content-Type": "text/plain"]) { (current, _) in current }
+            }
+        } else if let form = form {
             // Make sure this header is always set for multipart form  data uploads
             allHeaders["Content-Type"] = "multipart/form-data; boundary=\(form.boundary)"
         }
-
-        // Set the HttpRequest headers
-        urlRequest.allHTTPHeaderFields = allHeaders
-
-        // Set the HttpRequest Body only if the Request is not a GET
-        guard method != .get else { return urlRequest }
 
         // Set HttpRequest Body based on the bodyEncoding
         urlRequest.httpBody = body?.data ?? form?.data

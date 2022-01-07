@@ -30,11 +30,13 @@ public protocol SmartNetBody {
 
 public struct HTTPBody: SmartNetBody {
     public let data: Data?
+    let bodyEncoding: BodyEncoding
 
     public init?(dictionary: [String: Any], bodyEncoding: BodyEncoding) {
         guard
             let data = try? HTTPBody.getData(from: dictionary, using: bodyEncoding)
         else { return nil }
+        self.bodyEncoding = bodyEncoding
         self.data = data
     }
 
@@ -43,6 +45,7 @@ public struct HTTPBody: SmartNetBody {
             let dictionary = try? encodable.toDictionary(),
             let data = try? HTTPBody.getData(from: dictionary, using: bodyEncoding)
         else { return nil }
+        self.bodyEncoding = bodyEncoding
         self.data = data
     }
 
@@ -50,6 +53,7 @@ public struct HTTPBody: SmartNetBody {
         guard
             let data = string.data(using: .utf8)
         else { return nil }
+        self.bodyEncoding = .plainText
         self.data = data
     }
 
