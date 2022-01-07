@@ -125,7 +125,7 @@ extension SmartNet {
         requestError: Error?
     ) -> NetworkError? {
         guard let requestError = requestError else { return nil }
-        if let statusCode = response?.statusCode {
+        if let statusCode = response?.httpStatusCode {
             return .error(statusCode: statusCode, data: data)
         } else {
             return self.resolve(error: requestError)
@@ -176,7 +176,7 @@ extension SmartNet: URLSessionDelegate {
 }
 
 extension URLResponse {
-    var statusCode: Int? {
+    var httpStatusCode: Int? {
         (self as? HTTPURLResponse)?.statusCode
     }
 }
