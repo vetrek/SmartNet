@@ -41,8 +41,16 @@ public enum NetworkError: Error, CustomStringConvertible {
 
     public var description: String {
         switch self {
-        case .error(let statusCode, _):
-            return "Error with status code: \(statusCode)"
+        case .error(let statusCode, let data):
+            var body = ""
+            if let data = data {
+                body = String(data: data, encoding: .utf8) ?? ""
+            }
+            return """
+            Error with status code: \(statusCode)\n
+            Response Body:\n
+            \(body)
+            """
         case .parsingFailed:
             return "Failed to parse the JSON response."
         case .emptyResponse:

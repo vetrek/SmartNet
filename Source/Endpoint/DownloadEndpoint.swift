@@ -1,5 +1,5 @@
 //
-//  Endpoint.swift
+//  DownloadEndpoint.swift
 //
 //  Copyright (c) 2021 Valerio69 (valerio.alsebas@gmail.com)
 //
@@ -24,27 +24,25 @@
 
 import Foundation
 
-public struct Endpoint<Value>: Requestable {
+public struct DownloadEndpoint: Requestable {
+    public typealias Response = Void
     
-    public typealias Response = Value
-
     public var path: String
     public var isFullPath: Bool
     public var method: HTTPMethod
     public var headers: [String: String]
     public var useEndpointHeaderOnly: Bool
     public var queryParameters: QueryParameters?
-    public var body: HTTPBody?
-    public var form: MultipartFormData?
-
+    public let body: HTTPBody?
+    public let form: MultipartFormData?
+    
     public init(
         path: String,
         isFullPath: Bool = false,
         method: HTTPMethod = .get,
         headers: [String: String] = [:],
         useEndpointHeaderOnly: Bool = false,
-        queryParameters: QueryParameters? = nil,
-        body: HTTPBody? = nil
+        queryParameters: QueryParameters? = nil
     ) {
         self.path = path
         self.isFullPath = isFullPath
@@ -52,26 +50,7 @@ public struct Endpoint<Value>: Requestable {
         self.headers = headers
         self.useEndpointHeaderOnly = useEndpointHeaderOnly
         self.queryParameters = queryParameters
-        self.body = body
+        self.body = nil
         self.form = nil
     }
-    
-    public init(
-        path: String,
-        isFullPath: Bool = false,
-        headers: [String: String] = [:],
-        useEndpointHeaderOnly: Bool = false,
-        queryParameters: QueryParameters? = nil,
-        form: MultipartFormData
-    ) {
-        self.path = path
-        self.isFullPath = isFullPath
-        self.method = .post
-        self.headers = headers
-        self.useEndpointHeaderOnly = useEndpointHeaderOnly
-        self.queryParameters = queryParameters
-        self.body = nil
-        self.form = form
-    }
-
 }

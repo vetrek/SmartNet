@@ -1,5 +1,5 @@
 //
-//  SmartNet.swift
+//  MultipartFormEndpoint.swift
 //
 //  Copyright (c) 2021 Valerio69 (valerio.alsebas@gmail.com)
 //
@@ -22,10 +22,40 @@
 //  THE SOFTWARE.
 //
 
-// https://orjpap.github.io/swift/http/ios/urlsession/2021/04/26/Multipart-Form-Requests.html
-
 import Foundation
 
+public struct MultipartFormEndpoint<Value>: Requestable {
+    public typealias Response = Value
+    
+    public var path: String
+    public var isFullPath: Bool
+    public var method: HTTPMethod
+    public var headers: [String: String]
+    public var useEndpointHeaderOnly: Bool
+    public var queryParameters: QueryParameters?
+    public var body: HTTPBody?
+    public var form: MultipartFormData?
+    
+    public init(
+        path: String,
+        isFullPath: Bool = false,
+        headers: [String: String] = [:],
+        useEndpointHeaderOnly: Bool = false,
+        queryParameters: QueryParameters? = nil,
+        form: MultipartFormData
+    ) {
+        self.path = path
+        self.isFullPath = isFullPath
+        self.method = .post
+        self.headers = headers
+        self.useEndpointHeaderOnly = useEndpointHeaderOnly
+        self.queryParameters = queryParameters
+        self.body = nil
+        self.form = form
+    }
+}
+
+// https://orjpap.github.io/swift/http/ios/urlsession/2021/04/26/Multipart-Form-Requests.html
 public struct MultipartFormData {
     let boundary: String = UUID().uuidString
     private var httpBody = NSMutableData()

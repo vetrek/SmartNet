@@ -1,5 +1,5 @@
 //
-//  SmartNet.swift
+//  NetworkConfiguration.swift
 //
 //  Copyright (c) 2021 Valerio69 (valerio.alsebas@gmail.com)
 //
