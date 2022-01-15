@@ -33,8 +33,8 @@ public struct DownloadEndpoint: Requestable {
     public var headers: [String: String]
     public var useEndpointHeaderOnly: Bool
     public var queryParameters: QueryParameters?
-    public let body: HTTPBody?
-    public let form: MultipartFormData?
+    public let body: HTTPBody? = nil
+    public let form: MultipartFormData? = nil
     
     public init(
         path: String,
@@ -50,7 +50,5 @@ public struct DownloadEndpoint: Requestable {
         self.headers = headers
         self.useEndpointHeaderOnly = useEndpointHeaderOnly
         self.queryParameters = queryParameters
-        self.body = nil
-        self.form = nil
     }
 }

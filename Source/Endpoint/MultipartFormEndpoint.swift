@@ -33,7 +33,7 @@ public struct MultipartFormEndpoint<Value>: Requestable {
     public var headers: [String: String]
     public var useEndpointHeaderOnly: Bool
     public var queryParameters: QueryParameters?
-    public var body: HTTPBody?
+    public let body: HTTPBody? = nil
     public var form: MultipartFormData?
     
     public init(
@@ -50,7 +50,6 @@ public struct MultipartFormEndpoint<Value>: Requestable {
         self.headers = headers
         self.useEndpointHeaderOnly = useEndpointHeaderOnly
         self.queryParameters = queryParameters
-        self.body = nil
         self.form = form
     }
 }
