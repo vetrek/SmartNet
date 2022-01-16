@@ -104,7 +104,7 @@ extension SmartNet {
         print(tag, curl)
         
         if let data = data {
-            print(tag, data)
+            print("🟢 SmartNet - Response 🟢", String(data: data, encoding: .utf8) ?? "")
         }
     }
 
