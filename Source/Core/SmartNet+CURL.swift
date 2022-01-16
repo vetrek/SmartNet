@@ -31,7 +31,8 @@ extension SmartNet {
     // Original source: https://github.com/Alamofire/Alamofire/blob/c039ac798b5acb91830dc64e8fe5de96970a4478/Source/Request.swift#L962
     static func printCurl(
         session: URLSession,
-        request: URLRequest
+        request: URLRequest,
+        data: Data? = nil
     ) {
         let tag = "🟡 SmartNet - cUrl 🟡"
         guard
@@ -101,6 +102,10 @@ extension SmartNet {
         let curl = components.joined(separator: " \\\n\t")
         
         print(tag, curl)
+        
+        if let data = data {
+            print(tag, data)
+        }
     }
 
 }

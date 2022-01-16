@@ -30,7 +30,7 @@ public protocol NetworkConfigurable {
     var queryParameters: [String: String] { get }
     var trustedDomains: [String] { get set }
     var requestTimeout: TimeInterval { get set }
-    var printCurl: Bool { get set }
+    var debug: Bool { get set }
 }
 
 /// Service Network default configuration
@@ -50,8 +50,8 @@ public final class NetworkConfiguration: NetworkConfigurable {
     /// Default HTTPRequest timeout
     public var requestTimeout: TimeInterval
     
-    /// Usefull when debugging 
-    public var printCurl: Bool
+    /// Print cURL and Response
+    public var debug: Bool
 
     public init(
         baseURL: URL,
@@ -59,13 +59,13 @@ public final class NetworkConfiguration: NetworkConfigurable {
         queryParameters: [String: String] = [:],
         trustedDomains: [String] = [],
         requestTimeout: TimeInterval = 60,
-        printCurl: Bool = true
+        debug: Bool = true
     ) {
         self.baseURL = baseURL
         self.headers = headers
         self.queryParameters = queryParameters
         self.trustedDomains = trustedDomains
         self.requestTimeout = requestTimeout
-        self.printCurl = printCurl
+        self.debug = debug
     }
 }

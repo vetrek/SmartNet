@@ -42,7 +42,7 @@ public extension SmartNet {
             )
         }
         
-        if config.printCurl {
+        if config.debug {
             SmartNet.printCurl(
                 session: session,
                 request: request
@@ -103,7 +103,7 @@ public extension SmartNet {
             )
         }
         
-        if config.printCurl {
+        if config.debug {
             SmartNet.printCurl(
                 session: session,
                 request: request
@@ -155,7 +155,7 @@ public extension SmartNet {
             )
         }
         
-        if config.printCurl {
+        if config.debug {
             SmartNet.printCurl(
                 session: session,
                 request: request
@@ -217,7 +217,7 @@ public extension SmartNet {
             )
         }
         
-        if config.printCurl {
+        if config.debug {
             SmartNet.printCurl(
                 session: session,
                 request: request

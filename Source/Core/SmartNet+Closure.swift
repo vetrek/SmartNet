@@ -62,11 +62,12 @@ public extension SmartNet {
         ) { [weak self] (data, response, error) in
             guard let self = self else { return }
             queue.async {
-                if self.config.printCurl,
+                if self.config.debug,
                    let session = self.session {
                     SmartNet.printCurl(
                         session: session,
-                        request: request
+                        request: request,
+                        data: data
                     )
                 }
                 
@@ -158,11 +159,12 @@ public extension SmartNet {
         ) { [weak self] (data, response, error) in
             guard let self = self else { return }
             queue.async {
-                if self.config.printCurl,
+                if self.config.debug,
                    let session = self.session {
                     SmartNet.printCurl(
                         session: session,
-                        request: request
+                        request: request,
+                        data: data
                     )
                 }
                 
@@ -241,11 +243,12 @@ public extension SmartNet {
         ) { [weak self] (data, response, error) in
             guard let self = self else { return }
             queue.async {
-                if self.config.printCurl,
+                if self.config.debug,
                    let session = self.session {
                     SmartNet.printCurl(
                         session: session,
-                        request: request
+                        request: request,
+                        data: data
                     )
                 }
                 
@@ -338,11 +341,12 @@ public extension SmartNet {
         ) { [weak self] (data, response, error) in
             guard let self = self else { return }
             queue.async {
-                if self.config.printCurl,
+                if self.config.debug,
                    let session = self.session {
                     SmartNet.printCurl(
                         session: session,
-                        request: request
+                        request: request,
+                        data: data
                     )
                 }
                 

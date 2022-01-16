@@ -302,7 +302,7 @@ extension SmartNet: URLSessionDownloadDelegate {
         )
         downloadsTasks.remove(download)
         
-        if config.printCurl,
+        if config.debug,
            let request = downloadTask.currentRequest {
             SmartNet.printCurl(
                 session: session,
