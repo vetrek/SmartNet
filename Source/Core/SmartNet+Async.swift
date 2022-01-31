@@ -31,62 +31,33 @@ public extension SmartNet {
         decoder: JSONDecoder = .default,
         progressHUD: SNProgressHUD? = nil
     ) async -> Response<E.Response> where D : Decodable, D == E.Response, E : Requestable {
-        guard
-            let session = session,
-            let request = try? endpoint.urlRequest(with: config)
-        else {
-            return Response(
-                result: .failure(.urlGeneration),
-                session: session,
-                request: nil,
-                response: nil
-            )
-        }
         
-        if config.debug {
-            SmartNet.printCurl(
-                session: session,
-                request: request
-            )
-        }
+        let response = await dataRequest(endpoint: endpoint, progressHUD: progressHUD)
         
-        do {
-            progressHUD?.show()
-            defer { progressHUD?.dismiss() }
-            let (data, response) = try await session.data(for: request, delegate: nil)
-            
-            if let networkError = validate(response: response, data: data) {
-                return Response(
-                    result: .failure(networkError),
-                    session: self.session,
-                    request: request,
-                    response: response
-                )
-            }
-            
+        switch response.result {
+        case .success(let data):
             guard let responseObject = try? decoder.decode(D.self, from: data)
             else {
                 return Response(
                     result: .failure(.parsingFailed),
-                    session: self.session,
-                    request: request,
-                    response: response
+                    session: session,
+                    request: response.request,
+                    response: response.response
                 )
             }
             return Response(
                 result: .success(responseObject),
-                session: self.session,
-                request: request,
-                response: response
+                session: session,
+                request: response.request,
+                response: response.response
             )
             
-        } catch {
-            let error = resolve(error: error)
+        case .failure(let error):
             return Response(
                 result: .failure(error),
                 session: session,
-                request: request,
-                response: nil
+                request: response.request,
+                response: response.response
             )
         }
     }
@@ -95,6 +66,74 @@ public extension SmartNet {
         with endpoint: E,
         progressHUD: SNProgressHUD? = nil
     ) async -> Response<E.Response> where E : Requestable, E.Response == Data {
+        await dataRequest(endpoint: endpoint, progressHUD: progressHUD)
+    }
+    
+    func request<E>(
+        with endpoint: E,
+        progressHUD: SNProgressHUD? = nil
+    ) async -> Response<E.Response> where E : Requestable, E.Response == String {
+        
+        let response = await dataRequest(endpoint: endpoint, progressHUD: progressHUD)
+        
+        switch response.result {
+        case .success(let data):
+            guard let string = String(data: data, encoding: .utf8)
+            else {
+                return Response(
+                    result: .failure(.dataToStringFailure(data: data)),
+                    session: session,
+                    request: response.request,
+                    response: response.response
+                )
+            }
+            
+            return Response(
+                result: .success(string),
+                session: session,
+                request: response.request,
+                response: response.response
+            )
+            
+        case .failure(let error):
+            return Response(
+                result: .failure(error),
+                session: session,
+                request: response.request,
+                response: response.response
+            )
+        }
+    }
+    
+    func request<E>(
+        with endpoint: E,
+        progressHUD: SNProgressHUD? = nil
+    ) async -> Response<E.Response> where E : Requestable, E.Response == Void {
+        let response = await dataRequest(endpoint: endpoint, progressHUD: progressHUD)
+        
+        switch response.result {
+        case .success:
+            return Response(
+                result: .success(()),
+                session: session,
+                request: response.request,
+                response: response.response
+            )
+            
+        case .failure(let error):
+            return Response(
+                result: .failure(error),
+                session: session,
+                request: response.request,
+                response: response.response
+            )
+        }
+    }
+    
+    private func dataRequest<E>(
+        endpoint: E,
+        progressHUD: SNProgressHUD? = nil
+    ) async -> (Response<Data>) where E : Requestable {
         guard
             let session = session,
             let request = try? endpoint.urlRequest(with: config)
@@ -108,15 +147,13 @@ public extension SmartNet {
         }
         
         if config.debug {
-            SmartNet.printCurl(
-                session: session,
-                request: request
-            )
+            SmartNet.printCurl(session: session, request: request)
         }
         
+        progressHUD?.show()
+        defer { progressHUD?.dismiss() }
+        
         do {
-            progressHUD?.show()
-            defer { progressHUD?.dismiss() }
             let (data, response) = try await session.data(for: request, delegate: nil)
             
             if let networkError = validate(response: response, data: data) {
@@ -130,126 +167,6 @@ public extension SmartNet {
             
             return Response(
                 result: .success(data),
-                session: self.session,
-                request: request,
-                response: response
-            )
-            
-        } catch {
-            let error = resolve(error: error)
-            return Response(
-                result: .failure(error),
-                session: session,
-                request: request,
-                response: nil
-            )
-        }
-    }
-    
-    func request<E>(
-        with endpoint: E,
-        progressHUD: SNProgressHUD? = nil
-    ) async -> Response<E.Response> where E : Requestable, E.Response == String {
-        guard
-            let session = session,
-            let request = try? endpoint.urlRequest(with: config)
-        else {
-            return Response(
-                result: .failure(.urlGeneration),
-                session: session,
-                request: nil,
-                response: nil
-            )
-        }
-        
-        if config.debug {
-            SmartNet.printCurl(
-                session: session,
-                request: request
-            )
-        }
-        
-        do {
-            progressHUD?.show()
-            defer { progressHUD?.dismiss() }
-            let (data, response) = try await session.data(for: request, delegate: nil)
-            
-            if let networkError = validate(response: response, data: data) {
-                return Response(
-                    result: .failure(networkError),
-                    session: self.session,
-                    request: request,
-                    response: response
-                )
-            }
-            
-            guard let string = String(data: data, encoding: .utf8)
-            else {
-                return Response(
-                    result: .failure(.dataToStringFailure(data: data)),
-                    session: self.session,
-                    request: request,
-                    response: response
-                )
-            }
-            
-            return Response(
-                result: .success(string),
-                session: self.session,
-                request: request,
-                response: response
-            )
-            
-        } catch {
-            let error = resolve(error: error)
-            return Response(
-                result: .failure(error),
-                session: session,
-                request: request,
-                response: nil
-            )
-        }
-    }
-    
-    func request<E>(
-        with endpoint: E,
-        progressHUD: SNProgressHUD? = nil
-    ) async -> Response<E.Response> where E : Requestable, E.Response == Void {
-        guard
-            let session = session,
-            let request = try? endpoint.urlRequest(with: config)
-        else {
-            return Response(
-                result: .failure(.urlGeneration),
-                session: session,
-                request: nil,
-                response: nil
-            )
-        }
-        
-        if config.debug {
-            SmartNet.printCurl(
-                session: session,
-                request: request
-            )
-        }
-        
-        do {
-            progressHUD?.show()
-            defer { progressHUD?.dismiss() }
-            let (data, response) = try await session.data(for: request, delegate: nil)
-            
-            if let networkError = validate(response: response, data: data) {
-                return Response(
-                    result: .failure(networkError),
-                    session: self.session,
-                    request: request,
-                    response: response
-                )
-            }
-            
-            return Response(
-                result: .success(()),
                 session: self.session,
                 request: request,
                 response: response
