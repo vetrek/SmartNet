@@ -40,3 +40,13 @@ public struct Response<Value> {
     }
 }
 
+extension Response {
+    func convertedTo<T>(result: Result<T>) -> Response<T> {
+        Response<T>(
+            result: result,
+            session: session,
+            request: request,
+            response: response
+        )
+    }
+}

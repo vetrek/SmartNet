@@ -36,29 +36,14 @@ public extension SmartNet {
         
         switch response.result {
         case .success(let data):
-            guard let responseObject = try? decoder.decode(D.self, from: data)
-            else {
-                return Response(
-                    result: .failure(.parsingFailed),
-                    session: session,
-                    request: response.request,
-                    response: response.response
-                )
+            guard let responseObject = try? decoder.decode(D.self, from: data) else {
+                return response.convertedTo(result: .failure(.parsingFailed))
             }
-            return Response(
-                result: .success(responseObject),
-                session: session,
-                request: response.request,
-                response: response.response
-            )
+            
+            return response.convertedTo(result: .success(responseObject))
             
         case .failure(let error):
-            return Response(
-                result: .failure(error),
-                session: session,
-                request: response.request,
-                response: response.response
-            )
+            return response.convertedTo(result: .failure(error))
         }
     }
     
@@ -78,30 +63,15 @@ public extension SmartNet {
         
         switch response.result {
         case .success(let data):
-            guard let string = String(data: data, encoding: .utf8)
-            else {
-                return Response(
-                    result: .failure(.dataToStringFailure(data: data)),
-                    session: session,
-                    request: response.request,
-                    response: response.response
-                )
+            guard let string = String(data: data, encoding: .utf8) else {
+                return response.convertedTo(result: .failure(.dataToStringFailure(data: data)))
             }
             
-            return Response(
-                result: .success(string),
-                session: session,
-                request: response.request,
-                response: response.response
-            )
+            return response.convertedTo(result: .success(string))
             
         case .failure(let error):
-            return Response(
-                result: .failure(error),
-                session: session,
-                request: response.request,
-                response: response.response
-            )
+            return response.convertedTo(result: .failure(error))
+            
         }
     }
     
@@ -113,20 +83,11 @@ public extension SmartNet {
         
         switch response.result {
         case .success:
-            return Response(
-                result: .success(()),
-                session: session,
-                request: response.request,
-                response: response.response
-            )
+            return response.convertedTo(result: .success(()))
             
         case .failure(let error):
-            return Response(
-                result: .failure(error),
-                session: session,
-                request: response.request,
-                response: response.response
-            )
+            return response.convertedTo(result: .failure(error))
+
         }
     }
     
