@@ -28,7 +28,8 @@ import Foundation
 public extension SmartNet {
     func request<D, E>(
         with endpoint: E,
-        decoder: JSONDecoder = .default
+        decoder: JSONDecoder = .default,
+        progressHUD: SNProgressHUD? = nil
     ) async -> Response<E.Response> where D : Decodable, D == E.Response, E : Requestable {
         guard
             let session = session,
@@ -50,6 +51,8 @@ public extension SmartNet {
         }
         
         do {
+            progressHUD?.show()
+            defer { progressHUD?.dismiss() }
             let (data, response) = try await session.data(for: request, delegate: nil)
             
             if let networkError = validate(response: response, data: data) {
@@ -89,7 +92,8 @@ public extension SmartNet {
     }
     
     func request<E>(
-        with endpoint: E
+        with endpoint: E,
+        progressHUD: SNProgressHUD? = nil
     ) async -> Response<E.Response> where E : Requestable, E.Response == Data {
         guard
             let session = session,
@@ -111,6 +115,8 @@ public extension SmartNet {
         }
         
         do {
+            progressHUD?.show()
+            defer { progressHUD?.dismiss() }
             let (data, response) = try await session.data(for: request, delegate: nil)
             
             if let networkError = validate(response: response, data: data) {
@@ -141,7 +147,8 @@ public extension SmartNet {
     }
     
     func request<E>(
-        with endpoint: E
+        with endpoint: E,
+        progressHUD: SNProgressHUD? = nil
     ) async -> Response<E.Response> where E : Requestable, E.Response == String {
         guard
             let session = session,
@@ -163,6 +170,8 @@ public extension SmartNet {
         }
         
         do {
+            progressHUD?.show()
+            defer { progressHUD?.dismiss() }
             let (data, response) = try await session.data(for: request, delegate: nil)
             
             if let networkError = validate(response: response, data: data) {
@@ -203,7 +212,8 @@ public extension SmartNet {
     }
     
     func request<E>(
-        with endpoint: E
+        with endpoint: E,
+        progressHUD: SNProgressHUD? = nil
     ) async -> Response<E.Response> where E : Requestable, E.Response == Void {
         guard
             let session = session,
@@ -225,6 +235,8 @@ public extension SmartNet {
         }
         
         do {
+            progressHUD?.show()
+            defer { progressHUD?.dismiss() }
             let (data, response) = try await session.data(for: request, delegate: nil)
             
             if let networkError = validate(response: response, data: data) {

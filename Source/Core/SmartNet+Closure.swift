@@ -41,6 +41,7 @@ public extension SmartNet {
         with endpoint: E,
         decoder: JSONDecoder = .default,
         queue: DispatchQueue = .main,
+        progressHUD: SNProgressHUD? = nil,
         completion: @escaping (Response<E.Response>) -> Void
     ) -> NetworkCancellable? where D: Decodable, D == E.Response, E: Requestable {
         guard
@@ -57,13 +58,19 @@ public extension SmartNet {
             return nil
         }
         
+        progressHUD?.show()
         let task = session?.dataTask(
             with: request
         ) { [weak self] (data, response, error) in
-            guard let self = self else { return }
+            guard let self = self else {
+                progressHUD?.dismiss()
+                return
+            }
+            
             queue.async {
-                if self.config.debug,
-                   let session = self.session {
+                defer { progressHUD?.dismiss() }
+                
+                if self.config.debug, let session = self.session {
                     SmartNet.printCurl(
                         session: session,
                         request: request,
@@ -138,6 +145,7 @@ public extension SmartNet {
     func request<E>(
         with endpoint: E,
         queue: DispatchQueue = .main,
+        progressHUD: SNProgressHUD? = nil,
         completion: @escaping (Response<E.Response>) -> Void
     ) -> NetworkCancellable? where E: Requestable, E.Response == Data {
         guard
@@ -154,13 +162,20 @@ public extension SmartNet {
             return nil
         }
         
+        progressHUD?.show()
+        
         let task = session?.dataTask(
             with: request
         ) { [weak self] (data, response, error) in
-            guard let self = self else { return }
+            guard let self = self else {
+                progressHUD?.dismiss()
+                return
+            }
+            
             queue.async {
-                if self.config.debug,
-                   let session = self.session {
+                defer { progressHUD?.dismiss() }
+                
+                if self.config.debug, let session = self.session {
                     SmartNet.printCurl(
                         session: session,
                         request: request,
@@ -222,6 +237,7 @@ public extension SmartNet {
     func request<E>(
         with endpoint: E,
         queue: DispatchQueue = .main,
+        progressHUD: SNProgressHUD? = nil,
         completion: @escaping (Response<E.Response>) -> Void
     ) -> NetworkCancellable? where E: Requestable, E.Response == String {
         guard
@@ -238,13 +254,20 @@ public extension SmartNet {
             return nil
         }
         
+        progressHUD?.show()
+        
         let task = session?.dataTask(
             with: request
         ) { [weak self] (data, response, error) in
-            guard let self = self else { return }
+            guard let self = self else {
+                progressHUD?.dismiss()
+                return
+            }
+            
             queue.async {
-                if self.config.debug,
-                   let session = self.session {
+                defer { progressHUD?.dismiss() }
+                
+                if self.config.debug, let session = self.session {
                     SmartNet.printCurl(
                         session: session,
                         request: request,
@@ -320,6 +343,7 @@ public extension SmartNet {
     func request<E>(
         with endpoint: E,
         queue: DispatchQueue = .main,
+        progressHUD: SNProgressHUD? = nil,
         completion: @escaping (Response<E.Response>) -> Void
     ) -> NetworkCancellable? where E: Requestable, E.Response == Void {
         guard
@@ -336,13 +360,19 @@ public extension SmartNet {
             return nil
         }
         
+        progressHUD?.show()
         let task = session?.dataTask(
             with: request
         ) { [weak self] (data, response, error) in
-            guard let self = self else { return }
+            guard let self = self else {
+                progressHUD?.dismiss()
+                return
+            }
+            
             queue.async {
-                if self.config.debug,
-                   let session = self.session {
+                defer { progressHUD?.dismiss() }
+                
+                if self.config.debug, let session = self.session {
                     SmartNet.printCurl(
                         session: session,
                         request: request,
