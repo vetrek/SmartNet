@@ -44,95 +44,20 @@ public extension SmartNet {
         progressHUD: SNProgressHUD? = nil,
         completion: @escaping (Response<E.Response>) -> Void
     ) -> NetworkCancellable? where D: Decodable, D == E.Response, E: Requestable {
-        guard
-            let request = try? endpoint.urlRequest(with: config)
-        else {
-            completion(
-                Response(
-                    result: .failure(.urlGeneration),
-                    session: session,
-                    request: nil,
-                    response: nil
-                )
-            )
-            return nil
-        }
-        
-        progressHUD?.show()
-        let task = session?.dataTask(
-            with: request
-        ) { [weak self] (data, response, error) in
-            guard let self = self else {
-                progressHUD?.dismiss()
-                return
-            }
-            
-            queue.async {
-                defer { progressHUD?.dismiss() }
-                
-                if self.config.debug, let session = self.session {
-                    SmartNet.printCurl(
-                        session: session,
-                        request: request,
-                        data: data
-                    )
-                }
-                
-                if let networkError = self.getRequestError(
-                    data: data,
-                    response: response,
-                    requestError: error
-                ) {
-                    completion(
-                        Response(
-                            result: .failure(networkError),
-                            session: self.session,
-                            request: request,
-                            response: response
-                        )
-                    )
-                    return
-                }
-                
-                guard
-                    let data = data
-                else {
-                    completion(
-                        Response(
-                            result: .failure(.emptyResponse),
-                            session: self.session,
-                            request: request,
-                            response: response
-                        )
-                    )
-                    return
-                }
-                
+        dataRequest(with: endpoint, queue: queue, progressHUD: progressHUD) { response in
+            switch response.result {
+            case .success(let data):
                 do {
                     let responseObject = try decoder.decode(D.self, from: data)
-                    completion(
-                        Response(
-                            result: .success(responseObject),
-                            session: self.session,
-                            request: request,
-                            response: response
-                        )
-                    )
+                    completion(response.convertedTo(result: .success(responseObject)))
                 } catch {
                     print(error)
-                    completion(
-                        Response(
-                            result: .failure(.parsingFailed),
-                            session: self.session,
-                            request: request,
-                            response: response
-                        )
-                    )
+                    completion(response.convertedTo(result: .failure(.parsingFailed)))
                 }
+            case .failure(let error):
+                completion(response.convertedTo(result: .failure(error)))
             }
         }
-        task?.resume()
-        return task
     }
     
     /// Create a request which ignore the response `Data`
@@ -148,6 +73,70 @@ public extension SmartNet {
         progressHUD: SNProgressHUD? = nil,
         completion: @escaping (Response<E.Response>) -> Void
     ) -> NetworkCancellable? where E: Requestable, E.Response == Data {
+        dataRequest(with: endpoint, queue: queue, progressHUD: progressHUD, completion: completion)
+    }
+    
+    /// Create a request and convert the reponse `Data` to `String`
+    /// - Parameters:
+    ///   - endpoint: The service `Endpoint`
+    ///   - queue: completiuon DispatchQueue
+    ///   - completion: response completion
+    /// - Returns: Return a cancellable Network Request
+    @discardableResult
+    func request<E>(
+        with endpoint: E,
+        queue: DispatchQueue = .main,
+        progressHUD: SNProgressHUD? = nil,
+        completion: @escaping (Response<E.Response>) -> Void
+    ) -> NetworkCancellable? where E: Requestable, E.Response == String {
+        dataRequest(with: endpoint, queue: queue, progressHUD: progressHUD) { response in
+            switch response.result {
+            case .success(let data):
+                guard
+                    let string = String(data: data, encoding: .utf8)
+                else {
+                    completion(response.convertedTo(result: .failure(.dataToStringFailure(data: data))))
+                    return
+                }
+                completion(response.convertedTo(result: .success(string)))
+            case .failure(let error):
+                completion(response.convertedTo(result: .failure(error)))
+            }
+        }
+    }
+    
+    /// Create a request which ignore the response `Data`
+    /// - Parameters:
+    ///   - endpoint: The service `Endpoint`
+    ///   - queue: completiuon DispatchQueue
+    ///   - completion: response completion
+    /// - Returns: Return a cancellable Network Request
+    @discardableResult
+    func request<E>(
+        with endpoint: E,
+        queue: DispatchQueue = .main,
+        progressHUD: SNProgressHUD? = nil,
+        completion: @escaping (Response<E.Response>) -> Void
+    ) -> NetworkCancellable? where E: Requestable, E.Response == Void {
+        dataRequest(with: endpoint, queue: queue, progressHUD: progressHUD) { response in
+            guard case .failure(.emptyResponse) = response.result else {
+                if let error = response.result.error as? NetworkError {
+                    completion(response.convertedTo(result: .failure(error)))
+                } else {
+                    completion(response.convertedTo(result: .failure(.networkFailure)))
+                }
+                return
+            }
+            completion(response.convertedTo(result: .success(())))
+        }
+    }
+    
+    private func dataRequest<E>(
+        with endpoint: E,
+        queue: DispatchQueue = .main,
+        progressHUD: SNProgressHUD? = nil,
+        completion: @escaping (Response<Data>) -> Void
+    ) -> NetworkCancellable? where E : Requestable {
         guard
             let request = try? endpoint.urlRequest(with: config)
         else {
@@ -167,7 +156,7 @@ public extension SmartNet {
         let task = session?.dataTask(
             with: request
         ) { [weak self] (data, response, error) in
-            guard let self = self else {
+            guard let self = self, let response = response else {
                 progressHUD?.dismiss()
                 return
             }
@@ -175,6 +164,7 @@ public extension SmartNet {
             queue.async {
                 defer { progressHUD?.dismiss() }
                 
+                // Print cURL
                 if self.config.debug, let session = self.session {
                     SmartNet.printCurl(
                         session: session,
@@ -183,11 +173,13 @@ public extension SmartNet {
                     )
                 }
                 
-                if let networkError = self.getRequestError(
-                    data: data,
-                    response: response,
-                    requestError: error
-                ) {
+                // Check error
+                if let networkError = error {
+                    let networkError = self.getRequestError(
+                        data: data,
+                        response: response,
+                        requestError: networkError
+                    )
                     completion(
                         Response(
                             result: .failure(networkError),
@@ -199,7 +191,25 @@ public extension SmartNet {
                     return
                 }
                 
-                guard
+                // Check HTTP response status code is within accepted range
+                if let error = self.validate(response: response, data: data) {
+                    let networkError = self.getRequestError(
+                        data: data,
+                        response: response,
+                        requestError: error
+                    )
+                    completion(
+                        Response(
+                            result: .failure(networkError),
+                            session: self.session,
+                            request: request,
+                            response: response
+                        )
+                    )
+                    return
+                }
+                
+               guard
                     let data = data
                 else {
                     completion(
@@ -216,188 +226,6 @@ public extension SmartNet {
                 completion(
                     Response(
                         result: .success(data),
-                        session: self.session,
-                        request: request,
-                        response: response
-                    )
-                )
-            }
-        }
-        task?.resume()
-        return task
-    }
-    
-    /// Create a request and convert the reponse `Data` to `String`
-    /// - Parameters:
-    ///   - endpoint: The service `Endpoint`
-    ///   - queue: completiuon DispatchQueue
-    ///   - completion: response completion
-    /// - Returns: Return a cancellable Network Request
-    @discardableResult
-    func request<E>(
-        with endpoint: E,
-        queue: DispatchQueue = .main,
-        progressHUD: SNProgressHUD? = nil,
-        completion: @escaping (Response<E.Response>) -> Void
-    ) -> NetworkCancellable? where E: Requestable, E.Response == String {
-        guard
-            let request = try? endpoint.urlRequest(with: config)
-        else {
-            completion(
-                Response(
-                    result: .failure(.urlGeneration),
-                    session: session,
-                    request: nil,
-                    response: nil
-                )
-            )
-            return nil
-        }
-        
-        progressHUD?.show()
-        
-        let task = session?.dataTask(
-            with: request
-        ) { [weak self] (data, response, error) in
-            guard let self = self else {
-                progressHUD?.dismiss()
-                return
-            }
-            
-            queue.async {
-                defer { progressHUD?.dismiss() }
-                
-                if self.config.debug, let session = self.session {
-                    SmartNet.printCurl(
-                        session: session,
-                        request: request,
-                        data: data
-                    )
-                }
-                
-                if let networkError = self.getRequestError(
-                    data: data,
-                    response: response,
-                    requestError: error
-                ) {
-                    completion(
-                        Response(
-                            result: .failure(networkError),
-                            session: self.session,
-                            request: request,
-                            response: response
-                        )
-                    )
-                    return
-                }
-                
-                guard
-                    let data = data
-                else {
-                    completion(
-                        Response(
-                            result: .failure(.emptyResponse),
-                            session: self.session,
-                            request: request,
-                            response: response
-                        )
-                    )
-                    return
-                }
-                
-                guard
-                    let string = String(data: data, encoding: .utf8)
-                else {
-                    completion(
-                        Response(
-                            result: .failure(.dataToStringFailure(data: data)),
-                            session: self.session,
-                            request: request,
-                            response: response
-                        )
-                    )
-                    return
-                }
-                
-                completion(
-                    Response(
-                        result: .success(string),
-                        session: self.session,
-                        request: request,
-                        response: response
-                    )
-                )
-            }
-        }
-        task?.resume()
-        return task
-    }
-    
-    /// Create a request which ignore the response `Data`
-    /// - Parameters:
-    ///   - endpoint: The service `Endpoint`
-    ///   - queue: completiuon DispatchQueue
-    ///   - completion: response completion
-    /// - Returns: Return a cancellable Network Request
-    @discardableResult
-    func request<E>(
-        with endpoint: E,
-        queue: DispatchQueue = .main,
-        progressHUD: SNProgressHUD? = nil,
-        completion: @escaping (Response<E.Response>) -> Void
-    ) -> NetworkCancellable? where E: Requestable, E.Response == Void {
-        guard
-            let request = try? endpoint.urlRequest(with: config)
-        else {
-            completion(
-                Response(
-                    result: .failure(.urlGeneration),
-                    session: session,
-                    request: nil,
-                    response: nil
-                )
-            )
-            return nil
-        }
-        
-        progressHUD?.show()
-        let task = session?.dataTask(
-            with: request
-        ) { [weak self] (data, response, error) in
-            guard let self = self else {
-                progressHUD?.dismiss()
-                return
-            }
-            
-            queue.async {
-                defer { progressHUD?.dismiss() }
-                
-                if self.config.debug, let session = self.session {
-                    SmartNet.printCurl(
-                        session: session,
-                        request: request,
-                        data: data
-                    )
-                }
-                
-                if let networkError = self.getRequestError(
-                    data: data,
-                    response: response,
-                    requestError: error
-                ) {
-                    completion(
-                        Response(
-                            result: .failure(networkError),
-                            session: self.session,
-                            request: request,
-                            response: response
-                        )
-                    )
-                    return
-                }
-                completion(
-                    Response(
-                        result: .success(()),
                         session: self.session,
                         request: request,
                         response: response

@@ -122,9 +122,8 @@ extension SmartNet {
     func getRequestError(
         data: Data?,
         response: URLResponse?,
-        requestError: Error?
-    ) -> NetworkError? {
-        guard let requestError = requestError else { return nil }
+        requestError: Error
+    ) -> NetworkError {
         if let statusCode = response?.httpStatusCode {
             return .error(statusCode: statusCode, data: data)
         } else {
@@ -132,7 +131,7 @@ extension SmartNet {
         }
     }
     
-    func validate(response: URLResponse, data: Data) -> NetworkError? {
+    func validate(response: URLResponse, data: Data?) -> NetworkError? {
         guard
             let httpResponse = response as? HTTPURLResponse,
             !(200..<300).contains(httpResponse.statusCode)
