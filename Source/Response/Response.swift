@@ -9,9 +9,10 @@ import Foundation
 
 public struct Response<Value> {
     public let result: Result<Value>
+    public private(set) var request: URLRequest?
+    public private(set) var response: URLResponse?
+    
     var session: URLSession?
-    var request: URLRequest?
-    var response: URLResponse?
     
     public init(result: Result<Value>) {
         self.result = result
@@ -37,6 +38,14 @@ public struct Response<Value> {
     
     public var statusCode: Int {
         (response as? HTTPURLResponse)?.statusCode ?? -1
+    }
+    
+    public var value: Value? {
+        result.value
+    }
+    
+    public var error: Error? {
+        result.error
     }
 }
 
