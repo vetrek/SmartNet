@@ -119,15 +119,20 @@ public extension SmartNet {
         completion: @escaping (Response<E.Response>) -> Void
     ) -> NetworkCancellable? where E: Requestable, E.Response == Void {
         dataRequest(with: endpoint, queue: queue, progressHUD: progressHUD) { response in
-            guard case .failure(.emptyResponse) = response.result else {
-                if let error = response.result.error as? NetworkError {
-                    completion(response.convertedTo(result: .failure(error)))
-                } else {
-                    completion(response.convertedTo(result: .failure(.networkFailure)))
+            switch response.result {
+            case .success:
+                completion(response.convertedTo(result: .success(())))
+            case .failure(let error):
+                guard case .emptyResponse = error else {
+                    if let error = response.result.error as? NetworkError {
+                        completion(response.convertedTo(result: .failure(error)))
+                    } else {
+                        completion(response.convertedTo(result: .failure(.networkFailure)))
+                    }
+                    return
                 }
-                return
+                completion(response.convertedTo(result: .success(())))
             }
-            completion(response.convertedTo(result: .success(())))
         }
     }
     
