@@ -24,10 +24,8 @@
 
 import Foundation
 
-
+@available(iOS 15.0.0, macOS 12.0, *)
 public extension SmartNet {
-    
-    @available(iOS 15.0.0, macOS 12.0.0, *)
     func request<D, E>(
         with endpoint: E,
         decoder: JSONDecoder = .default,
@@ -49,7 +47,6 @@ public extension SmartNet {
         }
     }
     
-    @available(iOS 15.0.0, macOS 12.0.0, *)
     func request<E>(
         with endpoint: E,
         progressHUD: SNProgressHUD? = nil
@@ -57,7 +54,6 @@ public extension SmartNet {
         await dataRequest(endpoint: endpoint, progressHUD: progressHUD)
     }
     
-    @available(iOS 15.0.0, macOS 12.0.0, *)
     func request<E>(
         with endpoint: E,
         progressHUD: SNProgressHUD? = nil
@@ -79,7 +75,6 @@ public extension SmartNet {
         }
     }
     
-    @available(iOS 15.0.0, macOS 12.0.0, *)
     func request<E>(
         with endpoint: E,
         progressHUD: SNProgressHUD? = nil
@@ -96,7 +91,6 @@ public extension SmartNet {
         }
     }
     
-    @available(iOS 15.0.0, macOS 12.0.0, *)
     private func dataRequest<E>(
         endpoint: E,
         progressHUD: SNProgressHUD? = nil
