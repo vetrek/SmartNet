@@ -25,7 +25,7 @@
 import Foundation
 
 @available(iOS 15.0.0, *)
-@available(OSX 12.00, *)
+@available(OSX 12.0, *)
 public extension SmartNet {
     func request<D, E>(
         with endpoint: E,
