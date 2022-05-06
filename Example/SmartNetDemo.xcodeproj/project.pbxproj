@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B90F88162825051D00818CF7 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B90F88152825051D00818CF7 /* AppDelegate.swift */; };
+		B90F88182825051D00818CF7 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B90F88172825051D00818CF7 /* ViewController.swift */; };
+		B90F881A2825051F00818CF7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B90F88192825051F00818CF7 /* Assets.xcassets */; };
+		B90F881D2825051F00818CF7 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = B90F881B2825051F00818CF7 /* Main.storyboard */; };
 		B93E926026DEC57A0096A6B4 /* SmartNet in Frameworks */ = {isa = PBXBuildFile; productRef = B93E925F26DEC57A0096A6B4 /* SmartNet */; };
 		B9A2316426A5B1820078E143 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9A2316326A5B1820078E143 /* AppDelegate.swift */; };
 		B9A2316626A5B1820078E143 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9A2316526A5B1820078E143 /* SceneDelegate.swift */; };
@@ -17,6 +21,12 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		B90F88132825051D00818CF7 /* SmartNetDemoMacOs.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SmartNetDemoMacOs.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B90F88152825051D00818CF7 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		B90F88172825051D00818CF7 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
+		B90F88192825051F00818CF7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B90F881C2825051F00818CF7 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		B90F881E2825051F00818CF7 /* SmartNetDemoMacOs.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SmartNetDemoMacOs.entitlements; sourceTree = "<group>"; };
 		B921C65F26B57BD30058D5DC /* SmartNet.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SmartNet.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		B925AA5426A61EC7006312D5 /* EasyNetworking.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = EasyNetworking.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		B9A2316026A5B1820078E143 /* SmartNetDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SmartNetDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -30,6 +40,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		B90F88102825051D00818CF7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B9A2315D26A5B1820078E143 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -41,6 +58,18 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		B90F88142825051D00818CF7 /* SmartNetDemoMacOs */ = {
+			isa = PBXGroup;
+			children = (
+				B90F88152825051D00818CF7 /* AppDelegate.swift */,
+				B90F88172825051D00818CF7 /* ViewController.swift */,
+				B90F88192825051F00818CF7 /* Assets.xcassets */,
+				B90F881B2825051F00818CF7 /* Main.storyboard */,
+				B90F881E2825051F00818CF7 /* SmartNetDemoMacOs.entitlements */,
+			);
+			path = SmartNetDemoMacOs;
+			sourceTree = "<group>";
+		};
 		B925AA5326A61EC7006312D5 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -54,6 +83,7 @@
 			isa = PBXGroup;
 			children = (
 				B9A2316226A5B1820078E143 /* SmartNetDemo */,
+				B90F88142825051D00818CF7 /* SmartNetDemoMacOs */,
 				B9A2316126A5B1820078E143 /* Products */,
 				B925AA5326A61EC7006312D5 /* Frameworks */,
 			);
@@ -63,6 +93,7 @@
 			isa = PBXGroup;
 			children = (
 				B9A2316026A5B1820078E143 /* SmartNetDemo.app */,
+				B90F88132825051D00818CF7 /* SmartNetDemoMacOs.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -92,6 +123,23 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		B90F88122825051D00818CF7 /* SmartNetDemoMacOs */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B90F88212825051F00818CF7 /* Build configuration list for PBXNativeTarget "SmartNetDemoMacOs" */;
+			buildPhases = (
+				B90F880F2825051D00818CF7 /* Sources */,
+				B90F88102825051D00818CF7 /* Frameworks */,
+				B90F88112825051D00818CF7 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SmartNetDemoMacOs;
+			productName = SmartNetDemoMacOs;
+			productReference = B90F88132825051D00818CF7 /* SmartNetDemoMacOs.app */;
+			productType = "com.apple.product-type.application";
+		};
 		B9A2315F26A5B1820078E143 /* SmartNetDemo */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = B9A2317426A5B1830078E143 /* Build configuration list for PBXNativeTarget "SmartNetDemo" */;
@@ -118,9 +166,12 @@
 		B9A2315826A5B1820078E143 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastSwiftUpdateCheck = 1240;
+				LastSwiftUpdateCheck = 1330;
 				LastUpgradeCheck = 1240;
 				TargetAttributes = {
+					B90F88122825051D00818CF7 = {
+						CreatedOnToolsVersion = 13.3.1;
+					};
 					B9A2315F26A5B1820078E143 = {
 						CreatedOnToolsVersion = 12.4;
 					};
@@ -140,11 +191,21 @@
 			projectRoot = "";
 			targets = (
 				B9A2315F26A5B1820078E143 /* SmartNetDemo */,
+				B90F88122825051D00818CF7 /* SmartNetDemoMacOs */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		B90F88112825051D00818CF7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B90F881A2825051F00818CF7 /* Assets.xcassets in Resources */,
+				B90F881D2825051F00818CF7 /* Main.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B9A2315E26A5B1820078E143 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -158,6 +219,15 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		B90F880F2825051D00818CF7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B90F88182825051D00818CF7 /* ViewController.swift in Sources */,
+				B90F88162825051D00818CF7 /* AppDelegate.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		B9A2315C26A5B1820078E143 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -171,6 +241,14 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
+		B90F881B2825051F00818CF7 /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				B90F881C2825051F00818CF7 /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
 		B9A2316E26A5B1830078E143 /* LaunchScreen.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
@@ -182,6 +260,66 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		B90F881F2825051F00818CF7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CODE_SIGN_ENTITLEMENTS = SmartNetDemoMacOs/SmartNetDemoMacOs.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = E95734YKE3;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSMainStoryboardFile = Main;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = valerio.SmartNetDemoMacOs;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		B90F88202825051F00818CF7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CODE_SIGN_ENTITLEMENTS = SmartNetDemoMacOs/SmartNetDemoMacOs.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = E95734YKE3;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSMainStoryboardFile = Main;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = valerio.SmartNetDemoMacOs;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 		B9A2317226A5B1830078E143 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -345,6 +483,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		B90F88212825051F00818CF7 /* Build configuration list for PBXNativeTarget "SmartNetDemoMacOs" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B90F881F2825051F00818CF7 /* Debug */,
+				B90F88202825051F00818CF7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		B9A2315B26A5B1820078E143 /* Build configuration list for PBXProject "SmartNetDemo" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
