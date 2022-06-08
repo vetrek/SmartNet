@@ -31,10 +31,13 @@ public extension SmartNet {
         progressHUD: SNProgressHUD? = nil
     ) async throws -> E.Response where D : Decodable, D == E.Response, E : Requestable {
         let data = try await dataRequest(endpoint: endpoint, progressHUD: progressHUD)
-        guard let responseObject = try? decoder.decode(D.self, from: data) else {
+        do {
+            let responseObject = try decoder.decode(D.self, from: data)
+            return responseObject
+        } catch {
+            print(error.localizedDescription)
             throw NetworkError.parsingFailed
         }
-        return responseObject
     }
     
     func request<E>(
