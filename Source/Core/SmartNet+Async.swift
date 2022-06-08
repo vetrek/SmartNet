@@ -35,7 +35,7 @@ public extension SmartNet {
             let responseObject = try decoder.decode(D.self, from: data)
             return responseObject
         } catch let error {
-            print(error.localizedDescription)
+            print(String(describing: error))
             throw NetworkError.parsingFailed
         }   
     }
