@@ -34,10 +34,10 @@ public extension SmartNet {
         do {
             let responseObject = try decoder.decode(D.self, from: data)
             return responseObject
-        } catch {
+        } catch let error {
             print(error.localizedDescription)
             throw NetworkError.parsingFailed
-        }
+        }   
     }
     
     func request<E>(
