@@ -161,14 +161,12 @@ public extension SmartNet {
         
         let task = session?.dataTask(
             with: request
-        ) { [weak self] (data, response, error) in
-            guard let self = self, let response = response else {
-                progressHUD?.dismiss()
-                return
-            }
-            
-            queue.async {
+        ) { (data, response, error) in
+            queue.async { [weak self] in
+                
                 defer { progressHUD?.dismiss() }
+                
+                guard let self = self else { return }
                 
                 // Print cURL
                 if self.config.debug, let session = self.session {
@@ -186,6 +184,7 @@ public extension SmartNet {
                         response: response,
                         requestError: networkError
                     )
+                    
                     completion(
                         Response(
                             result: .failure(networkError),
@@ -194,8 +193,11 @@ public extension SmartNet {
                             response: response
                         )
                     )
+                    
                     return
                 }
+                
+                guard let response = response else { return }
                 
                 // Check HTTP response status code is within accepted range
                 if let error = self.validate(response: response, data: data) {
@@ -215,7 +217,7 @@ public extension SmartNet {
                     return
                 }
                 
-               guard
+                guard
                     let data = data
                 else {
                     completion(
