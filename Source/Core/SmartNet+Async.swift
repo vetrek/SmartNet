@@ -24,123 +24,59 @@
 
 import Foundation
 
-@available(iOS 15.0.0, macOS 12.0, *)
 public extension SmartNet {
     func request<D, E>(
         with endpoint: E,
         decoder: JSONDecoder = .default,
         progressHUD: SNProgressHUD? = nil
-    ) async -> Response<E.Response> where D : Decodable, D == E.Response, E : Requestable {
-        
-        let response = await dataRequest(endpoint: endpoint, progressHUD: progressHUD)
-        
-        switch response.result {
-        case .success(let data):
-            guard let responseObject = try? decoder.decode(D.self, from: data) else {
-                return response.convertedTo(result: .failure(.parsingFailed))
-            }
-            
-            return response.convertedTo(result: .success(responseObject))
-            
-        case .failure(let error):
-            return response.convertedTo(result: .failure(error))
+    ) async throws -> E.Response where D : Decodable, D == E.Response, E : Requestable {
+        let data = try await dataRequest(endpoint: endpoint, progressHUD: progressHUD)
+        guard let responseObject = try? decoder.decode(D.self, from: data) else {
+            throw NetworkError.parsingFailed
         }
+        return responseObject
     }
     
     func request<E>(
         with endpoint: E,
         progressHUD: SNProgressHUD? = nil
-    ) async -> Response<E.Response> where E : Requestable, E.Response == Data {
-        await dataRequest(endpoint: endpoint, progressHUD: progressHUD)
+    ) async throws -> E.Response where E : Requestable, E.Response == Data {
+        try await dataRequest(endpoint: endpoint, progressHUD: progressHUD)
     }
     
     func request<E>(
         with endpoint: E,
         progressHUD: SNProgressHUD? = nil
-    ) async -> Response<E.Response> where E : Requestable, E.Response == String {
-        
-        let response = await dataRequest(endpoint: endpoint, progressHUD: progressHUD)
-        
-        switch response.result {
-        case .success(let data):
-            guard let string = String(data: data, encoding: .utf8) else {
-                return response.convertedTo(result: .failure(.dataToStringFailure(data: data)))
-            }
-            
-            return response.convertedTo(result: .success(string))
-            
-        case .failure(let error):
-            return response.convertedTo(result: .failure(error))
-            
+    ) async throws -> E.Response where E : Requestable, E.Response == String {
+        let data = try await dataRequest(endpoint: endpoint, progressHUD: progressHUD)
+        guard let string = String(data: data, encoding: .utf8) else {
+            throw NetworkError.dataToStringFailure(data: data)
         }
+        return string
     }
     
+    @discardableResult
     func request<E>(
         with endpoint: E,
         progressHUD: SNProgressHUD? = nil
-    ) async -> Response<E.Response> where E : Requestable, E.Response == Void {
-        let response = await dataRequest(endpoint: endpoint, progressHUD: progressHUD)
-        
-        switch response.result {
-        case .success:
-            return response.convertedTo(result: .success(()))
-            
-        case .failure(let error):
-            return response.convertedTo(result: .failure(error))
-
-        }
+    ) async throws -> E.Response where E : Requestable, E.Response == Void {
+        let _ = try await dataRequest(endpoint: endpoint, progressHUD: progressHUD)
+        return
     }
     
     private func dataRequest<E>(
         endpoint: E,
         progressHUD: SNProgressHUD? = nil
-    ) async -> (Response<Data>) where E : Requestable {
-        guard
-            let session = session,
-            let request = try? endpoint.urlRequest(with: config)
-        else {
-            return Response(
-                result: .failure(.urlGeneration),
-                session: session,
-                request: nil,
-                response: nil
-            )
-        }
-        
-        if config.debug {
-            SmartNet.printCurl(session: session, request: request)
-        }
-        
-        progressHUD?.show()
-        defer { progressHUD?.dismiss() }
-        
-        do {
-            let (data, response) = try await session.data(for: request, delegate: nil)
-            
-            if let networkError = validate(response: response, data: data) {
-                return Response(
-                    result: .failure(networkError),
-                    session: self.session,
-                    request: request,
-                    response: response
-                )
+    ) async throws -> Data where E : Requestable {
+        return try await withCheckedThrowingContinuation { continuation in
+            dataRequest(with: endpoint, progressHUD: progressHUD) { response in
+                switch response.result {
+                case .success(let data):
+                    continuation.resume(returning: data)
+                case .failure(let error):
+                    continuation.resume(throwing: error)
+                }
             }
-            
-            return Response(
-                result: .success(data),
-                session: self.session,
-                request: request,
-                response: response
-            )
-            
-        } catch {
-            let error = resolve(error: error)
-            return Response(
-                result: .failure(error),
-                session: session,
-                request: request,
-                response: nil
-            )
         }
     }
 }

@@ -79,12 +79,16 @@ struct ContentView: View {
                 ForEach(endpoints, id: \.uid) { endpoint in
                     HStack(alignment: .center, spacing: nil) {
                         Button {
-
                             network.request(
                                 with: endpoint.endpoint
                             ) { (response) in
                                 print(response)
                             }
+                            
+                            Task {
+                                try? await network.request(with: endpoints.first!.endpoint)
+                            }
+                            
                             downloadTask = network.download(url: URL(string: "https://jsoncompare.org/LearningContainer/SampleFiles/Video/MP4/Sample-Video-File-For-Testing.mp4")!)?
                                 .downloadProgress { progress, fileSize in
                                     print("[Download - Progress]", progress.fractionCompleted, fileSize)
@@ -115,7 +119,6 @@ struct ContentView: View {
             }
         }
     }
-    
 }
 
 struct ContentView_Previews: PreviewProvider {
@@ -152,20 +155,4 @@ class Test {
         )
     )
 
-    var subscriptions = Set<AnyCancellable>()
-
-    func asd<E>(endpoint: E) where E: Requestable, E.Response == Void {
-        network.request(with: endpoint)?
-            .sink(
-                receiveCompletion: { (response) in
-                    if case .failure(let error) = response {
-                        print(error.localizedDescription)
-                    }
-                },
-                receiveValue: { (response) in
-                    print(response)
-                }
-            )
-            .store(in: &subscriptions)
-    }
 }

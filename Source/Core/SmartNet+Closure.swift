@@ -136,7 +136,8 @@ public extension SmartNet {
         }
     }
     
-    private func dataRequest<E>(
+    @discardableResult
+    internal func dataRequest<E>(
         with endpoint: E,
         queue: DispatchQueue = .main,
         progressHUD: SNProgressHUD? = nil,
