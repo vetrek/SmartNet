@@ -76,8 +76,8 @@ public extension SmartNet {
                 switch response.result {
                 case .success(let data):
                     continuation.resume(returning: data)
-                case .failure(let error):
-                    continuation.resume(throwing: error)
+                case .failure:
+                    continuation.resume(throwing: response.error!)
                 }
             }
         }
