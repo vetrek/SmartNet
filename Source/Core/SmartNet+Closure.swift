@@ -201,14 +201,9 @@ public extension SmartNet {
                 
                 // Check HTTP response status code is within accepted range
                 if let error = self.validate(response: response, data: data) {
-                    let networkError = self.getRequestError(
-                        data: data,
-                        response: response,
-                        requestError: error
-                    )
                     completion(
                         Response(
-                            result: .failure(networkError),
+                            result: .failure(error),
                             session: self.session,
                             request: request,
                             response: response
