@@ -18,7 +18,7 @@ The [Swift Package Manager](https://swift.org/package-manager/) is a tool for au
 
 In Xcode 11+ select File > Packages > Add Package Dependency > Enter this project's URL:
     
-    https://github.com/Valerio69/SmartNet.git
+    https://github.com/vetrek/SmartNet.git
 
 
 ### CocoaPods
