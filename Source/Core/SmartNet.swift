@@ -50,8 +50,9 @@ public final class SmartNet: NSObject {
         super.init()
 
         let sessionConfig = URLSessionConfiguration.default
+        sessionConfig.shouldUseExtendedBackgroundIdleMode = true
         sessionConfig.timeoutIntervalForRequest = config.requestTimeout
-
+        
         self.session = URLSession(
             configuration: sessionConfig,
             delegate: self,
