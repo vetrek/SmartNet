@@ -131,7 +131,7 @@ public final class DownloadTask: NetworkCancellable, Hashable {
     }
     
     internal func downloadHandler(
-        localURL: URL?,
+        tmpURL: URL?,
         urlResponse: URLResponse?,
         error: Error?
     ) {
@@ -148,19 +148,19 @@ public final class DownloadTask: NetworkCancellable, Hashable {
             return
         }
         
-        guard let localURL = localURL else {
+        guard let tmpURL = tmpURL else {
             response.queue.async { response.closure(Response(result: .failure(.invalidDownloadUrl))) }
             state = .error
             return
         }
-        guard let data = try? Data(contentsOf: localURL) else {
+        guard let data = try? Data(contentsOf: tmpURL) else {
             response.queue.async { response.closure(Response(result: .failure(.invalidDownloadFileData))) }
             state = .error
             return
         }
         
         // Try to move the file to the new URL
-        var url = localURL
+        var url = tmpURL
         if let downloadDestination = downloadDestination {
             guard moveFile(at: url, to: downloadDestination.url, shouldReplace: downloadDestination.removePreviousFile) else {
                 response.queue.async { response.closure(Response(result: .failure(.unableToSaveFile(url)))) }
@@ -296,7 +296,7 @@ extension SmartNet: URLSessionDownloadDelegate {
             })
         else { return }
         download.downloadHandler(
-            localURL: location,
+            tmpURL: location,
             urlResponse: downloadTask.response,
             error: nil
         )
