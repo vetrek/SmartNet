@@ -169,7 +169,7 @@ public final class DownloadTask: NetworkCancellable, Hashable {
             url = downloadDestination.url
         }
         
-        let result = DownloadResult(fileData: data, localURL: localURL)
+        let result = DownloadResult(fileData: data, localURL: url)
         response.queue.async {
             response.closure(Response(result: .success(result)))
             self.state = .completed
