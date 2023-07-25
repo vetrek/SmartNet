@@ -28,6 +28,14 @@ import Foundation
 // MARK: - Networking Closure
 
 public extension SmartNet {
+  /// Sends a request to the provided endpoint and expects a decoded response.
+  ///
+  /// - Parameters:
+  ///   - endpoint: The endpoint to send the request to.
+  ///   - decoder: The JSON decoder to use for decoding the response. Default value is the standard `JSONDecoder`.
+  ///   - queue: The dispatch queue to receive the response on. Default value is the main queue.
+  ///   - progressHUD: An optional progress HUD to show loading state.
+  /// - Returns: A publisher emitting the decoded response or an error.
   func request<D, E>(
     with endpoint: E,
     decoder: JSONDecoder = .default,
@@ -39,6 +47,13 @@ public extension SmartNet {
       .eraseToAnyPublisher()
   }
   
+  /// Sends a request to the provided endpoint and expects a data response.
+  ///
+  /// - Parameters:
+  ///   - endpoint: The endpoint to send the request to.
+  ///   - queue: The dispatch queue to receive the response on. Default value is the main queue.
+  ///   - progressHUD: An optional progress HUD to show loading state.
+  /// - Returns: A publisher emitting the received data or an error.
   func request<E>(
     with endpoint: E,
     queue: DispatchQueue = .main,
@@ -47,6 +62,13 @@ public extension SmartNet {
     dataRequest(with: endpoint)
   }
   
+  /// Sends a request to the provided endpoint and expects a string response.
+  ///
+  /// - Parameters:
+  ///   - endpoint: The endpoint to send the request to.
+  ///   - queue: The dispatch queue to receive the response on. Default value is the main queue.
+  ///   - progressHUD: An optional progress HUD to show loading state.
+  /// - Returns: A publisher emitting the received string or an error.
   func request<E>(
     with endpoint: E,
     queue: DispatchQueue = .main,
@@ -64,17 +86,30 @@ public extension SmartNet {
       .eraseToAnyPublisher()
   }
   
+  /// Sends a request to the provided endpoint and does not expect a specific response (void).
+  ///
+  /// - Parameters:
+  ///   - endpoint: The endpoint to send the request to.
+  ///   - queue: The dispatch queue to receive the response on. Default value is the main queue.
+  ///   - progressHUD: An optional progress HUD to show loading state.
+  /// - Returns: A publisher indicating success or an error.
   func request<E>(
     with endpoint: E,
     queue: DispatchQueue = .main,
     progressHUD: SNProgressHUD? = nil
   ) -> AnyPublisher<E.Response, Error> where E: Requestable, E.Response == Void {
     dataRequest(with: endpoint)
-       .map { _ in return Void() } // Convert received Data to Void
-       .eraseToAnyPublisher()
+      .map { _ in return Void() } // Convert received Data to Void
+      .eraseToAnyPublisher()
   }
   
-  @discardableResult
+  /// Sends a data request to the provided endpoint.
+  ///
+  /// - Parameters:
+  ///   - endpoint: The endpoint to send the request to.
+  ///   - queue: The dispatch queue to receive the response on. Default value is the main queue.
+  ///   - progressHUD: An optional progress HUD to show loading state.
+  /// - Returns: A publisher emitting the received data or an error.
   internal func dataRequest<E>(
     with endpoint: E,
     queue: DispatchQueue = .main,
