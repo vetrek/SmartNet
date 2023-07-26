@@ -130,12 +130,12 @@ network.request(with: endpoint)?
 - Using async/await
 
 ```swift
-    do {
-        let response = try await network.request(with: endpoint)
-        print(response)
-    } catch {
-        print(error)
-    }
+do {
+    let response = try await network.request(with: endpoint)
+    print(response)
+} catch {
+    print(error)
+}
 ```
 
 ## Info
