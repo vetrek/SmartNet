@@ -137,6 +137,3 @@ do {
     print(error)
 }
 ```
-
-## Info
-Project inspired by SENetworking (https://github.com/kudoleh/SENetworking).
