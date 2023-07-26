@@ -7,6 +7,7 @@ SmartNet is an HTTP networking library written in Swift that aims to make networ
 - Supported Requests:  **Encodable**, **Dictionary**, **String**
 - [Supported Response Types: **Decodable**, **String**, **Data**, **Void**
 - Supported QueryParameters: **Encodable**, **Dictionary**
+- Async/Await Support
 - iOS 13+ **Combine** Support
 - Light and easy Networking Interface
 - "Truested Domains" list to bypass SSL Authentication Challenge (**not recommended**)
