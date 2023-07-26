@@ -96,16 +96,14 @@ Equivalent of https://api.example.com/person with the following body:
 
 **API CALL**
 
-- Using Closures
+- Using async/await
 
 ```swift
-network.request(with: endpoint) { (response) in
-    switch response.result {
-    case .success(let person):
-        print("Success! \(person.name)")
-    case .failure(let error):
-        print(error.localizedDescription)
-    }
+do {
+    let response = try await network.request(with: endpoint)
+    print(response)
+} catch {
+    print(error)
 }
 ```
 
@@ -128,13 +126,15 @@ network.request(with: endpoint)?
     .store(in: &subscriptions)
 ```
 
-- Using async/await
+- Using Closures
 
 ```swift
-do {
-    let response = try await network.request(with: endpoint)
-    print(response)
-} catch {
-    print(error)
+network.request(with: endpoint) { (response) in
+    switch response.result {
+    case .success(let person):
+        print("Success! \(person.name)")
+    case .failure(let error):
+        print(error.localizedDescription)
+    }
 }
 ```
