@@ -127,5 +127,16 @@ network.request(with: endpoint)?
     .store(in: &subscriptions)
 ```
 
+- Using async/await
+
+```swift
+    do {
+        let response = try await network.request(with: endpoint)
+        print(response)
+    } catch {
+        print(error)
+    }
+```
+
 ## Info
 Project inspired by SENetworking (https://github.com/kudoleh/SENetworking).
