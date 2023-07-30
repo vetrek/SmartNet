@@ -105,12 +105,6 @@ extension SmartNet {
     
     
     tag = "🟢 SmartNet - Response with StatusCode: \((response as? HTTPURLResponse)?.statusCode ?? 0) 🟢"
-
-    if let data = data {
-      print(tag, String(data: data, encoding: .utf8) ?? "")
-    } else {
-      print(tag)
-    }
     
     if let data = data, let jsonString = String(data: data, encoding: .utf8) {
       if let jsonObject = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
