@@ -103,16 +103,15 @@ extension SmartNet {
     
     print(tag, curl)
     
-    
     tag = "🟢 SmartNet - Response with StatusCode: \((response as? HTTPURLResponse)?.statusCode ?? 0) 🟢"
     
     if let data = data, let jsonString = String(data: data, encoding: .utf8) {
       if let jsonObject = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
         let prettyData = try? JSONSerialization.data(withJSONObject: jsonObject, options: .prettyPrinted)
         let prettyString = String(data: prettyData ?? data, encoding: .utf8) ?? jsonString
-        print("🟢 SmartNet - Response 🟢", prettyString)
+        print(tag, prettyString)
       } else {
-        print("🟢 SmartNet - Response 🟢", jsonString)
+        print(tag, jsonString)
       }
     }
   }
