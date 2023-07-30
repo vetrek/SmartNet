@@ -173,6 +173,7 @@ public extension SmartNet {
           SmartNet.printCurl(
             session: session,
             request: request,
+            response: response,
             data: data
           )
         }
