@@ -278,13 +278,15 @@ public extension SmartNet {
     with endpoint: DownloadEndpoint,
     destination: DownloadTask.DownloadFileDestination? = nil
   ) async throws -> DownloadTask.DownloadResult {
-    return try await withCheckedThrowingContinuation { continuation in
+    return try await withCheckedThrowingContinuation { [weak self] continuation in
       do {
-        guard let session = session else {
+        guard
+          let self,
+          let session = self.session else {
           continuation.resume(throwing: NSError(domain: "SmartNet", code: 100, userInfo: [NSLocalizedDescriptionKey: "Invalid Session"]))
           return
         }
-        try DownloadTask(
+        let downloadTask = try DownloadTask(
           session: session,
           endpoint: endpoint,
           config: config,
@@ -297,6 +299,8 @@ public extension SmartNet {
             continuation.resume(throwing: error)
           }
         }
+        self.downloadsTasks.insert(downloadTask)
+        
       } catch {
         continuation.resume(throwing: error)
       }
