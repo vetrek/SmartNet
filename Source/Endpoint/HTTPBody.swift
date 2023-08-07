@@ -74,8 +74,9 @@ public struct HTTPBody: SmartNetBody {
   
   mutating func addingKeyValues(keyValues: [String: Any]) -> Self {
     guard
+      bodyType == .keyValue,
       let dictionary,
-      let newBody = HTTPBody(dictionary: dictionary.merging(keyValues, uniquingKeysWith: { $1 }))
+      let newBody = HTTPBody(dictionary: dictionary.merging(keyValues, uniquingKeysWith: { $1 }), bodyEncoding: bodyEncoding)
     else { return self }
     self = newBody
     return self
