@@ -62,7 +62,7 @@ public final class NetworkConfiguration: NetworkConfigurable {
     baseURL: URL,
     headers: [String: String] = [:],
     queryParameters: [String: String] = [:],
-    bodyParameters: [String: String] = [:],
+    bodyParameters: [String: Any] = [:],
     trustedDomains: [String] = [],
     requestTimeout: TimeInterval = 60,
     debug: Bool = true
