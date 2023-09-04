@@ -396,7 +396,7 @@ private extension SmartNet {
   // Manages the downloading tasks based on the current active and pending tasks.
   func startNextPendingDownload() {
     downloadQueue.sync {
-      while downloadsTasks.count < 10 && !pendingDownloads.isEmpty {
+      while downloadsTasks.count < maxConcurrentDownloads && !pendingDownloads.isEmpty {
         if let pendingDownload = pendingDownloads.first {
           pendingDownloads.removeFirst() // Remove from pending
           downloadsTasks.insert(pendingDownload) // Insert into active downloads
