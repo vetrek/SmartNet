@@ -91,6 +91,7 @@ public final class DownloadTask: NetworkCancellable, Hashable {
     self.remoteURL = try endpoint.url(with: config)
     self.remoteURLRequest = try endpoint.urlRequest(with: config)
     self.downloadDestination = destination
+    commonInit()
   }
   
   init(
@@ -100,13 +101,17 @@ public final class DownloadTask: NetworkCancellable, Hashable {
     self.session = session
     self.remoteURL = url
     self.remoteURLRequest = URLRequest(url: url)
+    commonInit()
   }
   
   // MARK: - Private Methods
   
-  func startDownload() {
+  func commonInit() {
     task = session.downloadTask(with: remoteURLRequest)
     observeDownloadProgress()
+  }
+  
+  func startDownload() {
     task.resume()
     state = .downloading
   }
