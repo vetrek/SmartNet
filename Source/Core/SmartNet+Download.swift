@@ -91,7 +91,6 @@ public final class DownloadTask: NetworkCancellable, Hashable {
     self.remoteURL = try endpoint.url(with: config)
     self.remoteURLRequest = try endpoint.urlRequest(with: config)
     self.downloadDestination = destination
-    startDownload()
   }
   
   init(
@@ -101,12 +100,11 @@ public final class DownloadTask: NetworkCancellable, Hashable {
     self.session = session
     self.remoteURL = url
     self.remoteURLRequest = URLRequest(url: url)
-    startDownload()
   }
   
   // MARK: - Private Methods
   
-  private func startDownload() {
+  func startDownload() {
     task = session.downloadTask(with: remoteURLRequest)
     observeDownloadProgress()
     task.resume()
@@ -270,7 +268,14 @@ public extension SmartNet {
         destination: destination
       )
     else { return nil }
-    downloadsTasks.insert(downloadTask)
+    
+    if downloadsTasks.count < maxConcurrentDownloads {
+      downloadsTasks.insert(downloadTask)
+      downloadTask.startDownload()
+    } else {
+      pendingDownloads.append(downloadTask)
+    }
+    
     return downloadTask
   }
   
@@ -312,7 +317,12 @@ public extension SmartNet {
   ) -> DownloadTask? {
     guard let session = session else { return nil }
     let downloadTask = DownloadTask(session: session, url: url)
-    downloadsTasks.insert(downloadTask)
+    if downloadsTasks.count < maxConcurrentDownloads {
+      downloadsTasks.insert(downloadTask)
+      downloadTask.startDownload()
+    } else {
+      pendingDownloads.append(downloadTask)
+    }
     return downloadTask
   }
 }
@@ -334,6 +344,9 @@ extension SmartNet: URLSessionDownloadDelegate {
       error: nil
     )
     downloadsTasks.remove(download)
+    
+    // Start pending downloads if any
+    startNextPendingDownload()
     
     if config.debug,
        let request = downloadTask.currentRequest {
@@ -371,5 +384,20 @@ extension SmartNet: URLSessionDownloadDelegate {
       })
     else { return }
     download.remoteFileSize = expectedTotalBytes
+  }
+}
+
+private extension SmartNet {
+  // Manages the downloading tasks based on the current active and pending tasks.
+  func startNextPendingDownload() {
+    downloadQueue.sync {
+      while downloadsTasks.count < 10 && !pendingDownloads.isEmpty {
+        if let pendingDownload = pendingDownloads.first {
+          pendingDownloads.removeFirst() // Remove from pending
+          downloadsTasks.insert(pendingDownload) // Insert into active downloads
+          pendingDownload.startDownload() // Start the download, assuming you have a method to do so
+        }
+      }
+    }
   }
 }

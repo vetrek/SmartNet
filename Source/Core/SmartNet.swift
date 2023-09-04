@@ -45,6 +45,12 @@ public final class SmartNet: NSObject {
   
   var downloadsTasks: Set<DownloadTask> = []
   
+  var pendingDownloads: [DownloadTask] = []
+  
+  let maxConcurrentDownloads = 6
+  
+  let downloadQueue = DispatchQueue(label: "com.smartnet.downloadQueue")
+  
   public init(config: NetworkConfigurable) {
     self.config = config
     super.init()
