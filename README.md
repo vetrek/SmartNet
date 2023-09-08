@@ -10,7 +10,10 @@ SmartNet is an HTTP networking library written in Swift that aims to make networ
 - Async/Await Support
 - iOS 13+ **Combine** Support
 - Light and easy Networking Interface
-- "Truested Domains" list to bypass SSL Authentication Challenge (**not recommended**)
+- "Trusted Domains" list to bypass SSL Authentication Challenge (**not recommended**)
+
+## Projects using SmartNet
+- [YourVPN](https://yourvpn.world/)
 
 ## Installation
 
