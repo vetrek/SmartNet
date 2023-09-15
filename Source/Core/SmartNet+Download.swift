@@ -111,9 +111,11 @@ public final class DownloadTask: NetworkCancellable, Hashable {
     observeDownloadProgress()
   }
   
-  func startDownload() {
+  @discardableResult
+  func startDownload() -> Self {
     task.resume()
     state = .downloading
+    return self
   }
   
   private func resumeDownloadWithData(_ data: Data) {
@@ -310,6 +312,7 @@ public extension SmartNet {
           }
         }
         self.downloadsTasks.insert(downloadTask)
+        downloadTask.startDownload()
         
       } catch {
         continuation.resume(throwing: error)
