@@ -25,6 +25,8 @@
 import Foundation
 import Combine
 
+public typealias RequestMiddlewareClosure = (URLRequest) throws -> Void
+
 public protocol NetworkCancellable {
   func cancel()
 }
@@ -50,6 +52,8 @@ public final class SmartNet: NSObject {
   let maxConcurrentDownloads = 6
   
   let downloadQueue = DispatchQueue(label: "com.smartnet.downloadQueue")
+  
+  var requestMiddlewares = [Middleware]()
   
   public init(config: NetworkConfigurable) {
     self.config = config
@@ -96,6 +100,74 @@ public extension SmartNet {
   func removeHeaders(keys: [String]) {
     keys.forEach { config.headers.removeValue(forKey: $0) }
   }
+  
+  /// Adds a middleware for a specific path component of a URL.
+  ///
+  /// Path components are the segments in the URL after the domain, separated by "/". For example, in the URL "https://example.com/v1/user", the path components are "v1" and "user".
+  /// If you specify the path component as "/", the middleware will be applied to every API call, regardless of its specific path.
+  ///
+  /// Multiple middlewares can be added for the same path component and they will be executed in the order they were added. This allows for layering different behaviors or modifications to a request based on different conditions or logic.
+  ///
+  /// Use this method to add a middleware that will be executed for requests with a specific URL path component.
+  /// - Parameters:
+  ///   - component: The URL path component for which the middleware should be applied.
+  ///   - middleware: The middleware closure that will be invoked for requests with the matching path component.
+  ///
+  /// - Example:
+  ///   ```
+  ///   smartNet.addMiddleware(component: "user") { request in
+  ///       // Modify the request, e.g., add a specific header
+  ///       var headers = request.allHTTPHeaderFields ?? [:]
+  ///       headers["Custom-Header"] = "CustomValue"
+  ///       request.allHTTPHeaderFields = headers
+  ///   }
+  ///   smartNet.addMiddleware(component: "user") { request in
+  ///       // Another middleware for "user", perhaps adding another header or logging
+  ///       // This will be executed after the previous "user" middleware
+  ///   }
+  ///   smartNet.addMiddleware(component: "/") { request in
+  ///       // This will be applied to every API call
+  ///   }
+  ///   ```
+  @discardableResult
+  func addMiddleware(component: String, callback: @escaping RequestMiddlewareClosure) -> Middleware {
+    let middleware = Middleware(pathComponent: component, callback: callback)
+    requestMiddlewares.append(middleware)
+    return middleware
+  }
+  
+  /// Removes all middlewares for a specific path component.
+  ///
+  /// Use this method to remove any middleware associated with a specific URL path component.
+  /// - Parameter component: The URL path component for which all associated middlewares should be removed.
+  ///
+  /// - Example:
+  ///   ```
+  ///   removeMiddleware(for: "user")
+  ///   ```
+  func removeMiddleware(for component: String) {
+    requestMiddlewares.removeAll { $0.pathComponent == component }
+  }
+  
+  /// Removes a specific middleware from the list of registered middlewares.
+  ///
+  /// If you want to stop a middleware from being executed on subsequent requests, you should remove it using this method.
+  /// Remember that removing a middleware will not affect the requests that are already in flight.
+  ///
+  /// - Parameter middleware: The middleware instance that you want to remove.
+  ///
+  /// - Example:
+  ///   ```
+  ///   let middleware = smartNet.addMiddleware(component: "/") { request in
+  ///     // This will be applied to every API call
+  ///   }
+  ///   // Later in the code, if you decide to remove the middleware:
+  ///   smartNet.removeMiddleware(middleware)
+  ///   ```
+  func removeMiddleware(_ middleware: Middleware) {
+    requestMiddlewares.removeAll { $0.uid == middleware.uid }
+  }
+
 }
 
 // MARK: - Errors Handlers
@@ -184,5 +256,13 @@ extension SmartNet: URLSessionDelegate {
 extension URLResponse {
   var httpStatusCode: Int? {
     (self as? HTTPURLResponse)?.statusCode
+  }
+}
+
+extension SmartNet {
+  public struct Middleware {
+    let uid = UUID()
+    public let pathComponent: String
+    public let callback: RequestMiddlewareClosure
   }
 }

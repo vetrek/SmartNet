@@ -157,6 +157,45 @@ public extension SmartNet {
       return nil
     }
     
+    if let url = request.url, !requestMiddlewares.isEmpty {
+      let pathComponents = url.pathComponents
+
+      do {
+        // Check for global middleware
+        var globalMiddlewares = [Middleware]()
+        var pathMiddlewares = [Middleware]()
+        
+        requestMiddlewares.forEach {
+          if $0.pathComponent == "/" {
+            globalMiddlewares.append($0)
+          } else if pathComponents.contains($0.pathComponent) {
+            pathMiddlewares.append($0)
+          }
+        }
+        
+        // Apply all global middlewares
+        for middleware in globalMiddlewares {
+          try middleware.callback(request)
+        }
+        
+        // Apply path-specific middlewares
+        for middleware in pathMiddlewares {
+          try middleware.callback(request)
+        }
+        
+      } catch {
+        completion(
+          Response(
+            result: .failure(.middleware(error)),
+            session: session,
+            request: request,
+            response: nil
+          )
+        )
+        return nil
+      }
+    }
+    
     progressHUD?.show()
     
     let task = session?.dataTask(
