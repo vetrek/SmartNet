@@ -169,6 +169,7 @@ extension Requestable {
       urlRequest.httpBody = form.data
     } else if let body = HTTPBody(dictionary: config.bodyParameters)?.data {
       // Send default body as json
+      allHeaders.merge(["Content-Type": "application/json"]) { (current, _) in current }
       urlRequest.httpBody = body
     }
     
