@@ -37,7 +37,7 @@ public enum HTTPMethod: String {
 }
 
 public enum BodyEncoding {
-  case json
+  case json(encoder: JSONEncoder = JSONEncoder())
   case formUrlEncodedAscii
   case plainText
 }

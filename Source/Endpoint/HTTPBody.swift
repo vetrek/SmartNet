@@ -42,7 +42,7 @@ public struct HTTPBody: SmartNetBody {
   
   let bodyEncoding: BodyEncoding
   
-  public init?(dictionary: [String: Any], bodyEncoding: BodyEncoding = .json) {
+  public init?(dictionary: [String: Any], bodyEncoding: BodyEncoding = .json()) {
     guard
       let data = try? HTTPBody.getData(from: dictionary, using: bodyEncoding)
     else { return nil }
@@ -52,10 +52,10 @@ public struct HTTPBody: SmartNetBody {
     self.bodyType = .keyValue
   }
   
-  public init?(encodable: Encodable, bodyEncoding: BodyEncoding = .json) {
+  public init?(encodable: Encodable, bodyEncoding: BodyEncoding = .json()) {
     guard
       let dictionary = try? encodable.toDictionary(),
-      let data = try? HTTPBody.getData(from: dictionary, using: bodyEncoding)
+      let data = try? HTTPBody.getData(from: encodable, using: bodyEncoding)
     else { return nil }
     self.bodyEncoding = bodyEncoding
     self.data = data
@@ -93,6 +93,21 @@ private extension HTTPBody {
     case .json:
       return try JSONSerialization.data(withJSONObject: dictionary)
     case .formUrlEncodedAscii:
+      return queryString(dictionary).data(using: String.Encoding.ascii, allowLossyConversion: true)
+    default:
+      return nil
+    }
+  }
+  
+  static func getData(
+    from encodable: Encodable,
+    using encoding: BodyEncoding
+  ) throws -> Data? {
+    switch encoding {
+    case let .json(encoder):
+      return try encoder.encode(encodable)
+    case .formUrlEncodedAscii:
+      guard let dictionary = try? encodable.toDictionary() else { return nil }
       return queryString(dictionary).data(using: String.Encoding.ascii, allowLossyConversion: true)
     default:
       return nil
