@@ -101,7 +101,7 @@ extension Requestable {
       var urlComponents = URLComponents(string: escapedEndpoint)
     else { throw RequestGenerationError.components }
     
-    var urlQueryItems = [URLQueryItem]()
+    var urlQueryItems = urlComponents.queryItems ?? []
     
     if let queryParameters = queryParameters?.parameters {
       urlQueryItems += queryParameters.map {
