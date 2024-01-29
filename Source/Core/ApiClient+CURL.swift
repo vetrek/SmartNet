@@ -1,5 +1,5 @@
 //
-//  SmartNet+CURL.swift
+//  ApiClient+CURL.swift
 //
 //  Copyright (c) 2021 Valerio69 (valerio.alsebas@gmail.com)
 //
@@ -26,7 +26,7 @@ import Foundation
 
 // MARK: - cURL
 
-extension SmartNet {
+extension ApiClient {
   // Original source: https://github.com/Alamofire/Alamofire/blob/c039ac798b5acb91830dc64e8fe5de96970a4478/Source/Request.swift#L962
   static func printCurl(
     session: URLSession,

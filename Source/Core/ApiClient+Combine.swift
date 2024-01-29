@@ -1,5 +1,5 @@
 //
-//  SmartNet+Async.swift
+//  ApiClient+Async.swift
 //
 //  Copyright (c) 2021 Valerio69 (valerio.alsebas@gmail.com)
 //
@@ -27,7 +27,7 @@ import Foundation
 
 // MARK: - Networking Closure
 
-public extension SmartNet {
+public extension ApiClient {
   /// Sends a request to the provided endpoint and expects a decoded response.
   ///
   /// - Parameters:

@@ -24,11 +24,7 @@
 
 import Foundation
 
-public protocol SmartNetBody {
-  var data: Data? { get }
-}
-
-public struct HTTPBody: SmartNetBody {
+public struct HTTPBody {
   enum BodyType {
     case keyValue
     case string

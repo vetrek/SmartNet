@@ -33,7 +33,7 @@ public struct Response<Value> {
       let session = session,
       let request = self.request
     else { return }
-    SmartNet.printCurl(session: session, request: request, response: response)
+    ApiClient.printCurl(session: session, request: request, response: response)
   }
   
   public var statusCode: Int {

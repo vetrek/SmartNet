@@ -1,5 +1,5 @@
 //
-//  SmartNet+Download.swift
+//  ApiClient+Download.swift
 //
 //  Copyright (c) 2021 Valerio69 (valerio.alsebas@gmail.com)
 //
@@ -261,7 +261,7 @@ public final class DownloadTask: NetworkCancellable, Hashable {
   
 }
 
-public extension SmartNet {
+public extension ApiClient {
   func download(
     with endpoint: DownloadEndpoint,
     destination: DownloadTask.DownloadFileDestination? = nil
@@ -335,7 +335,7 @@ public extension SmartNet {
   }
 }
 
-extension SmartNet: URLSessionDownloadDelegate {
+extension ApiClient: URLSessionDownloadDelegate {
   public func urlSession(
     _ session: URLSession,
     downloadTask: URLSessionDownloadTask,
@@ -358,7 +358,7 @@ extension SmartNet: URLSessionDownloadDelegate {
     
     if config.debug,
        let request = downloadTask.currentRequest {
-      SmartNet.printCurl(
+      ApiClient.printCurl(
         session: session,
         request: request
       )
@@ -395,7 +395,7 @@ extension SmartNet: URLSessionDownloadDelegate {
   }
 }
 
-private extension SmartNet {
+private extension ApiClient {
   // Manages the downloading tasks based on the current active and pending tasks.
   func startNextPendingDownload() {
     downloadQueue.sync {

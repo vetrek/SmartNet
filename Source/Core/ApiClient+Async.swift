@@ -1,5 +1,5 @@
 //
-//  SmartNet+Async.swift
+//  ApiClient+Async.swift
 //
 //  Copyright (c) 2021 Valerio69 (valerio.alsebas@gmail.com)
 //
@@ -24,7 +24,7 @@
 
 import Foundation
 
-public extension SmartNet {
+public extension ApiClient {
   func request<D, E>(
     with endpoint: E,
     decoder: JSONDecoder = .default,

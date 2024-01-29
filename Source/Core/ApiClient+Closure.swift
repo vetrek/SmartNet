@@ -1,5 +1,5 @@
 //
-//  SmartNet+Closure.swift
+//  ApiClient+Closure.swift
 //
 //  Copyright (c) 2021 Valerio69 (valerio.alsebas@gmail.com)
 //
@@ -27,7 +27,7 @@ import Foundation
 
 // MARK: - Networking Closure
 
-public extension SmartNet {
+public extension ApiClient {
   
   /// Create a request and convert the reponse `Data` to a `Decodable` object
   /// - Parameters:
@@ -209,7 +209,7 @@ public extension SmartNet {
         
         // Print cURL
         if self.config.debug, let session = self.session {
-          SmartNet.printCurl(
+          ApiClient.printCurl(
             session: session,
             request: request,
             response: response,

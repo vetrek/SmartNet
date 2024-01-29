@@ -1,5 +1,5 @@
 //
-//  SmartNet.swift
+//  ApiClient.swift
 //
 //  Copyright (c) 2021 Valerio69 (valerio.alsebas@gmail.com)
 //
@@ -35,7 +35,7 @@ extension URLSessionTask: NetworkCancellable { }
 
 public typealias CompletionHandler<T> = (Response<T>) -> Void
 
-public final class SmartNet: NSObject {
+public final class ApiClient: NSObject {
   
   /// Network Session Configuration
   public private(set) var config: NetworkConfigurable
@@ -81,7 +81,7 @@ public final class SmartNet: NSObject {
 
 // MARK: - Public Utility Methods
 
-public extension SmartNet {
+public extension ApiClient {
   
   // MARK: - Network configuration Headers utility
   
@@ -115,17 +115,17 @@ public extension SmartNet {
   ///
   /// - Example:
   ///   ```
-  ///   smartNet.addMiddleware(component: "user") { request in
+  ///   apiClient.addMiddleware(component: "user") { request in
   ///       // Modify the request, e.g., add a specific header
   ///       var headers = request.allHTTPHeaderFields ?? [:]
   ///       headers["Custom-Header"] = "CustomValue"
   ///       request.allHTTPHeaderFields = headers
   ///   }
-  ///   smartNet.addMiddleware(component: "user") { request in
+  ///   apiClient.addMiddleware(component: "user") { request in
   ///       // Another middleware for "user", perhaps adding another header or logging
   ///       // This will be executed after the previous "user" middleware
   ///   }
-  ///   smartNet.addMiddleware(component: "/") { request in
+  ///   apiClient.addMiddleware(component: "/") { request in
   ///       // This will be applied to every API call
   ///   }
   ///   ```
@@ -158,11 +158,11 @@ public extension SmartNet {
   ///
   /// - Example:
   ///   ```
-  ///   let middleware = smartNet.addMiddleware(component: "/") { request in
+  ///   let middleware = apiClient.addMiddleware(component: "/") { request in
   ///     // This will be applied to every API call
   ///   }
   ///   // Later in the code, if you decide to remove the middleware:
-  ///   smartNet.removeMiddleware(middleware)
+  ///   apiClient.removeMiddleware(middleware)
   ///   ```
   func removeMiddleware(_ middleware: Middleware) {
     requestMiddlewares.removeAll { $0.uid == middleware.uid }
@@ -172,7 +172,7 @@ public extension SmartNet {
 
 // MARK: - Errors Handlers
 
-extension SmartNet {
+extension ApiClient {
   /// Convert Error to `NetworkError`
   /// - Parameter error: Error
   /// - Returns: NetworkError
@@ -221,7 +221,7 @@ extension SmartNet {
 
 // MARK: - URLSessionDelegate
 
-extension SmartNet: URLSessionDelegate {
+extension ApiClient: URLSessionDelegate {
   /// Allow Trusted Domains.
   public func urlSession(
     _ session: URLSession,
@@ -259,7 +259,7 @@ extension URLResponse {
   }
 }
 
-extension SmartNet {
+extension ApiClient {
   public struct Middleware {
     let uid = UUID()
     public let pathComponent: String
