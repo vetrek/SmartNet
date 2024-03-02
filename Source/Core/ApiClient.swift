@@ -38,6 +38,7 @@ public typealias CompletionHandler<T> = (Response<T>) -> Void
 public final class ApiClient: NSObject {
   
   /// Network Session Configuration
+  @ThreadSafe
   public private(set) var config: NetworkConfigurable
   
   /// Session
