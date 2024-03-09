@@ -341,10 +341,9 @@ extension ApiClient: URLSessionDownloadDelegate {
     downloadTask: URLSessionDownloadTask,
     didFinishDownloadingTo location: URL
   ) {
-    guard
-      let download = downloadsTasks.first(where: {
-        $0.task.taskIdentifier == downloadTask.taskIdentifier
-      })
+    guard let download = downloadsTasks.first(where: {
+      $0.task.taskIdentifier == downloadTask.taskIdentifier
+    })
     else { return }
     download.downloadHandler(
       tmpURL: location,
@@ -372,10 +371,9 @@ extension ApiClient: URLSessionDownloadDelegate {
     totalBytesWritten: Int64,
     totalBytesExpectedToWrite: Int64
   ) {
-    guard
-      let download = downloadsTasks.first(where: {
-        $0.task.taskIdentifier == downloadTask.taskIdentifier
-      })
+    guard let download = downloadsTasks.first(where: {
+      $0.task.taskIdentifier == downloadTask.taskIdentifier
+    })
     else { return }
     download.remoteFileSize = totalBytesExpectedToWrite
   }
@@ -386,8 +384,7 @@ extension ApiClient: URLSessionDownloadDelegate {
     didResumeAtOffset fileOffset: Int64,
     expectedTotalBytes: Int64
   ) {
-    guard
-      let download = downloadsTasks.first(where: {
+    guard let download = downloadsTasks.first(where: {
         $0.task.taskIdentifier == downloadTask.taskIdentifier
       })
     else { return }

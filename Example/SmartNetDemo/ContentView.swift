@@ -27,132 +27,145 @@ import SmartNet
 import Combine
 
 struct EndpointWrapper<Value>: Hashable {
-    let uid = UUID()
-    let endpoint: Endpoint<Value>
-
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(uid)
-    }
-
-    static func == (lhs: EndpointWrapper<Value>, rhs: EndpointWrapper<Value>) -> Bool {
-        lhs.uid == rhs.uid
-    }
+  let uid = UUID()
+  let endpoint: Endpoint<Value>
+  
+  func hash(into hasher: inout Hasher) {
+    hasher.combine(uid)
+  }
+  
+  static func == (lhs: EndpointWrapper<Value>, rhs: EndpointWrapper<Value>) -> Bool {
+    lhs.uid == rhs.uid
+  }
 }
 
 let endpoints: [EndpointWrapper<Void>] = [
-    EndpointWrapper(
-        endpoint: Endpoint(
-            path: "entries",
-            queryParameters: QueryParameters(
-                parameters: ["description": "cat"]
-            )
-        )
-    ),
-    EndpointWrapper(
-        endpoint: Endpoint(
-            path: "entries",
-            method: .post,
-            queryParameters: QueryParameters(
-                parameters: ["description": "cat"]
-            )
-        )
+  EndpointWrapper(
+    endpoint: Endpoint(
+      path: "entries",
+      queryParameters: QueryParameters(
+        parameters: ["description": "cat"]
+      )
     )
+  ),
+  EndpointWrapper(
+    endpoint: Endpoint(
+      path: "entries",
+      method: .post,
+      queryParameters: QueryParameters(
+        parameters: ["description": "cat"]
+      )
+    )
+  )
 ]
 
-let network = SmartNet(
-    config: NetworkConfiguration(
-        baseURL: URL(string: "https://api.publicapis.org")!,
-        headers: ["ASD": "aaa"],
-        trustedDomains: ["api.publicapis.org"]
-    )
+let network = ApiClient(
+  config: NetworkConfiguration(
+    baseURL: URL(string: "https://httpbin.org/post")!,
+    trustedDomains: ["httpbin.org"]
+  )
 )
-
-let test = Test()
 
 var downloadTask: DownloadTask?
 
 struct ContentView: View {
-    
-    var body: some View {
-        ScrollView(.vertical, showsIndicators: true) {
-            VStack(alignment: .center, spacing: nil) {
-                ForEach(endpoints, id: \.uid) { endpoint in
-                    HStack(alignment: .center, spacing: nil) {
-                        Button {
-                            network.request(
-                                with: endpoint.endpoint
-                            ) { (response) in
-                                print(response)
-                            }
-                            
-                            Task {
-                                try? await network.request(with: endpoints.first!.endpoint)
-                            }
-                            
-                            downloadTask = network.download(url: URL(string: "https://jsoncompare.org/LearningContainer/SampleFiles/Video/MP4/Sample-Video-File-For-Testing.mp4")!)?
-                                .downloadProgress { progress, fileSize in
-                                    print("[Download - Progress]", progress.fractionCompleted, fileSize)
-                                }
-                                .response { response in
-                                    print("[Download - Response]", response.result)
-                                }
-                            
-                        } label: {
-                            Text(endpoint.endpoint.method.rawValue)
-                        }
-                    }.padding()
+  @State private var uploadTask: UploadTask<String>?
+  @State private var uploadProgress: Double?
+  
+  var body: some View {
+    ScrollView(.vertical, showsIndicators: true) {
+      VStack(alignment: .center, spacing: 20) {
+        HStack {
+          Button {
+            uploadTask = try! network.upload(
+              with: MultipartFormEndpoint(
+                path: "https://httpbin.org/post",
+                isFullPath: true,
+                form: MultipartFormData { form in
+                  // Create a Data object with 10MB size
+                  form.addTextField(named: "key-1", value: .randomString(length: 100000))
+                  form.addTextField(named: "key-1", value: .randomString(length: 100000))
+                  
+//                  let tenMB = 1 * 1024 * 1024 // 10MB in bytes
+//                  form.addDataField(named: "key-1", data: Data(repeating: 0, count: tenMB))
+//                  form.addDataField(named: "key-2", data: Data(repeating: 1, count: tenMB))
                 }
-                
-                HStack(alignment: .center, spacing: 30) {
-                    Button {
-                        downloadTask?.pause()
-                    } label: {
-                        Text("PAUSE")
-                    }
-                    
-                    Button {
-                        downloadTask?.resume()
-                    } label: {
-                        Text("RESUME")
-                    }
-                }
+              )
+            )
+            .progress { progress in
+//              print("[Upload - Progress]", progress.fractionCompleted)
+              uploadProgress = progress.fractionCompleted
             }
+            .response { response in
+//              print("[Upload - Response]", response.result)
+            }
+          } label: {
+            Text("Upload")
+          }
+          
+          if let uploadProgress {
+            Text("\(uploadProgress)")
+          }
+          
+          Spacer()
+          
+          if #available(iOS 17.0, *) {
+            Button {
+              uploadTask?.pause()
+            } label: {
+              Text("PAUSE")
+            }
+            
+            Button {
+              uploadTask?.resume()
+            } label: {
+              Text("RESUMe")
+            }
+          }
         }
+        
+        Button {
+          downloadTask = network.download(url: URL(string: "https://jsoncompare.org/LearningContainer/SampleFiles/Video/MP4/Sample-Video-File-For-Testing.mp4")!)?
+            .downloadProgress { progress, fileSize in
+              print("[Download - Progress]", progress.fractionCompleted, fileSize)
+            }
+            .response { response in
+              print("[Download - Response]", response.result)
+            }
+          
+        } label: {
+          Text("Download")
+        }
+        
+        
+        HStack(alignment: .center, spacing: 30) {
+          Button {
+            downloadTask?.pause()
+          } label: {
+            Text("PAUSE")
+          }
+          
+          Button {
+            downloadTask?.resume()
+          } label: {
+            Text("RESUME")
+          }
+        }
+      }
     }
+    .padding(24)
+  }
 }
 
 struct ContentView_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView()
-    }
+  static var previews: some View {
+    ContentView()
+  }
 }
 
-class Test {
-    let endpoints: [EndpointWrapper<Data>] = [
-        EndpointWrapper(
-            endpoint: Endpoint(
-                path: "entries",
-                queryParameters: QueryParameters(
-                    parameters: ["description": "cat"]
-                )
-            )
-        ),
-        EndpointWrapper(
-            endpoint: Endpoint(
-                path: "entries",
-                method: .post,
-                queryParameters: QueryParameters(
-                    parameters: ["description": "cat"]
-                )
-            )
-        )
-    ]
-
-    let network = SmartNet(
-        config: NetworkConfiguration(
-            baseURL: URL(string: "https://api.publicapis.org")!,
-            trustedDomains: ["api.publicapis.org"]
-        )
-    )
-
+extension String {
+  static func randomString(length: Int) -> String {
+    let letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    return String((0..<length).map { _ in letters.randomElement()! })
+  }
 }

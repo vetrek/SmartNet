@@ -36,6 +36,7 @@ public enum NetworkError: Error, CustomStringConvertible {
   case cancelled
   case networkFailure
   case urlGeneration
+  case invalidFormData
   case dataToStringFailure(data: Data)
   case middleware(Error)
   case generic(Error)
@@ -67,6 +68,9 @@ public enum NetworkError: Error, CustomStringConvertible {
     
     case .urlGeneration:
       return "Unable to convert Requestable to URLRequest"
+      
+    case .invalidFormData:
+      return "MultipartForm Data is invalid"
     
     case .dataToStringFailure:
       return "Unable to convert response data to string"
