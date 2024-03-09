@@ -59,16 +59,16 @@ let endpoints: [EndpointWrapper<Void>] = [
   )
 ]
 
-let network = ApiClient(
-  config: NetworkConfiguration(
-    baseURL: URL(string: "https://httpbin.org/post")!,
-    trustedDomains: ["httpbin.org"]
-  )
-)
-
-var downloadTask: DownloadTask?
-
 struct ContentView: View {
+  
+  private let network = ApiClient(
+    config: NetworkConfiguration(
+      baseURL: URL(string: "https://httpbin.org/post")!,
+      trustedDomains: ["httpbin.org"]
+    )
+  )
+  
+  @State private var downloadTask: DownloadTask?
   @State private var uploadTask: UploadTask<String>?
   @State private var uploadProgress: Double?
   
@@ -93,11 +93,11 @@ struct ContentView: View {
               )
             )
             .progress { progress in
-//              print("[Upload - Progress]", progress.fractionCompleted)
+              print("[Upload - Progress]", progress.fractionCompleted)
               uploadProgress = progress.fractionCompleted
             }
             .response { response in
-//              print("[Upload - Response]", response.result)
+              print("[Upload - Response]", response.result)
             }
           } label: {
             Text("Upload")
