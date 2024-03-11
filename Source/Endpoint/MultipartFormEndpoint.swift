@@ -59,7 +59,7 @@ public struct MultipartFormData {
   private(set) var boundary: String = UUID().uuidString
   private var httpBody = NSMutableData()
   
-  init() { }
+  public init() { }
   
   public init(completion: (inout Self) -> Void) {
     var form = MultipartFormData()
