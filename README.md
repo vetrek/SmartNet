@@ -42,7 +42,7 @@ If the Endpoint is initialized with "***useEndpointHeaderOnly: true***" the Netw
 Base
 ```swift
 let config = NetworkConfiguration(baseURL: URL(string: "https://api.example.com")!)
-let network = SmartNet(config: config)
+let network = ApiClient(config: config)
 ```
 
 Advanced
@@ -54,7 +54,7 @@ let config = NetworkConfiguration(
     trustedDomains: ["api.publicapis.org"],
     requestTimeout: 120
 )
-let network = SmartNet(config: config)
+let network = ApiClient(config: config)
 ```
 
 - ### Create an Endpoint
