@@ -39,6 +39,7 @@ public struct MultipartFormEndpoint<Value>: Requestable {
   public init(
     path: String,
     isFullPath: Bool = false,
+    method: HTTPMethod = .post,
     headers: [String: String] = [:],
     useEndpointHeaderOnly: Bool = false,
     queryParameters: QueryParameters? = nil,
@@ -46,7 +47,7 @@ public struct MultipartFormEndpoint<Value>: Requestable {
   ) {
     self.path = path
     self.isFullPath = isFullPath
-    self.method = .post
+    self.method = method
     self.headers = headers
     self.useEndpointHeaderOnly = useEndpointHeaderOnly
     self.queryParameters = queryParameters
