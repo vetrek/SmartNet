@@ -70,10 +70,11 @@ let network: ApiClient = {
       pathComponent: "entries",
       preRequestCallbak: { request in
         print(request.description)
+        throw NSError(domain: "smartnet", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid API Request"])
       },
       postResponseCallbak: { data, response, error in
         await testAsync()
-        throw NSError(domain: "asd", code: 1)
+        throw NSError(domain: "smartnet", code: 2, userInfo: [NSLocalizedDescriptionKey: "Invalid Token Refres"])
       }
     )
   )
