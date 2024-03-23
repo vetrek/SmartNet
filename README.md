@@ -1,16 +1,18 @@
+
+
+
 # SmartNet
-SmartNet is an HTTP networking library written in Swift that aims to make networking as easy as possible.
+
+SmartNet is a comprehensive Swift HTTP networking library designed for iOS development. It simplifies complex networking tasks, offering support for multipart/form-data, concurrent uploads and downloads, and modern Swift features like async/await and Combine.
 
 ## Features
 
-- [Easy configuration](#network-configuration)
-- Supported Requests:  **Encodable**, **Dictionary**, **String**
-- [Supported Response Types: **Decodable**, **String**, **Data**, **Void**
-- Supported QueryParameters: **Encodable**, **Dictionary**
-- Async/Await Support
-- iOS 13+ **Combine** Support
-- Light and easy Networking Interface
-- "Trusted Domains" list to bypass SSL Authentication Challenge (**not recommended**)
+- Global Network Configuration
+- Supported Request Types: Encodable, Dictionary, String, multipart/form-data
+- Flexible Response Handling: Decodable, String, Data, Void
+- Concurrent Uploads/Downloads with progress tracking
+- Async/Await and Combine Support
+- Middleware for request/response interception
 
 ## Projects using SmartNet
 - [YourVPN](https://yourvpn.world/)
@@ -18,12 +20,10 @@ SmartNet is an HTTP networking library written in Swift that aims to make networ
 ## Installation
 
 ### Swift Package Manager
-The [Swift Package Manager](https://swift.org/package-manager/) is a tool for automating the distribution of Swift code and is integrated into the `swift` compiler.
 
-In Xcode 11+ select File > Packages > Add Package Dependency > Enter this project's URL:
-    
-    https://github.com/vetrek/SmartNet.git
-
+```plaintext
+https://github.com/vetrek/SmartNet.git
+```
 
 ### CocoaPods
 
@@ -31,21 +31,19 @@ In Xcode 11+ select File > Packages > Add Package Dependency > Enter this projec
 pod 'SmartNet'
 ```
 
-## Examples
+## Usage Examples
 
-- ### Network Default Configuration
+### Configuring the ApiClient
 
-**NetworkConfiguration** is used to define defaults settings that are going to be used in every call. 
-
-If the Endpoint is initialized with "***useEndpointHeaderOnly: true***" the NetworkConfiguration headers will be ignored.
-
-Base
 ```swift
-let config = NetworkConfiguration(baseURL: URL(string: "https://api.example.com")!)
-let network = ApiClient(config: config)
+let apiClient = ApiClient(
+  config: NetworkConfiguration(
+    baseURL: URL(string: "https://api.publicapis.org")!
+  )
+)
 ```
 
-Advanced
+**Advanced**
 ```swift
 let config = NetworkConfiguration(
     baseURL: URL(string: "https://api.publicapis.org")!,
@@ -57,87 +55,168 @@ let config = NetworkConfiguration(
 let network = ApiClient(config: config)
 ```
 
-- ### Create an Endpoint
-
-#### GET
-
+### Endpoints
 ```swift
-let endpoint = Endpoint<Person>(
-    path: "person",
-    queryParameters: QueryParameters(
-        parameters: [
-            "name": "Jhon", 
-            "age": 18
-        ]
-    )
-)
-```
-Equivalent of https://api.example.com/person?name=Jhon&age=18
-
-
-***POST***
-```swift
-let endpoint = Endpoint<Person>(
-    path: "person",
-    method: .post,
-    body: HTTPBody(
-        encodable: PersonRequst(
-            name: "Jhon",
-            age: 18
-        )
-    )
-)
-```
-Equivalent of https://api.example.com/person with the following body:
-
-```json
-{
-    "name": "Jhon",
-    "age": 18
+// MARK: - Define Response DTO
+struct Person: Codable {
+  let name: string?
+  let age: Int?
 }
+
+// MARK: - GET
+let getEndpoint = Endpoint<Person>(
+  path: "person",
+  queryParameters: QueryParameters(
+    parameters: [
+      "name": "Jhon",
+      "age": 18
+    ]
+  )
+)
+
+// MARK: - POST
+let postEndpoint = Endpoint<Person>(
+  path: "person",
+  method: .post,
+  body: HTTPBody(
+    encodable: PersonRequst(
+      name: "Jhon",
+      age: 18
+    )
+  )
+)
 ```
 
-**API CALL**
-
-- Using async/await
+### Async
 
 ```swift
 do {
-    let response = try await network.request(with: endpoint)
-    print(response)
+  let person = try await apiClient.request(with: getEndpoint)
+  print(person.name)
 } catch {
     print(error)
 }
 ```
 
-- Using Combine
+### Closures
+
+```swift
+apiClient.request(with: postEndpoint) { response in
+    switch response.result {
+    case let .success(person):
+        print(person.name)
+    case let .failure(error):
+        print(error.localizedDescription)
+    }
+}
+```
+
+### Combine
 
 ```swift
 var subscriptions = Set<AnyCancellable>()
 
-network.request(with: endpoint)?
-    .sink(
-        receiveCompletion: { (response) in
-            if case .failure(let error) = response {
-                print(error.localizedDescription)
-            }
-        },
-        receiveValue: { (person) in
-            print("Success! \(person.name)")
+apiClient.request(with: getEndpoint)
+    .sink(receiveCompletion: { completion in
+        if case .failure(let error) = completion {
+            print("Error: \(error)")
         }
-    )
+    }, receiveValue: { person in
+        print(person.name)
+    })
     .store(in: &subscriptions)
 ```
 
-- Using Closures
+### Middleware
+
+Intercept every request and response with middleware.
 
 ```swift
-network.request(with: endpoint) { (response) in
-    switch response.result {
-    case .success(let person):
-        print("Success! \(person.name)")
-    case .failure(let error):
-        print(error.localizedDescription)
+// MARK: - Add a global middleware
+network.addMiddleware(
+  ApiClient.Middleware(
+    pathComponent: "/",
+    preRequestCallback: { request in
+      print("Request: \(request)")
+      throw NSError(
+        domain: "smartnet",
+        code: 1, 
+        userInfo: [
+          NSLocalizedDescriptionKey: "Invalid API Request"
+        ]
+      )
+    },
+    postResponseCallback: { _, _, _ in
+      await testAsync()
+      throw NSError(
+        domain: "smartnet", 
+        code: 2,
+        userInfo: [
+          NSLocalizedDescriptionKey: "Invalid Token Refres"
+        ]
+      )
     }
+  )
+)
+
+// MARK: - Add path specific middleware
+network.addMiddleware(
+  ApiClient.Middleware(
+    pathComponent: "person",
+    preRequestCallback: { request in
+      print("Request: \(request)")
+      throw NSError(
+        domain: "smartnet",
+        code: 1, 
+        userInfo: [
+          NSLocalizedDescriptionKey: "Invalid API Request"
+        ]
+      )
+    },
+    postResponseCallback: { _, _, _ in
+      print("Response received")
+      throw NSError(
+        domain: "smartnet", 
+        code: 2,
+        userInfo: [
+          NSLocalizedDescriptionKey: "Invalid Token Refres"
+        ]
+      )
+    }
+  )
+)
+```
+
+### Upload
+
+Upload files with multipart/form-data. Progress updates and response handling are supported.
+
+```swift
+let uploadTask = try! network.upload(
+  with: MultipartFormEndpoint(
+    path: "your/upload/path",
+    form: MultipartFormData { form in
+      form.addTextField(named: "key-1", value: "value-1")
+      form.addDataField(named: "file", data: fileData, fileName: "example.jpg", mimeType: "image/jpeg")
+    }
+  )
+).progress { progress in
+  print("Upload Progress: \(progress.fractionCompleted)")
+}.response { response in
+  print("Upload Response: \(response)")
 }
+```
+
+### Downloading Files
+
+Download files with progress tracking and easy response handling.
+
+```swift
+let downloadTask = network.download(url: URL(string: "https://example.com/file.zip")!)?
+  .downloadProgress { progress, _ in
+    print("Download Progress: \(progress.fractionCompleted)")
+  }
+  .response { response in
+    print("Download Response: \(response.result)")
+  }
 ```
