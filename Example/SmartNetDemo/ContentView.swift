@@ -39,34 +39,52 @@ struct EndpointWrapper<Value>: Hashable {
   }
 }
 
-let endpoints: [EndpointWrapper<Void>] = [
-  EndpointWrapper(
-    endpoint: Endpoint(
-      path: "entries",
-      queryParameters: QueryParameters(
-        parameters: ["description": "cat"]
-      )
+let endpoints: [Endpoint<Void>] = [
+  Endpoint(
+    path: "https://api.publicapis.org/entries",
+    isFullPath: true,
+    queryParameters: QueryParameters(
+      parameters: ["description": "cat"]
     )
   ),
-  EndpointWrapper(
-    endpoint: Endpoint(
-      path: "entries",
-      method: .post,
-      queryParameters: QueryParameters(
-        parameters: ["description": "cat"]
-      )
+  Endpoint(
+    path: "https://api.publicapis.org/entries",
+    isFullPath: true,
+    method: .post,
+    queryParameters: QueryParameters(
+      parameters: ["description": "cat"]
     )
   )
+
 ]
 
-struct ContentView: View {
-  
-  private let network = ApiClient(
+let network: ApiClient = {
+  let apiClient = ApiClient(
     config: NetworkConfiguration(
       baseURL: URL(string: "https://httpbin.org/post")!,
       trustedDomains: ["httpbin.org"]
     )
   )
+  apiClient.addMiddleware(
+    ApiClient.Middleware(
+      pathComponent: "entries",
+      preRequestCallbak: { request in
+        print(request.description)
+      },
+      postResponseCallbak: { data, response, error in
+        await testAsync()
+        throw NSError(domain: "asd", code: 1)
+      }
+    )
+  )
+  return apiClient
+}()
+
+func testAsync() async {
+  
+}
+
+struct ContentView: View {
   
   @State private var downloadTask: DownloadTask?
   @State private var uploadTask: UploadTask<String>?
@@ -119,7 +137,7 @@ struct ContentView: View {
             Button {
               uploadTask?.resume()
             } label: {
-              Text("RESUMe")
+              Text("RESUME")
             }
           }
         }
@@ -151,6 +169,15 @@ struct ContentView: View {
             Text("RESUME")
           }
         }
+        
+        Button {
+          network.request(with: endpoints.randomElement()!) { response in
+            print(response)
+          }
+        } label: {
+          Text("Start REQUEST")
+        }
+        
       }
     }
     .padding(24)
