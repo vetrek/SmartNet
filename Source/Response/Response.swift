@@ -20,7 +20,7 @@ public struct Response<Value> {
     self.request = nil
   }
   
-  init(result: Result<Value>, session: URLSession?, request: URLRequest?, response: URLResponse?) {
+  init(result: Result<Value>, session: URLSession?, request: URLRequest? = nil, response: URLResponse? = nil) {
     self.result = result
     self.session = session
     self.request = request

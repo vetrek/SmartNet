@@ -136,21 +136,22 @@ public extension ApiClient {
     }
   }
   
+}
+
+// MARK: - Main Request Function
+extension ApiClient {
   @discardableResult
-  internal func dataRequest<E>(
+  func dataRequest<E>(
     with endpoint: E,
     queue: DispatchQueue = .main,
     progressHUD: SNProgressHUD? = nil,
     completion: @escaping (Response<Data>) -> Void
   ) -> NetworkCancellable? where E : Requestable {
-    guard let request = try? endpoint.urlRequest(with: config)
-    else {
+    guard let request = try? endpoint.urlRequest(with: config) else {
       completion(
         Response(
           result: .failure(.urlGeneration),
-          session: session,
-          request: nil,
-          response: nil
+          session: session
         )
       )
       return nil
@@ -193,8 +194,65 @@ public extension ApiClient {
       }
     }
     
+    do {
+      try applyPreRequestMiddlewares(request: request)
+    } catch {
+      completion(
+        Response(
+          result: .failure(.middleware(error)),
+          session: session,
+          request: request,
+          response: nil
+        )
+      )
+      return nil
+    }
+    
     progressHUD?.show()
     
+    return runDataTask(
+      request: request,
+      queue: queue,
+      progressHUD: progressHUD,
+      completion: completion
+    )
+  }
+  
+  func applyPreRequestMiddlewares(
+    request: URLRequest
+  ) throws {
+    guard let url = request.url, !middlewares.isEmpty else { return } 
+    
+    let pathComponents = url.pathComponents
+    
+    var globalMiddlewares = [Middleware]()
+    var pathMiddlewares = [Middleware]()
+    
+    middlewares.forEach {
+      if $0.pathComponent == "/" {
+        globalMiddlewares.append($0)
+      } else if pathComponents.contains($0.pathComponent) {
+        pathMiddlewares.append($0)
+      }
+    }
+    
+    // Apply all global middlewares
+    for middleware in globalMiddlewares {
+      try middleware.preRequestCallbak(request)
+    }
+    
+    // Apply path-specific middlewares
+    for middleware in pathMiddlewares {
+      try middleware.preRequestCallbak(request)
+    }
+  }
+  
+  func runDataTask(
+    request: URLRequest,
+    queue: DispatchQueue = .main,
+    progressHUD: SNProgressHUD? = nil,
+    completion: @escaping (Response<Data>) -> Void
+  ) -> NetworkCancellable? {
     let task = session?.dataTask(
       with: request
     ) { (data, response, error) in
@@ -224,40 +282,22 @@ public extension ApiClient {
         }
         
         // Run postResponse Middlewares
-        if let url = request.url, !middlewares.isEmpty {
-          let pathComponents = url.pathComponents
-          do {
-            var globalMiddlewares = [Middleware]()
-            var pathMiddlewares = [Middleware]()
-            
-            middlewares.forEach {
-              if $0.pathComponent == "/" {
-                globalMiddlewares.append($0)
-              } else if pathComponents.contains($0.pathComponent) {
-                pathMiddlewares.append($0)
-              }
-            }
-            
-            // Apply all global middlewares
-            for middleware in globalMiddlewares {
-              try await middleware.postResponseCallbak(data, response, error)
-            }
-            
-            // Apply path-specific middlewares
-            for middleware in pathMiddlewares {
-              try await middleware.postResponseCallbak(data, response, error)
-            }
-          } catch {
-            responseBlock(
-              Response(
-                result: .failure(.middleware(error)),
-                session: session,
-                request: request,
-                response: nil
-              )
+        do {
+          try await applyPostResponseMiddlewares(
+            request: request,
+            data: data,
+            response: response,
+            error: error
+          )
+        } catch {
+          responseBlock(
+            Response(
+              result: .failure(.middleware(error)),
+              session: session,
+              request: request,
+              response: response
             )
-            return
-          }
+          )
         }
         
         // Check error
@@ -280,6 +320,7 @@ public extension ApiClient {
           return
         }
         
+        // Make sure have a response
         guard let response else { return }
         
         // Check HTTP response status code is within accepted range
@@ -307,7 +348,7 @@ public extension ApiClient {
           return
         }
         
-        
+        // Success Response
         responseBlock(
           Response(
             result: .success(data),
@@ -322,4 +363,37 @@ public extension ApiClient {
     return task
   }
   
+  func applyPostResponseMiddlewares(
+    request: URLRequest,
+    data: Data?,
+    response: URLResponse?,
+    error: Error?
+  ) async throws {
+    guard let url = request.url, !middlewares.isEmpty else { return }
+    
+    let pathComponents = url.pathComponents
+    
+    // We separate the two to run first the global Middlewares
+    // and then the path specific one
+    var globalMiddlewares = [Middleware]()
+    var pathMiddlewares = [Middleware]()
+    
+    middlewares.forEach {
+      if $0.pathComponent == "/" {
+        globalMiddlewares.append($0)
+      } else if pathComponents.contains($0.pathComponent) {
+        pathMiddlewares.append($0)
+      }
+    }
+    
+    // Apply all global middlewares
+    for middleware in globalMiddlewares {
+      try await middleware.postResponseCallbak(data, response, error)
+    }
+    
+    // Apply path-specific middlewares
+    for middleware in pathMiddlewares {
+      try await middleware.postResponseCallbak(data, response, error)
+    }
+  }
 }
