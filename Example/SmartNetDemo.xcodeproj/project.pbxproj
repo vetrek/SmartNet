@@ -51,8 +51,6 @@
 		B90F88192825051F00818CF7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B90F881C2825051F00818CF7 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		B90F881E2825051F00818CF7 /* SmartNetDemoMacOs.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SmartNetDemoMacOs.entitlements; sourceTree = "<group>"; };
-		B921C65F26B57BD30058D5DC /* SmartNet.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SmartNet.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		B925AA5426A61EC7006312D5 /* EasyNetworking.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = EasyNetworking.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		B9A2316026A5B1820078E143 /* SmartNetDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SmartNetDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B9A2316326A5B1820078E143 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		B9A2316526A5B1820078E143 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -186,8 +184,6 @@
 			isa = PBXGroup;
 			children = (
 				B908F5E62B9AFF01004A338A /* Source */,
-				B921C65F26B57BD30058D5DC /* SmartNet.framework */,
-				B925AA5426A61EC7006312D5 /* EasyNetworking.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
