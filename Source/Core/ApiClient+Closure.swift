@@ -143,8 +143,7 @@ public extension ApiClient {
     progressHUD: SNProgressHUD? = nil,
     completion: @escaping (Response<Data>) -> Void
   ) -> NetworkCancellable? where E : Requestable {
-    guard
-      let request = try? endpoint.urlRequest(with: config)
+    guard let request = try? endpoint.urlRequest(with: config)
     else {
       completion(
         Response(
@@ -157,15 +156,13 @@ public extension ApiClient {
       return nil
     }
     
-    if let url = request.url, !requestMiddlewares.isEmpty {
+    if let url = request.url, !middlewares.isEmpty {
       let pathComponents = url.pathComponents
-
       do {
-        // Check for global middleware
         var globalMiddlewares = [Middleware]()
         var pathMiddlewares = [Middleware]()
         
-        requestMiddlewares.forEach {
+        middlewares.forEach {
           if $0.pathComponent == "/" {
             globalMiddlewares.append($0)
           } else if pathComponents.contains($0.pathComponent) {
@@ -175,12 +172,12 @@ public extension ApiClient {
         
         // Apply all global middlewares
         for middleware in globalMiddlewares {
-          try middleware.callback(request)
+          try middleware.preRequestCallbak(request)
         }
         
         // Apply path-specific middlewares
         for middleware in pathMiddlewares {
-          try middleware.callback(request)
+          try middleware.preRequestCallbak(request)
         }
         
       } catch {
@@ -201,11 +198,20 @@ public extension ApiClient {
     let task = session?.dataTask(
       with: request
     ) { (data, response, error) in
-      queue.async { [weak self] in
+      Task { [weak self] in
+        defer {
+          DispatchQueue.main.async {
+            progressHUD?.dismiss()
+          }
+        }
         
-        defer { progressHUD?.dismiss() }
+        func responseBlock(_ response: Response<Data>) {
+          queue.async {
+            completion(response)
+          }
+        }
         
-        guard let self = self else { return }
+        guard let self else { return }
         
         // Print cURL
         if self.config.debug, let session = self.session {
@@ -217,6 +223,43 @@ public extension ApiClient {
           )
         }
         
+        // Run postResponse Middlewares
+        if let url = request.url, !middlewares.isEmpty {
+          let pathComponents = url.pathComponents
+          do {
+            var globalMiddlewares = [Middleware]()
+            var pathMiddlewares = [Middleware]()
+            
+            middlewares.forEach {
+              if $0.pathComponent == "/" {
+                globalMiddlewares.append($0)
+              } else if pathComponents.contains($0.pathComponent) {
+                pathMiddlewares.append($0)
+              }
+            }
+            
+            // Apply all global middlewares
+            for middleware in globalMiddlewares {
+              try await middleware.postResponseCallbak(data, response, error)
+            }
+            
+            // Apply path-specific middlewares
+            for middleware in pathMiddlewares {
+              try await middleware.postResponseCallbak(data, response, error)
+            }
+          } catch {
+            responseBlock(
+              Response(
+                result: .failure(.middleware(error)),
+                session: session,
+                request: request,
+                response: nil
+              )
+            )
+            return
+          }
+        }
+        
         // Check error
         if let networkError = error {
           let networkError = self.getRequestError(
@@ -225,7 +268,7 @@ public extension ApiClient {
             requestError: networkError
           )
           
-          completion(
+          responseBlock(
             Response(
               result: .failure(networkError),
               session: self.session,
@@ -237,11 +280,11 @@ public extension ApiClient {
           return
         }
         
-        guard let response = response else { return }
+        guard let response else { return }
         
         // Check HTTP response status code is within accepted range
         if let error = self.validate(response: response, data: data) {
-          completion(
+          responseBlock(
             Response(
               result: .failure(error),
               session: self.session,
@@ -252,10 +295,8 @@ public extension ApiClient {
           return
         }
         
-        guard
-          let data = data
-        else {
-          completion(
+        guard let data else {
+          responseBlock(
             Response(
               result: .failure(.emptyResponse),
               session: self.session,
@@ -266,7 +307,8 @@ public extension ApiClient {
           return
         }
         
-        completion(
+        
+        responseBlock(
           Response(
             result: .success(data),
             session: self.session,

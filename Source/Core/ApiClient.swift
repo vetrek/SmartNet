@@ -25,7 +25,8 @@
 import Foundation
 import Combine
 
-public typealias RequestMiddlewareClosure = (URLRequest) throws -> Void
+public typealias PreRequestMiddlewareClosure = (URLRequest) throws -> Void
+public typealias PostResponseMiddlewareClosure = (Data?, URLResponse?, Error?) async throws -> Void
 
 public protocol NetworkCancellable {
   func cancel()
@@ -61,7 +62,7 @@ public final class ApiClient: NSObject {
   let downloadQueue = DispatchQueue(label: "com.smartnet.downloadQueue")
   let uploadQueue = DispatchQueue(label: "com.smartnet.uploadQueue")
   
-  var requestMiddlewares = [Middleware]()
+  var middlewares: [Middleware] = []
   
   public init(config: NetworkConfigurable) {
     self.config = config
@@ -109,39 +110,45 @@ public extension ApiClient {
     keys.forEach { config.headers.removeValue(forKey: $0) }
   }
   
-  /// Adds a middleware for a specific path component of a URL.
+  /// Registers a middleware to intercept and modify requests and responses based on a specific URL path component.
   ///
-  /// Path components are the segments in the URL after the domain, separated by "/". For example, in the URL "https://example.com/v1/user", the path components are "v1" and "user".
-  /// If you specify the path component as "/", the middleware will be applied to every API call, regardless of its specific path.
+  /// A URL path component is a segment of the URL that follows the domain name, separated by "/". For instance, in "https://example.com/v1/user", the segments "v1" and "user" are path components.
   ///
-  /// Multiple middlewares can be added for the same path component and they will be executed in the order they were added. This allows for layering different behaviors or modifications to a request based on different conditions or logic.
+  /// Specifying the path component as "/" allows the middleware to intercept every API call, applying global modifications or behaviors. This feature facilitates the application of diverse middleware logic on a per-path-segment basis, enabling precise control over request and response handling for different API endpoints.
   ///
-  /// Use this method to add a middleware that will be executed for requests with a specific URL path component.
+  /// It's possible to associate multiple middleware with the same path component. They execute sequentially in the order they were added, enabling layered modifications or behaviors for the same URL path segment.
+  ///
+  /// Use this function to attach middleware for intercepting requests matching a specific URL path component. The middleware can perform various operations such as modifying requests before they're sent or processing responses after they're received.
+  ///
   /// - Parameters:
-  ///   - component: The URL path component for which the middleware should be applied.
-  ///   - middleware: The middleware closure that will be invoked for requests with the matching path component.
+  ///   - middleware: The `Middleware` instance encapsulating the path component target, pre-request callback, and post-response callback.
   ///
   /// - Example:
   ///   ```
-  ///   apiClient.addMiddleware(component: "user") { request in
+  ///   let userPreRequestMiddleware = Middleware(pathComponent: "user", preRequestCallbak: { request in
   ///       // Modify the request, e.g., add a specific header
   ///       var headers = request.allHTTPHeaderFields ?? [:]
-  ///       headers["Custom-Header"] = "CustomValue"
+  ///       headers["Authorization"] = "Bearer token"
   ///       request.allHTTPHeaderFields = headers
-  ///   }
-  ///   apiClient.addMiddleware(component: "user") { request in
-  ///       // Another middleware for "user", perhaps adding another header or logging
-  ///       // This will be executed after the previous "user" middleware
-  ///   }
-  ///   apiClient.addMiddleware(component: "/") { request in
-  ///       // This will be applied to every API call
-  ///   }
+  ///   }, postResponseCallbak: { response in
+  ///       // Process the response, e.g., logging or error handling
+  ///   })
+  ///
+  ///   apiClient.addMiddleware(userPreRequestMiddleware)
+  ///
+  ///   let globalMiddleware = Middleware(pathComponent: "/", preRequestCallbak: { request in
+  ///       // Applies to every API call
+  ///       var headers = request.allHTTPHeaderFields ?? [:]
+  ///       headers["App-Version"] = "1.0.0"
+  ///       request.allHTTPHeaderFields = headers
+  ///   }, postResponseCallbak: { response in
+  ///       // Global response handling
+  ///   })
+  ///
+  ///   apiClient.addMiddleware(globalMiddleware)
   ///   ```
-  @discardableResult
-  func addMiddleware(component: String, callback: @escaping RequestMiddlewareClosure) -> Middleware {
-    let middleware = Middleware(pathComponent: component, callback: callback)
-    requestMiddlewares.append(middleware)
-    return middleware
+  func addMiddleware(_ middleware: Middleware) {
+    middlewares.append(middleware)
   }
   
   /// Removes all middlewares for a specific path component.
@@ -154,7 +161,7 @@ public extension ApiClient {
   ///   removeMiddleware(for: "user")
   ///   ```
   func removeMiddleware(for component: String) {
-    requestMiddlewares.removeAll { $0.pathComponent == component }
+    middlewares.removeAll { $0.pathComponent == component }
   }
   
   /// Removes a specific middleware from the list of registered middlewares.
@@ -173,7 +180,7 @@ public extension ApiClient {
   ///   apiClient.removeMiddleware(middleware)
   ///   ```
   func removeMiddleware(_ middleware: Middleware) {
-    requestMiddlewares.removeAll { $0.uid == middleware.uid }
+    middlewares.removeAll { $0.uid == middleware.uid }
   }
 
 }
@@ -268,9 +275,42 @@ extension URLResponse {
 }
 
 extension ApiClient {
+  /// Represents a middleware component that can be applied to network requests and responses.
+  /// This struct defines a middleware with a unique identifier, target URL path component,
+  /// a callback closure to execute, and specifies whether it should be applied before the request is sent
+  /// or after the response is received.
   public struct Middleware {
+    
     let uid = UUID()
+    
+    /// Path components are the segments in the URL after the domain, separated by "/". For example, in the URL "https://example.com/v1/user", the path components are "v1" and "user".
+    /// If you specify the path component as "/", the middleware will be applied to every API call, regardless of its specific path.
+    ///
+    /// Examples:
+    /// - If `pathComponent` is "user", the middleware is applied only to requests
+    ///   that include "/user" in their URL path, such as "https://example.com/api/user" or "https://example.com/api/user/details".
+    ///
+    /// - If `pathComponent` is "/v1", the middleware targets requests with "/v1" in their path,
+    ///   like "https://example.com/api/v1/products" or "https://example.com/api/v1/users/123".
+    ///
+    /// - Using "/" as `pathComponent` means the middleware applies to every request, regardless of its path.
+    ///   This is useful for applying global behaviors, such as logging all requests or adding common headers
+    ///   to every request made by the application.
+    ///
+    /// This targeted application makes it possible to layer middleware based on URL structure, enabling
+    /// fine-grained control over request modification and response handling based on specific endpoints or services.
     public let pathComponent: String
-    public let callback: RequestMiddlewareClosure
+    
+    /// Closure to be executed before the request is sent.
+    public let preRequestCallbak: PreRequestMiddlewareClosure
+    
+    /// Closure to be executed after the response is received.
+    public let postResponseCallbak: PostResponseMiddlewareClosure
+    
+    public init(pathComponent: String, preRequestCallbak: @escaping PreRequestMiddlewareClosure, postResponseCallbak: @escaping PostResponseMiddlewareClosure) {
+      self.pathComponent = pathComponent
+      self.preRequestCallbak = preRequestCallbak
+      self.postResponseCallbak = postResponseCallbak
+    }
   }
 }
