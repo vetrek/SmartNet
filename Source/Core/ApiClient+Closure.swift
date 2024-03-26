@@ -251,8 +251,11 @@ extension ApiClient {
     request: URLRequest,
     queue: DispatchQueue = .main,
     progressHUD: SNProgressHUD? = nil,
+    retryCount: Int = 0,
     completion: @escaping (Response<Data>) -> Void
   ) -> NetworkCancellable? {
+    guard retryCount < 2 else { return nil }
+    
     let task = session?.dataTask(
       with: request
     ) { (data, response, error) in
@@ -311,6 +314,7 @@ extension ApiClient {
                 request: request,
                 queue: queue,
                 progressHUD: progressHUD,
+                retryCount: retryCount + 1,
                 completion: completion
               )
               return
@@ -328,6 +332,7 @@ extension ApiClient {
                 request: request,
                 queue: queue,
                 progressHUD: progressHUD,
+                retryCount: retryCount + 1,
                 completion: completion
               )
               return
