@@ -26,7 +26,7 @@ import Foundation
 import Combine
 
 public typealias PreRequestMiddlewareClosure = (URLRequest) throws -> Void
-public typealias PostResponseMiddlewareClosure = (Data?, URLResponse?, Error?) async throws -> Void
+public typealias PostResponseMiddlewareClosure = (Data?, URLResponse?, Error?) async throws -> ApiClient.Middleware.PostRequestResult
 
 public protocol NetworkCancellable {
   func cancel()
@@ -281,6 +281,11 @@ extension ApiClient {
   /// or after the response is received.
   public struct Middleware {
     
+    public enum PostRequestResult {
+      case next
+      case retryRequest
+    }
+    
     let uid = UUID()
     
     /// Path components are the segments in the URL after the domain, separated by "/". For example, in the URL "https://example.com/v1/user", the path components are "v1" and "user".
@@ -307,7 +312,11 @@ extension ApiClient {
     /// Closure to be executed after the response is received.
     public let postResponseCallbak: PostResponseMiddlewareClosure
     
-    public init(pathComponent: String, preRequestCallbak: @escaping PreRequestMiddlewareClosure, postResponseCallbak: @escaping PostResponseMiddlewareClosure) {
+    public init(
+      pathComponent: String,
+      preRequestCallbak: @escaping PreRequestMiddlewareClosure,
+      postResponseCallbak: @escaping PostResponseMiddlewareClosure
+    ) {
       self.pathComponent = pathComponent
       self.preRequestCallbak = preRequestCallbak
       self.postResponseCallbak = postResponseCallbak

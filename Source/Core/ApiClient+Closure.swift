@@ -283,12 +283,56 @@ extension ApiClient {
         
         // Run postResponse Middlewares
         do {
-          try await applyPostResponseMiddlewares(
-            request: request,
-            data: data,
-            response: response,
-            error: error
-          )
+          guard let url = request.url, !middlewares.isEmpty else { return }
+          
+          let pathComponents = url.pathComponents
+          
+          // We separate the two to run first the global Middlewares
+          // and then the path specific one
+          var globalMiddlewares = [Middleware]()
+          var pathMiddlewares = [Middleware]()
+          
+          middlewares.forEach {
+            if $0.pathComponent == "/" {
+              globalMiddlewares.append($0)
+            } else if pathComponents.contains($0.pathComponent) {
+              pathMiddlewares.append($0)
+            }
+          }
+          
+          // Apply all global middlewares
+          for middleware in globalMiddlewares {
+            let result = try await middleware.postResponseCallbak(data, response, error)
+            switch result {
+            case .next:
+              continue
+            case .retryRequest:
+              _ = runDataTask(
+                request: request,
+                queue: queue,
+                progressHUD: progressHUD,
+                completion: completion
+              )
+              return
+            }
+          }
+          
+          // Apply path-specific middlewares
+          for middleware in pathMiddlewares {
+            let result = try await middleware.postResponseCallbak(data, response, error)
+            switch result {
+            case .next:
+              continue
+            case .retryRequest:
+              _ = runDataTask(
+                request: request,
+                queue: queue,
+                progressHUD: progressHUD,
+                completion: completion
+              )
+              return
+            }
+          }
         } catch {
           responseBlock(
             Response(
@@ -361,39 +405,5 @@ extension ApiClient {
     }
     task?.resume()
     return task
-  }
-  
-  func applyPostResponseMiddlewares(
-    request: URLRequest,
-    data: Data?,
-    response: URLResponse?,
-    error: Error?
-  ) async throws {
-    guard let url = request.url, !middlewares.isEmpty else { return }
-    
-    let pathComponents = url.pathComponents
-    
-    // We separate the two to run first the global Middlewares
-    // and then the path specific one
-    var globalMiddlewares = [Middleware]()
-    var pathMiddlewares = [Middleware]()
-    
-    middlewares.forEach {
-      if $0.pathComponent == "/" {
-        globalMiddlewares.append($0)
-      } else if pathComponents.contains($0.pathComponent) {
-        pathMiddlewares.append($0)
-      }
-    }
-    
-    // Apply all global middlewares
-    for middleware in globalMiddlewares {
-      try await middleware.postResponseCallbak(data, response, error)
-    }
-    
-    // Apply path-specific middlewares
-    for middleware in pathMiddlewares {
-      try await middleware.postResponseCallbak(data, response, error)
-    }
   }
 }
