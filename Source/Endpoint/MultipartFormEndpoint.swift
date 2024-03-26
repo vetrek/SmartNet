@@ -81,7 +81,7 @@ public struct MultipartFormData {
   ) -> String {
     var fieldString = "--\(boundary)\r\n"
     fieldString += "Content-Disposition: form-data; name=\"\(name)\"\r\n"
-    fieldString += "Content-Type: text/plain; charset=ISO-8859-1\r\n"
+    fieldString += "Content-Type: text/plain; charset=UTF-8\r\n" // Updated to UTF-8
     fieldString += "Content-Transfer-Encoding: 8bit\r\n"
     fieldString += "\r\n"
     fieldString += "\(value)\r\n"
