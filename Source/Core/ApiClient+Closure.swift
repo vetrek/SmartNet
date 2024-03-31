@@ -211,7 +211,7 @@ extension ApiClient {
     progressHUD?.show()
     
     return runDataTask(
-      request: request,
+      endpoint: endpoint,
       queue: queue,
       progressHUD: progressHUD,
       completion: completion
@@ -247,17 +247,27 @@ extension ApiClient {
     }
   }
   
-  func runDataTask(
-    request: URLRequest,
+  func runDataTask<E>(
+    endpoint: E,
     queue: DispatchQueue = .main,
     progressHUD: SNProgressHUD? = nil,
     retryCount: Int = 0,
     completion: @escaping (Response<Data>) -> Void
-  ) -> NetworkCancellable? {
+  ) -> NetworkCancellable? where E : Requestable {
     @Sendable func responseBlock(_ response: Response<Data>) {
       queue.async {
         completion(response)
       }
+    }
+    
+    guard let request = try? endpoint.urlRequest(with: config) else {
+      responseBlock(
+        Response(
+          result: .failure(.urlGeneration),
+          session: session
+        )
+      )
+      return nil
     }
     
     guard retryCount < 2 else {
@@ -322,7 +332,7 @@ extension ApiClient {
                 continue
               case .retryRequest:
                 _ = runDataTask(
-                  request: request,
+                  endpoint: endpoint,
                   queue: queue,
                   progressHUD: progressHUD,
                   retryCount: retryCount + 1,
@@ -340,7 +350,7 @@ extension ApiClient {
                 continue
               case .retryRequest:
                 _ = runDataTask(
-                  request: request,
+                  endpoint: endpoint,
                   queue: queue,
                   progressHUD: progressHUD,
                   retryCount: retryCount + 1,
