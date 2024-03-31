@@ -57,7 +57,7 @@ public final class ApiClient: NSObject {
   
   let maxConcurrentDownloads = 6
   
-  let maxConcurrentUploads = 6_000_0000
+  let maxConcurrentUploads = 60_000_000
   
   let downloadQueue = DispatchQueue(label: "com.smartnet.downloadQueue")
   let uploadQueue = DispatchQueue(label: "com.smartnet.uploadQueue")
