@@ -34,6 +34,7 @@ public enum NetworkError: Error, CustomStringConvertible {
   case invalidDownloadFileData
   case unableToSaveFile(_ currentURL: URL?)
   case cancelled
+  case middlewareMaxRetry
   case networkFailure
   case urlGeneration
   case invalidFormData
@@ -62,6 +63,9 @@ public enum NetworkError: Error, CustomStringConvertible {
     
     case .cancelled:
       return "The network request has been cancelled"
+      
+    case .middlewareMaxRetry:
+      return "Middleware max rety request reached"
     
     case .networkFailure:
       return "Unable to perform the request."

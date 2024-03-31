@@ -254,7 +254,25 @@ extension ApiClient {
     retryCount: Int = 0,
     completion: @escaping (Response<Data>) -> Void
   ) -> NetworkCancellable? {
-    guard retryCount < 2 else { return nil }
+    @Sendable func responseBlock(_ response: Response<Data>) {
+      queue.async {
+        completion(response)
+      }
+    }
+    
+    guard retryCount < 2 else {
+      responseBlock(
+        Response(
+          result: .failure(
+            .middlewareMaxRetry
+          ),
+          session: session,
+          request: request,
+          response: nil
+        )
+      )
+      return nil
+    }
     
     let task = session?.dataTask(
       with: request
@@ -263,12 +281,6 @@ extension ApiClient {
         defer {
           DispatchQueue.main.async {
             progressHUD?.dismiss()
-          }
-        }
-        
-        func responseBlock(_ response: Response<Data>) {
-          queue.async {
-            completion(response)
           }
         }
         
@@ -285,70 +297,71 @@ extension ApiClient {
         }
         
         // Run postResponse Middlewares
-        do {
-          guard let url = request.url, !middlewares.isEmpty else { return }
-          
-          let pathComponents = url.pathComponents
-          
-          // We separate the two to run first the global Middlewares
-          // and then the path specific one
-          var globalMiddlewares = [Middleware]()
-          var pathMiddlewares = [Middleware]()
-          
-          middlewares.forEach {
-            if $0.pathComponent == "/" {
-              globalMiddlewares.append($0)
-            } else if pathComponents.contains($0.pathComponent) {
-              pathMiddlewares.append($0)
+        if let url = request.url, !middlewares.isEmpty {
+          do {
+            let pathComponents = url.pathComponents
+            
+            // We separate the two to run first the global Middlewares
+            // and then the path specific one
+            var globalMiddlewares = [Middleware]()
+            var pathMiddlewares = [Middleware]()
+            
+            middlewares.forEach {
+              if $0.pathComponent == "/" {
+                globalMiddlewares.append($0)
+              } else if pathComponents.contains($0.pathComponent) {
+                pathMiddlewares.append($0)
+              }
             }
-          }
-          
-          // Apply all global middlewares
-          for middleware in globalMiddlewares {
-            let result = try await middleware.postResponseCallbak(data, response, error)
-            switch result {
-            case .next:
-              continue
-            case .retryRequest:
-              _ = runDataTask(
+            
+            // Apply all global middlewares
+            for middleware in globalMiddlewares {
+              let result = try await middleware.postResponseCallbak(data, response, error)
+              switch result {
+              case .next:
+                continue
+              case .retryRequest:
+                _ = runDataTask(
+                  request: request,
+                  queue: queue,
+                  progressHUD: progressHUD,
+                  retryCount: retryCount + 1,
+                  completion: completion
+                )
+                return
+              }
+            }
+            
+            // Apply path-specific middlewares
+            for middleware in pathMiddlewares {
+              let result = try await middleware.postResponseCallbak(data, response, error)
+              switch result {
+              case .next:
+                continue
+              case .retryRequest:
+                _ = runDataTask(
+                  request: request,
+                  queue: queue,
+                  progressHUD: progressHUD,
+                  retryCount: retryCount + 1,
+                  completion: completion
+                )
+                return
+              }
+            }
+          } catch {
+            responseBlock(
+              Response(
+                result: .failure(.middleware(error)),
+                session: session,
                 request: request,
-                queue: queue,
-                progressHUD: progressHUD,
-                retryCount: retryCount + 1,
-                completion: completion
+                response: response
               )
-              return
-            }
-          }
-          
-          // Apply path-specific middlewares
-          for middleware in pathMiddlewares {
-            let result = try await middleware.postResponseCallbak(data, response, error)
-            switch result {
-            case .next:
-              continue
-            case .retryRequest:
-              _ = runDataTask(
-                request: request,
-                queue: queue,
-                progressHUD: progressHUD,
-                retryCount: retryCount + 1,
-                completion: completion
-              )
-              return
-            }
-          }
-        } catch {
-          responseBlock(
-            Response(
-              result: .failure(.middleware(error)),
-              session: session,
-              request: request,
-              response: response
             )
-          )
+            return
+          }
         }
-        
+       
         // Check error
         if let networkError = error {
           let networkError = self.getRequestError(
@@ -370,7 +383,9 @@ extension ApiClient {
         }
         
         // Make sure have a response
-        guard let response else { return }
+        guard let response else { 
+          return
+        }
         
         // Check HTTP response status code is within accepted range
         if let error = self.validate(response: response, data: data) {
