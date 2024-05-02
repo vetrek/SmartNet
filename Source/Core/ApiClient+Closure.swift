@@ -194,18 +194,20 @@ extension ApiClient {
       }
     }
     
-    do {
-      try applyPreRequestMiddlewares(request: request)
-    } catch {
-      completion(
-        Response(
-          result: .failure(.middleware(error)),
-          session: session,
-          request: request,
-          response: nil
+    if endpoint.allowMiddlewares {
+      do {
+        try applyPreRequestMiddlewares(request: request)
+      } catch {
+        completion(
+          Response(
+            result: .failure(.middleware(error)),
+            session: session,
+            request: request,
+            response: nil
+          )
         )
-      )
-      return nil
+        return nil
+      }
     }
     
     progressHUD?.show()
@@ -307,7 +309,9 @@ extension ApiClient {
         }
         
         // Run postResponse Middlewares
-        if let url = request.url, !middlewares.isEmpty {
+        if endpoint.allowMiddlewares,
+           let url = request.url,
+           !middlewares.isEmpty {
           do {
             let pathComponents = url.pathComponents
             
