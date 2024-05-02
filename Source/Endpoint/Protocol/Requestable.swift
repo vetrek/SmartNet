@@ -73,6 +73,9 @@ public protocol Requestable {
   /// Multipart Form Data Form
   var form: MultipartFormData? { get }
   
+  /// Call
+  var allowMiddlewares: Bool { get }
+  
   /// Return the `URLRequest` from the Requestable
   func urlRequest(with config: NetworkConfigurable) throws -> URLRequest
 }
