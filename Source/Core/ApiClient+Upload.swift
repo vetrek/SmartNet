@@ -94,6 +94,7 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
   
   /// Resumes the upload using a previously paused data blob, available only on iOS 17.0 and later.
   @available(iOS 17.0, *)
+  @available(macOS 14.0, *)
   private func resumeUploadWithData(_ data: Data) {
     task = session.uploadTask(withResumeData: data)
     observeUploadProgress()
@@ -125,6 +126,7 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
   }
   
   /// Pauses the upload task if it's currently uploading, available only on iOS 17.0 and later.
+  @available(macOS 14.0, *)
   @available(iOS 17.0, *)
   public func pause() {
     guard state == .uploading else { return }
@@ -138,6 +140,7 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
   
   /// Resumes the upload task from a paused state, available only on iOS 17.0 and later.
   @available(iOS 17.0, *)
+  @available(macOS 14.0, *)
   public func resume() {
     guard state == .paused else { return }
     if let resumedData {
