@@ -92,9 +92,11 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
   
   // MARK: - Private Methods
   
-  /// Resumes the upload using a previously paused data blob, available only on iOS 17.0 and later.
-  @available(iOS 17.0, *)
-  @available(macOS 14.0, *)
+  /// Resumes an upload from the given data.
+  /// This function initiates an upload task with resume data and observes its progress.
+  /// Available only on iOS 17.0 and later.
+  /// - Parameter data: The data from which the upload should be resumed.
+  @available(iOS 17.0, macOS 14.0, *)
   private func resumeUploadWithData(_ data: Data) {
     task = session.uploadTask(withResumeData: data)
     observeUploadProgress()
@@ -125,9 +127,10 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
     state = .cancelled
   }
   
-  /// Pauses the upload task if it's currently uploading, available only on iOS 17.0 and later.
-  @available(macOS 14.0, *)
-  @available(iOS 17.0, *)
+  /// Pauses the currently uploading task. If the task is not uploading, the function does nothing.
+  /// Changes the task's state to paused and stores the resume data for later continuation.
+  /// Available only on iOS 17.0 and later.
+  @available(iOS 17.0, macOS 14.0, *)
   public func pause() {
     guard state == .uploading else { return }
     progressObserver?.invalidate()
@@ -138,9 +141,10 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
     state = .paused
   }
   
-  /// Resumes the upload task from a paused state, available only on iOS 17.0 and later.
-  @available(iOS 17.0, *)
-  @available(macOS 14.0, *)
+  /// Resumes an upload task that was previously paused, ensuring it continues from where it left off if resume data is available.
+  /// If no resume data is found, it restarts the upload task.
+  /// This function is only available on iOS 17.0 and later, and macOS 14.0 and later.
+  @available(iOS 17.0, macOS 14.0, *)
   public func resume() {
     guard state == .paused else { return }
     if let resumedData {
