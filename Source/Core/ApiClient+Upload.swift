@@ -208,7 +208,7 @@ private extension UploadTask {
     }
     
     guard (200..<300).contains(httpResponse.statusCode) else {
-      return (false, .error(statusCode: httpResponse.statusCode, data: nil))
+      return (false, .error(statusCode: httpResponse.statusCode, data: data))
     }
     
     return (true, nil)
