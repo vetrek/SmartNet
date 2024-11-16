@@ -47,12 +47,16 @@ public final class ApiClient: NSObject {
   
   // MARK: - Internal properties
   
+  @ThreadSafe
   var downloadsTasks: Set<DownloadTask> = []
   
+  @ThreadSafe
   var pendingDownloads: [DownloadTask] = []
   
+  @ThreadSafe
   var uploadsTasks = Set<AnyProgressiveTransferTask>()
   
+  @ThreadSafe
   var pendingUploads = [AnyProgressiveTransferTask]()
   
   let maxConcurrentDownloads = 6
