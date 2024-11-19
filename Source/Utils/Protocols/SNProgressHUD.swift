@@ -7,7 +7,7 @@
 
 import Foundation
 
-public protocol SNProgressHUD {
-    func show()
-    func dismiss()
+public protocol SNProgressHUD: Sendable {
+  func show()
+  func dismiss()
 }
