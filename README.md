@@ -1,18 +1,28 @@
-
-
-
 # SmartNet
 
-SmartNet is a comprehensive Swift HTTP networking library designed for iOS development. It simplifies complex networking tasks, offering support for multipart/form-data, concurrent uploads and downloads, and modern Swift features like async/await and Combine.
+SmartNet is a modern Swift HTTP networking library designed for iOS development. It provides a clean, type-safe API for making network requests with support for multiple programming paradigms and advanced features like middleware, file operations, and debugging tools.
 
 ## Features
 
-- Global Network Configuration
-- Supported Request Types: Encodable, Dictionary, String, multipart/form-data
-- Flexible Response Handling: Decodable, String, Data, Void
-- Concurrent Uploads/Downloads with progress tracking
-- Async/Await and Combine Support
-- Middleware for request/response interception
+### Core Features
+
+- **Flexible Configuration**: Comprehensive network configuration with support for base URLs, headers, query parameters, and more
+- **Multiple Programming Paradigms**: Support for Async/Await, Combine, and closure-based callbacks
+- **Type-Safe Request Building**: Generic `Endpoint<Value>` type for type-safe responses and flexible request configuration
+
+### Advanced Features
+
+- **Middleware System**:
+  - Pre-request middleware for request modification
+  - Post-response middleware for response handling
+  - Path-specific middleware support
+  - Async middleware support
+- **File Operations**:
+  - Multipart form data uploads
+  - File downloads with progress tracking
+  - Concurrent upload/download support
+- **Debugging Tools**:
+  - Debug mode configuration
 
 ## Projects using SmartNet
 - [YourVPN](https://yourvpn.world/)
@@ -21,17 +31,23 @@ SmartNet is a comprehensive Swift HTTP networking library designed for iOS devel
 
 ### Swift Package Manager
 
-```plaintext
-https://github.com/vetrek/SmartNet.git
+Add the following to your `Package.swift`:
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/vetrek/SmartNet.git", from: "1.0.0")
+]
 ```
 
 ### CocoaPods
+
+Add the following to your `Podfile`:
 
 ```ruby
 pod 'SmartNet'
 ```
 
-## Usage Examples
+## Usage
 
 ### Configuring the ApiClient
 
