@@ -151,7 +151,7 @@ public extension ApiClient {
   ///
   ///   apiClient.addMiddleware(globalMiddleware)
   ///   ```
-  func addMiddleware(_ middleware: Middleware) {
+  func addMiddleware(_ middleware: any MiddlewareProtocol) {
     middlewares.append(middleware)
   }
   
