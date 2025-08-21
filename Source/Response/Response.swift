@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct Response<Value> {
+public struct Response<Value: Sendable>: Sendable {
   public let result: Result<Value>
   public private(set) var request: URLRequest?
   public private(set) var response: URLResponse?

@@ -25,7 +25,7 @@
 import Foundation
 
 /// HTTPRequest Result
-public enum Result<Value> {
+public enum Result<Value: Sendable>: Sendable {
     case success(Value)
     case failure(NetworkError)
 

@@ -147,7 +147,7 @@ extension ApiClient {
     progressHUD: SNProgressHUD? = nil,
     completion: @escaping (Response<Data>) -> Void
   ) -> NetworkCancellable? where E : Requestable {
-    guard let request = try? endpoint.urlRequest(with: config) else {
+    guard var request = try? endpoint.urlRequest(with: config) else {
       completion(
         Response(
           result: .failure(.urlGeneration),
@@ -160,9 +160,9 @@ extension ApiClient {
     if let url = request.url, !middlewares.isEmpty {
       let pathComponents = url.pathComponents
       do {
-        var globalMiddlewares = [Middleware]()
-        var pathMiddlewares = [Middleware]()
-        
+        var globalMiddlewares = [any MiddlewareProtocol]()
+        var pathMiddlewares = [any MiddlewareProtocol]()
+
         middlewares.forEach {
           if $0.pathComponent == "/" {
             globalMiddlewares.append($0)
@@ -173,12 +173,12 @@ extension ApiClient {
         
         // Apply all global middlewares
         for middleware in globalMiddlewares {
-          try middleware.preRequestCallbak(request)
+          try middleware.preRequest(&request)
         }
         
         // Apply path-specific middlewares
         for middleware in pathMiddlewares {
-          try middleware.preRequestCallbak(request)
+          try middleware.preRequest(&request)
         }
         
       } catch {
@@ -223,13 +223,14 @@ extension ApiClient {
   func applyPreRequestMiddlewares(
     request: URLRequest
   ) throws {
-    guard let url = request.url, !middlewares.isEmpty else { return } 
+    var request = request
+    guard let url = request.url, !middlewares.isEmpty else { return }
     
     let pathComponents = url.pathComponents
     
-    var globalMiddlewares = [Middleware]()
-    var pathMiddlewares = [Middleware]()
-    
+    var globalMiddlewares = [any MiddlewareProtocol]()
+    var pathMiddlewares = [any MiddlewareProtocol]()
+
     middlewares.forEach {
       if $0.pathComponent == "/" {
         globalMiddlewares.append($0)
@@ -240,12 +241,12 @@ extension ApiClient {
     
     // Apply all global middlewares
     for middleware in globalMiddlewares {
-      try middleware.preRequestCallbak(request)
+      try middleware.preRequest(&request)
     }
     
     // Apply path-specific middlewares
     for middleware in pathMiddlewares {
-      try middleware.preRequestCallbak(request)
+      try middleware.preRequest(&request)
     }
   }
   
@@ -317,9 +318,9 @@ extension ApiClient {
             
             // We separate the two to run first the global Middlewares
             // and then the path specific one
-            var globalMiddlewares = [Middleware]()
-            var pathMiddlewares = [Middleware]()
-            
+            var globalMiddlewares = [any MiddlewareProtocol]()
+            var pathMiddlewares = [any MiddlewareProtocol]()
+
             middlewares.forEach {
               if $0.pathComponent == "/" {
                 globalMiddlewares.append($0)
@@ -330,7 +331,11 @@ extension ApiClient {
             
             // Apply all global middlewares
             for middleware in globalMiddlewares {
-              let result = try await middleware.postResponseCallbak(data, response, error)
+              let result = try await middleware.postResponse(
+                data: data,
+                response: response,
+                error: error
+              )
               switch result {
               case .next:
                 continue
@@ -348,7 +353,11 @@ extension ApiClient {
             
             // Apply path-specific middlewares
             for middleware in pathMiddlewares {
-              let result = try await middleware.postResponseCallbak(data, response, error)
+              let result = try await middleware.postResponse(
+                data: data,
+                response: response,
+                error: error
+              )
               switch result {
               case .next:
                 continue
