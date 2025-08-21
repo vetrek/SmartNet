@@ -25,8 +25,8 @@
 import Foundation
 import Combine
 
-public typealias PreRequestMiddlewareClosure = (URLRequest) throws -> Void
-public typealias PostResponseMiddlewareClosure = (Data?, URLResponse?, Error?) async throws -> ApiClient.Middleware.PostRequestResult
+//public typealias PreRequestMiddlewareClosure = (URLRequest) throws -> Void
+//public typealias PostResponseMiddlewareClosure = (Data?, URLResponse?, Error?) async throws -> ApiClient.Middleware.PostRequestResult
 
 public protocol NetworkCancellable {
   func cancel()

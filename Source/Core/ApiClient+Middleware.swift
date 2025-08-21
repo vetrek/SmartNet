@@ -37,27 +37,27 @@ extension ApiClient {
     public let pathComponent: String
     
     /// Closure to be executed before the request is sent.
-    let preRequestCallbak: PreRequestMiddlewareClosure
+    let preRequestCallback: (URLRequest) throws -> Void
 
     /// Closure to be executed after the response is received.
-    let postResponseCallbak: PostResponseMiddlewareClosure
-    
+    let postResponseCallback: (Data?, URLResponse?, Error?) async throws -> ApiClient.Middleware.PostRequestResult
+
     public init(
       pathComponent: String,
-      preRequestCallbak: @escaping PreRequestMiddlewareClosure,
-      postResponseCallbak: @escaping PostResponseMiddlewareClosure
+      preRequestCallback: @escaping (URLRequest) throws -> Void,
+      postResponseCallback: @escaping (Data?, URLResponse?, Error?) async throws -> ApiClient.Middleware.PostRequestResult
     ) {
       self.pathComponent = pathComponent
-      self.preRequestCallbak = preRequestCallbak
-      self.postResponseCallbak = postResponseCallbak
+      self.preRequestCallback = preRequestCallback
+      self.postResponseCallback = postResponseCallback
     }
 
     public func preRequest(_ request: inout URLRequest) throws {
-      try preRequestCallbak(request)
+      try preRequestCallback(request)
     }
 
     public func postResponse(data: Data?, response: URLResponse?, error: Error?) async throws -> PostRequestResult {
-      try await postResponseCallbak(data, response, error)
+      try await postResponseCallback(data, response, error)
     }
   }
 }
