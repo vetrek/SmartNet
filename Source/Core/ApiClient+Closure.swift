@@ -306,10 +306,10 @@ extension ApiClient {
           let elapsed = Date().timeIntervalSince(startTime)
           let ms = Int((elapsed.truncatingRemainder(dividingBy: 1)) * 1000)
           if elapsed < 1 {
-            print("[API Time] Took: \(ms) ms")
+            print("⏱️ SmartNet - [API Time] Took: \(ms) ms")
           } else {
             let seconds = Int(elapsed)
-            print("[API Time] Took: \(seconds)s \(ms)ms")
+            print("⏱️ SmartNet - [API Time] Took: \(seconds)s \(ms)ms")
           }
           
           ApiClient.printCurl(
