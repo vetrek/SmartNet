@@ -28,7 +28,7 @@ import Foundation
 // MARK: - Networking Closure
 
 public extension ApiClient {
-  
+
   /// Create a request and convert the reponse `Data` to a `Decodable` object
   /// - Parameters:
   ///   - endpoint: The service `Endpoint`
@@ -59,7 +59,7 @@ public extension ApiClient {
       }
     }
   }
-  
+
   /// Create a request which ignore the response `Data`
   /// - Parameters:
   ///   - endpoint: The service `Endpoint`
@@ -75,7 +75,7 @@ public extension ApiClient {
   ) -> NetworkCancellable? where E: Requestable, E.Response == Data {
     dataRequest(with: endpoint, queue: queue, progressHUD: progressHUD, completion: completion)
   }
-  
+
   /// Create a request and convert the reponse `Data` to `String`
   /// - Parameters:
   ///   - endpoint: The service `Endpoint`
@@ -104,7 +104,7 @@ public extension ApiClient {
       }
     }
   }
-  
+
   /// Create a request which ignore the response `Data`
   /// - Parameters:
   ///   - endpoint: The service `Endpoint`
@@ -135,7 +135,7 @@ public extension ApiClient {
       }
     }
   }
-  
+
 }
 
 // MARK: - Main Request Function
@@ -156,7 +156,7 @@ extension ApiClient {
       )
       return nil
     }
-    
+
     if let url = request.url, !middlewares.isEmpty {
       let pathComponents = url.pathComponents
       do {
@@ -170,17 +170,17 @@ extension ApiClient {
             pathMiddlewares.append($0)
           }
         }
-        
+
         // Apply all global middlewares
         for middleware in globalMiddlewares {
           try middleware.preRequest(&request)
         }
-        
+
         // Apply path-specific middlewares
         for middleware in pathMiddlewares {
           try middleware.preRequest(&request)
         }
-        
+
       } catch {
         completion(
           Response(
@@ -193,7 +193,7 @@ extension ApiClient {
         return nil
       }
     }
-    
+
     if endpoint.allowMiddlewares {
       do {
         try applyPreRequestMiddlewares(request: request)
@@ -209,9 +209,9 @@ extension ApiClient {
         return nil
       }
     }
-    
+
     progressHUD?.show()
-    
+
     return runDataTask(
       endpoint: endpoint,
       queue: queue,
@@ -219,15 +219,15 @@ extension ApiClient {
       completion: completion
     )
   }
-  
+
   func applyPreRequestMiddlewares(
     request: URLRequest
   ) throws {
     var request = request
     guard let url = request.url, !middlewares.isEmpty else { return }
-    
+
     let pathComponents = url.pathComponents
-    
+
     var globalMiddlewares = [any MiddlewareProtocol]()
     var pathMiddlewares = [any MiddlewareProtocol]()
 
@@ -238,18 +238,18 @@ extension ApiClient {
         pathMiddlewares.append($0)
       }
     }
-    
+
     // Apply all global middlewares
     for middleware in globalMiddlewares {
       try middleware.preRequest(&request)
     }
-    
+
     // Apply path-specific middlewares
     for middleware in pathMiddlewares {
       try middleware.preRequest(&request)
     }
   }
-  
+
   func runDataTask<E>(
     endpoint: E,
     queue: DispatchQueue = .main,
@@ -262,7 +262,7 @@ extension ApiClient {
         completion(response)
       }
     }
-    
+
     guard let request = try? endpoint.urlRequest(with: config) else {
       responseBlock(
         Response(
@@ -272,7 +272,7 @@ extension ApiClient {
       )
       return nil
     }
-    
+
     guard retryCount < 2 else {
       responseBlock(
         Response(
@@ -286,7 +286,9 @@ extension ApiClient {
       )
       return nil
     }
-    
+
+    let startTime = Date()
+
     let task = session?.dataTask(
       with: request
     ) { (data, response, error) in
@@ -296,11 +298,20 @@ extension ApiClient {
             progressHUD?.dismiss()
           }
         }
-        
+
         guard let self else { return }
-        
+
         // Print cURL
         if self.config.debug, let session = self.session {
+          let elapsed = Date().timeIntervalSince(startTime)
+          let ms = Int((elapsed.truncatingRemainder(dividingBy: 1)) * 1000)
+          if elapsed < 1 {
+            print("[API Time] Took: \(ms) ms")
+          } else {
+            let seconds = Int(elapsed)
+            print("[API Time] Took: \(seconds)s \(ms)ms")
+          }
+          
           ApiClient.printCurl(
             session: session,
             request: request,
@@ -308,14 +319,14 @@ extension ApiClient {
             data: data
           )
         }
-        
+
         // Run postResponse Middlewares
         if endpoint.allowMiddlewares,
            let url = request.url,
            !middlewares.isEmpty {
           do {
             let pathComponents = url.pathComponents
-            
+
             // We separate the two to run first the global Middlewares
             // and then the path specific one
             var globalMiddlewares = [any MiddlewareProtocol]()
@@ -328,7 +339,7 @@ extension ApiClient {
                 pathMiddlewares.append($0)
               }
             }
-            
+
             // Apply all global middlewares
             for middleware in globalMiddlewares {
               let result = try await middleware.postResponse(
@@ -350,7 +361,7 @@ extension ApiClient {
                 return
               }
             }
-            
+
             // Apply path-specific middlewares
             for middleware in pathMiddlewares {
               let result = try await middleware.postResponse(
@@ -384,7 +395,7 @@ extension ApiClient {
             return
           }
         }
-       
+
         // Check error
         if let networkError = error {
           let networkError = self.getRequestError(
@@ -392,7 +403,7 @@ extension ApiClient {
             response: response,
             requestError: networkError
           )
-          
+
           responseBlock(
             Response(
               result: .failure(networkError),
@@ -401,15 +412,15 @@ extension ApiClient {
               response: response
             )
           )
-          
+
           return
         }
-        
+
         // Make sure have a response
-        guard let response else { 
+        guard let response else {
           return
         }
-        
+
         // Check HTTP response status code is within accepted range
         if let error = self.validate(response: response, data: data) {
           responseBlock(
@@ -422,7 +433,7 @@ extension ApiClient {
           )
           return
         }
-        
+
         guard let data else {
           responseBlock(
             Response(
@@ -434,7 +445,7 @@ extension ApiClient {
           )
           return
         }
-        
+
         // Success Response
         responseBlock(
           Response(
