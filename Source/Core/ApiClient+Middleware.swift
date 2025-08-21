@@ -10,12 +10,6 @@ extension ApiClient {
   /// a callback closure to execute, and specifies whether it should be applied before the request is sent
   /// or after the response is received.
   public struct Middleware: MiddlewareProtocol {
-
-    public enum PostRequestResult {
-      case next
-      case retryRequest
-    }
-    
     public let id = UUID()
 
     /// Path components are the segments in the URL after the domain, separated by "/". For example, in the URL "https://example.com/v1/user", the path components are "v1" and "user".
@@ -40,12 +34,12 @@ extension ApiClient {
     let preRequestCallback: (URLRequest) throws -> Void
 
     /// Closure to be executed after the response is received.
-    let postResponseCallback: (Data?, URLResponse?, Error?) async throws -> ApiClient.Middleware.PostRequestResult
+    let postResponseCallback: (Data?, URLResponse?, Error?) async throws -> ApiClient.PostRequestResult
 
     public init(
       pathComponent: String,
       preRequestCallback: @escaping (URLRequest) throws -> Void,
-      postResponseCallback: @escaping (Data?, URLResponse?, Error?) async throws -> ApiClient.Middleware.PostRequestResult
+      postResponseCallback: @escaping (Data?, URLResponse?, Error?) async throws -> ApiClient.PostRequestResult
     ) {
       self.pathComponent = pathComponent
       self.preRequestCallback = preRequestCallback
@@ -60,11 +54,16 @@ extension ApiClient {
       try await postResponseCallback(data, response, error)
     }
   }
+
+  public enum PostRequestResult {
+    case next
+    case retryRequest
+  }
 }
 
 public protocol MiddlewareProtocol {
   var id: UUID { get }
   var pathComponent: String { get }
   func preRequest(_ request: inout URLRequest) throws
-  func postResponse(data: Data?, response: URLResponse?, error: Error?) async throws -> ApiClient.Middleware.PostRequestResult
+  func postResponse(data: Data?, response: URLResponse?, error: Error?) async throws -> ApiClient.PostRequestResult
 }
