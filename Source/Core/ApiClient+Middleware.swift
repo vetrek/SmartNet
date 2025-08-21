@@ -34,12 +34,12 @@ extension ApiClient {
     let preRequestCallback: (URLRequest) throws -> Void
 
     /// Closure to be executed after the response is received.
-    let postResponseCallback: (Data?, URLResponse?, Error?) async throws -> ApiClient.PostRequestResult
+    let postResponseCallback: (Data?, URLResponse?, Error?) async throws -> MiddlewarePostRequestResult
 
     public init(
       pathComponent: String,
       preRequestCallback: @escaping (URLRequest) throws -> Void,
-      postResponseCallback: @escaping (Data?, URLResponse?, Error?) async throws -> ApiClient.PostRequestResult
+      postResponseCallback: @escaping (Data?, URLResponse?, Error?) async throws -> MiddlewarePostRequestResult
     ) {
       self.pathComponent = pathComponent
       self.preRequestCallback = preRequestCallback
@@ -50,12 +50,12 @@ extension ApiClient {
       try preRequestCallback(request)
     }
 
-    public func postResponse(data: Data?, response: URLResponse?, error: Error?) async throws -> PostRequestResult {
+    public func postResponse(data: Data?, response: URLResponse?, error: Error?) async throws -> MiddlewarePostRequestResult {
       try await postResponseCallback(data, response, error)
     }
   }
 
-  public enum PostRequestResult {
+  public enum MiddlewarePostRequestResult {
     case next
     case retryRequest
   }
@@ -65,5 +65,5 @@ public protocol MiddlewareProtocol {
   var id: UUID { get }
   var pathComponent: String { get }
   func preRequest(_ request: inout URLRequest) throws
-  func postResponse(data: Data?, response: URLResponse?, error: Error?) async throws -> ApiClient.PostRequestResult
+  func postResponse(data: Data?, response: URLResponse?, error: Error?) async throws -> ApiClient.MiddlewarePostRequestResult
 }
