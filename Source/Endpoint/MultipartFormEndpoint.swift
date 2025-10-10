@@ -36,6 +36,7 @@ public struct MultipartFormEndpoint<Value>: Requestable {
   public let body: HTTPBody? = nil
   public var allowMiddlewares: Bool
   public var form: MultipartFormData?
+  public var debugRequest: Bool
   
   
   public init(
@@ -46,7 +47,8 @@ public struct MultipartFormEndpoint<Value>: Requestable {
     useEndpointHeaderOnly: Bool = false,
     queryParameters: QueryParameters? = nil,
     allowMiddlewares: Bool = true,
-    form: MultipartFormData
+    form: MultipartFormData,
+    debugRequest: Bool = false
   ) {
     self.path = path
     self.isFullPath = isFullPath
@@ -56,6 +58,7 @@ public struct MultipartFormEndpoint<Value>: Requestable {
     self.queryParameters = queryParameters
     self.allowMiddlewares = allowMiddlewares
     self.form = form
+    self.debugRequest = debugRequest
   }
 }
 

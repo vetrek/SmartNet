@@ -75,6 +75,9 @@ public protocol Requestable {
   
   /// Call
   var allowMiddlewares: Bool { get }
+
+  /// Enables cURL logging for this endpoint regardless of the client's global debug flag.
+  var debugRequest: Bool { get }
   
   /// Return the `URLRequest` from the Requestable
   func urlRequest(with config: NetworkConfigurable) throws -> URLRequest
@@ -181,4 +184,8 @@ extension Requestable {
     
     return urlRequest
   }
+}
+
+public extension Requestable {
+  var debugRequest: Bool { false }
 }

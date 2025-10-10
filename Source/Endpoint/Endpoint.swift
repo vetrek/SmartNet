@@ -37,6 +37,7 @@ public struct Endpoint<Value>: Requestable {
   public var body: HTTPBody?
   public let form: MultipartFormData? = nil
   public var allowMiddlewares: Bool
+  public var debugRequest: Bool
   
   public init(
     path: String,
@@ -46,7 +47,8 @@ public struct Endpoint<Value>: Requestable {
     useEndpointHeaderOnly: Bool = false,
     queryParameters: QueryParameters? = nil,
     body: HTTPBody? = nil,
-    allowMiddlewares: Bool = true
+    allowMiddlewares: Bool = true,
+    debugRequest: Bool = false
   ) {
     self.path = path
     self.isFullPath = isFullPath
@@ -56,5 +58,6 @@ public struct Endpoint<Value>: Requestable {
     self.queryParameters = queryParameters
     self.body = body
     self.allowMiddlewares = allowMiddlewares
+    self.debugRequest = debugRequest
   }
 }
