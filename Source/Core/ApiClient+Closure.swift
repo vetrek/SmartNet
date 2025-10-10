@@ -140,6 +140,26 @@ public extension ApiClient {
 
 // MARK: - Main Request Function
 extension ApiClient {
+  func prepareRequest<E>(for endpoint: E) throws -> URLRequest where E: Requestable {
+    do {
+      var request = try endpoint.urlRequest(with: config)
+      if endpoint.allowMiddlewares {
+        do {
+          try applyPreRequestMiddlewares(to: &request)
+        } catch {
+          throw NetworkError.middleware(error)
+        }
+      }
+      return request
+    } catch let error as NetworkError {
+      throw error
+    } catch is RequestGenerationError {
+      throw NetworkError.urlGeneration
+    } catch {
+      throw NetworkError.generic(error)
+    }
+  }
+
   @discardableResult
   func dataRequest<E>(
     with endpoint: E,
@@ -147,85 +167,56 @@ extension ApiClient {
     progressHUD: SNProgressHUD? = nil,
     completion: @escaping (Response<Data>) -> Void
   ) -> NetworkCancellable? where E : Requestable {
-    guard var request = try? endpoint.urlRequest(with: config) else {
+    let request: URLRequest
+    do {
+      request = try prepareRequest(for: endpoint)
+    } catch let error as NetworkError {
       completion(
         Response(
-          result: .failure(.urlGeneration),
+          result: .failure(error),
+          session: session
+        )
+      )
+      return nil
+    } catch {
+      completion(
+        Response(
+          result: .failure(.generic(error)),
           session: session
         )
       )
       return nil
     }
 
-    if let url = request.url, !middlewares.isEmpty {
-      let pathComponents = url.pathComponents
-      do {
-        var globalMiddlewares = [any MiddlewareProtocol]()
-        var pathMiddlewares = [any MiddlewareProtocol]()
-
-        middlewares.forEach {
-          if $0.pathComponent == "/" {
-            globalMiddlewares.append($0)
-          } else if pathComponents.contains($0.pathComponent) {
-            pathMiddlewares.append($0)
-          }
-        }
-
-        // Apply all global middlewares
-        for middleware in globalMiddlewares {
-          try middleware.preRequest(&request)
-        }
-
-        // Apply path-specific middlewares
-        for middleware in pathMiddlewares {
-          try middleware.preRequest(&request)
-        }
-
-      } catch {
-        completion(
-          Response(
-            result: .failure(.middleware(error)),
-            session: session,
-            request: request,
-            response: nil
-          )
-        )
-        return nil
-      }
-    }
-
-    if endpoint.allowMiddlewares {
-      do {
-        try applyPreRequestMiddlewares(request: request)
-      } catch {
-        completion(
-          Response(
-            result: .failure(.middleware(error)),
-            session: session,
-            request: request,
-            response: nil
-          )
-        )
-        return nil
-      }
-    }
-
     progressHUD?.show()
 
     return runDataTask(
       endpoint: endpoint,
+      request: request,
       queue: queue,
       progressHUD: progressHUD,
+      retryCount: 0,
       completion: completion
     )
   }
 
   func applyPreRequestMiddlewares(
-    request: URLRequest
+    to request: inout URLRequest
   ) throws {
-    var request = request
     guard let url = request.url, !middlewares.isEmpty else { return }
 
+    let groups = middlewareGroups(for: url)
+
+    for middleware in groups.global {
+      try middleware.preRequest(&request)
+    }
+
+    for middleware in groups.path {
+      try middleware.preRequest(&request)
+    }
+  }
+
+  func middlewareGroups(for url: URL) -> (global: [any MiddlewareProtocol], path: [any MiddlewareProtocol]) {
     let pathComponents = url.pathComponents
 
     var globalMiddlewares = [any MiddlewareProtocol]()
@@ -239,19 +230,36 @@ extension ApiClient {
       }
     }
 
-    // Apply all global middlewares
-    for middleware in globalMiddlewares {
-      try middleware.preRequest(&request)
+    return (global: globalMiddlewares, path: pathMiddlewares)
+  }
+
+  func shouldRetryAfterPostResponse(
+    _ middlewares: [any MiddlewareProtocol],
+    data: Data?,
+    response: URLResponse?,
+    error: Error?
+  ) async throws -> Bool {
+    for middleware in middlewares {
+      let result = try await middleware.postResponse(
+        data: data,
+        response: response,
+        error: error
+      )
+
+      switch result {
+      case .next:
+        continue
+      case .retryRequest:
+        return true
+      }
     }
 
-    // Apply path-specific middlewares
-    for middleware in pathMiddlewares {
-      try middleware.preRequest(&request)
-    }
+    return false
   }
 
   func runDataTask<E>(
     endpoint: E,
+    request: URLRequest,
     queue: DispatchQueue = .main,
     progressHUD: SNProgressHUD? = nil,
     retryCount: Int = 0,
@@ -261,16 +269,6 @@ extension ApiClient {
       queue.async {
         completion(response)
       }
-    }
-
-    guard let request = try? endpoint.urlRequest(with: config) else {
-      responseBlock(
-        Response(
-          result: .failure(.urlGeneration),
-          session: session
-        )
-      )
-      return nil
     }
 
     guard retryCount < 2 else {
@@ -288,9 +286,10 @@ extension ApiClient {
     }
 
     let startTime = Date()
+    let currentRequest = request
 
     let task = session?.dataTask(
-      with: request
+      with: currentRequest
     ) { (data, response, error) in
       Task { [weak self] in
         defer {
@@ -314,81 +313,76 @@ extension ApiClient {
           
           ApiClient.printCurl(
             session: session,
-            request: request,
+            request: currentRequest,
             response: response,
             data: data
           )
         }
 
+        func scheduleRetry() {
+          do {
+            let retriedRequest = try self.prepareRequest(for: endpoint)
+            _ = self.runDataTask(
+              endpoint: endpoint,
+              request: retriedRequest,
+              queue: queue,
+              progressHUD: progressHUD,
+              retryCount: retryCount + 1,
+              completion: completion
+            )
+          } catch let networkError as NetworkError {
+            responseBlock(
+              Response(
+                result: .failure(networkError),
+                session: self.session,
+                request: currentRequest,
+                response: response
+              )
+            )
+          } catch {
+            responseBlock(
+              Response(
+                result: .failure(.generic(error)),
+                session: self.session,
+                request: currentRequest,
+                response: response
+              )
+            )
+          }
+        }
+
         // Run postResponse Middlewares
         if endpoint.allowMiddlewares,
-           let url = request.url,
+           let url = currentRequest.url,
            !middlewares.isEmpty {
           do {
-            let pathComponents = url.pathComponents
+            let groups = self.middlewareGroups(for: url)
 
-            // We separate the two to run first the global Middlewares
-            // and then the path specific one
-            var globalMiddlewares = [any MiddlewareProtocol]()
-            var pathMiddlewares = [any MiddlewareProtocol]()
-
-            middlewares.forEach {
-              if $0.pathComponent == "/" {
-                globalMiddlewares.append($0)
-              } else if pathComponents.contains($0.pathComponent) {
-                pathMiddlewares.append($0)
-              }
+            if try await self.shouldRetryAfterPostResponse(
+              groups.global,
+              data: data,
+              response: response,
+              error: error
+            ) {
+              scheduleRetry()
+              return
             }
 
-            // Apply all global middlewares
-            for middleware in globalMiddlewares {
-              let result = try await middleware.postResponse(
-                data: data,
-                response: response,
-                error: error
-              )
-              switch result {
-              case .next:
-                continue
-              case .retryRequest:
-                _ = runDataTask(
-                  endpoint: endpoint,
-                  queue: queue,
-                  progressHUD: progressHUD,
-                  retryCount: retryCount + 1,
-                  completion: completion
-                )
-                return
-              }
-            }
-
-            // Apply path-specific middlewares
-            for middleware in pathMiddlewares {
-              let result = try await middleware.postResponse(
-                data: data,
-                response: response,
-                error: error
-              )
-              switch result {
-              case .next:
-                continue
-              case .retryRequest:
-                _ = runDataTask(
-                  endpoint: endpoint,
-                  queue: queue,
-                  progressHUD: progressHUD,
-                  retryCount: retryCount + 1,
-                  completion: completion
-                )
-                return
-              }
+            if try await self.shouldRetryAfterPostResponse(
+              groups.path,
+              data: data,
+              response: response,
+              error: error
+            ) {
+              scheduleRetry()
+              return
             }
           } catch {
             responseBlock(
               Response(
                 result: .failure(.middleware(error)),
                 session: session,
-                request: request,
+                request: currentRequest,
                 response: response
               )
             )
@@ -408,7 +402,7 @@ extension ApiClient {
             Response(
               result: .failure(networkError),
               session: self.session,
-              request: request,
+              request: currentRequest,
               response: response
             )
           )
@@ -427,7 +421,7 @@ extension ApiClient {
             Response(
               result: .failure(error),
               session: self.session,
-              request: request,
+              request: currentRequest,
               response: response
             )
           )
@@ -439,7 +433,7 @@ extension ApiClient {
             Response(
               result: .failure(.emptyResponse),
               session: self.session,
-              request: request,
+              request: currentRequest,
               response: response
             )
           )
@@ -451,7 +445,7 @@ extension ApiClient {
           Response(
             result: .success(data),
             session: self.session,
-            request: request,
+            request: currentRequest,
             response: response
           )
         )
