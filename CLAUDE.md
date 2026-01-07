@@ -27,15 +27,16 @@ SmartNet is a Swift HTTP networking library for iOS 13+ and macOS 10.15+ with no
 
 **Endpoint<Value>** (`Source/Endpoint/Endpoint.swift`) - Generic, type-safe endpoint definition. Conforms to `Requestable` protocol which defines URL construction, headers, body encoding, and middleware configuration.
 
-**NetworkConfiguration** (`Source/Core/NetworkConfiguration.swift`) - Holds baseURL, default headers, query parameters, timeouts, and debug settings.
+**NetworkConfiguration** (`Source/Core/NetworkConfiguration.swift`) - Holds baseURL, default headers, query parameters, timeouts, debug settings, and default retry policy.
 
 ### Request Flow
 
-1. `Endpoint<T>` defines path, method, body, headers, query params
+1. `Endpoint<T>` defines path, method, body, headers, query params, optional retry policy
 2. ApiClient applies middleware pre-request callbacks
 3. URLSession executes request
-4. Middleware post-response callbacks run (can return `.next` or `.retryRequest`)
-5. Response decoded to type `T` and returned
+4. On failure, retry policy determines if/when to retry (with backoff delay)
+5. Middleware post-response callbacks run (can return `.next` or `.retryRequest`)
+6. Response decoded to type `T` and returned
 
 ### Middleware System
 
@@ -45,6 +46,32 @@ Middlewares target specific path components and execute in registration order:
 - `preRequestCallback` - modify request before sending (throws to cancel)
 - `postResponseCallback` - process response, can trigger retry
 
+### Retry Policies
+
+`RetryPolicy` protocol (`Source/Core/RetryPolicy.swift`) defines automatic retry behavior:
+
+**Built-in Policies:**
+- `ExponentialBackoffRetryPolicy` - Default. Delays: 1s, 2s, 4s, 8s... with optional jitter
+- `LinearBackoffRetryPolicy` - Linear delays: 1s, 2s, 3s, 4s...
+- `ImmediateRetryPolicy` - Retry immediately without delay
+- `NoRetryPolicy` - Disable retries entirely
+
+**RetryCondition** flags control which errors trigger retries:
+- `.timeout`, `.connectionLost`, `.networkFailure`, `.serverError` (5xx), `.rateLimited` (429), `.dnsFailure`
+- `.default` = [timeout, connectionLost, networkFailure, serverError]
+
+**Configuration:**
+- Set global default via `NetworkConfiguration.retryPolicy`
+- Override per-endpoint via `Endpoint.retryPolicy`
+- Rate-limited responses (429) respect server's `Retry-After` header
+
+### Logging
+
+`SmartNetLogger` (`Source/Utils/Logger.swift`) provides unified logging via `os_log`:
+- Levels: `.debug`, `.info`, `.warning`, `.error`, `.none`
+- Default: `.debug` in DEBUG builds, `.warning` in release
+- Access via `SmartNetLogger.shared`
+
 ### Thread Safety
 
 `@ThreadSafe` property wrapper (`Source/Utils/ThreadSafe.swift`) uses pthread_mutex for concurrent access. Applied to config and task collections in ApiClient.
@@ -52,21 +79,37 @@ Middlewares target specific path components and execute in registration order:
 ### Key Protocols
 
 - `Requestable` - base protocol for all endpoint types
+- `RetryPolicy` - defines retry behavior (maxRetries, shouldRetry, delay)
 - `MiddlewareProtocol` - middleware implementation contract
 - `NetworkCancellable` - cancellation interface for requests
 
 ### Error Handling
 
-`NetworkError` enum (`Source/Utils/NetworkError.swift`) covers all failure cases: HTTP errors, parsing failures, middleware errors, cancellation, network failures.
+`NetworkError` enum (`Source/Utils/NetworkError.swift`) covers all failure cases:
+- HTTP errors (`.error(statusCode:data:)`)
+- Parsing failures (`.parsingFailed`)
+- Middleware errors (`.middleware(Error)`, `.middlewareMaxRetry`)
+- Network conditions (`.timeout`, `.connectionLost`, `.networkFailure`, `.dnsLookupFailed`)
+- Security (`.sslError(Error?)`)
+- Rate limiting (`.rateLimited(retryAfter:)`)
+- Cancellation (`.cancelled`)
 
 ## Testing
 
-Tests use XCTest in `Tests/SmartNetTests/`. Pattern: setUp creates ApiClient, tearDown calls `client.destroy()` to prevent retain cycles.
+Tests use Swift Testing framework (`@Suite`, `@Test`, `#expect`). Two test targets:
 
-Key test files:
-- `ApiClientMiddlewareTests.swift` - middleware pipeline behavior
+**Unit Tests** (`Tests/UnitTests/`) - Fast, isolated tests:
+- `RetryPolicyTests.swift` - retry policy behavior and conditions
 - `EndpointRequestTests.swift` - request URL/header generation
 - `HTTPBodyTests.swift` - body encoding (JSON, form URL encoded)
+- `ThreadSafetyTests.swift` - concurrent access safety
+- `LifecycleTests.swift` - ApiClient lifecycle and cleanup
+
+**Integration Tests** (`Tests/IntegrationTests/`) - Full request cycle with MockURLProtocol:
+- `ClosureRequestTests.swift`, `AsyncRequestTests.swift`, `CombineRequestTests.swift` - all paradigms
+- `ErrorHandlingTests.swift` - error case coverage
+- `ApiClientMiddlewareTests.swift` - middleware pipeline behavior
+- `FileOperationTests.swift` - download/upload operations
 
 ## Code Conventions
 

@@ -32,6 +32,7 @@ public protocol NetworkConfigurable {
   var trustedDomains: [String] { get set }
   var requestTimeout: TimeInterval { get set }
   var debug: Bool { get set }
+  var retryPolicy: RetryPolicy { get set }
 }
 
 /// Service Network default configuration
@@ -57,7 +58,10 @@ public final class NetworkConfiguration: NetworkConfigurable {
   
   /// Print cURL and Response
   public var debug: Bool
-  
+
+  /// Default retry policy for all requests
+  public var retryPolicy: RetryPolicy
+
   public init(
     baseURL: URL,
     headers: [String: String] = [:],
@@ -65,7 +69,8 @@ public final class NetworkConfiguration: NetworkConfigurable {
     bodyParameters: [String: Any] = [:],
     trustedDomains: [String] = [],
     requestTimeout: TimeInterval = 60,
-    debug: Bool = true
+    debug: Bool = true,
+    retryPolicy: RetryPolicy = ExponentialBackoffRetryPolicy()
   ) {
     self.baseURL = baseURL
     self.headers = headers
@@ -74,5 +79,6 @@ public final class NetworkConfiguration: NetworkConfigurable {
     self.trustedDomains = trustedDomains
     self.requestTimeout = requestTimeout
     self.debug = debug
+    self.retryPolicy = retryPolicy
   }
 }

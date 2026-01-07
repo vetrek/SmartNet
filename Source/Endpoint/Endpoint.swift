@@ -25,9 +25,9 @@
 import Foundation
 
 public struct Endpoint<Value>: Requestable {
-  
+
   public typealias Response = Value
-  
+
   public var path: String
   public var isFullPath: Bool
   public var method: HTTPMethod
@@ -38,7 +38,8 @@ public struct Endpoint<Value>: Requestable {
   public let form: MultipartFormData? = nil
   public var allowMiddlewares: Bool
   public var debugRequest: Bool
-  
+  public var retryPolicy: RetryPolicy?
+
   public init(
     path: String,
     isFullPath: Bool = false,
@@ -48,7 +49,8 @@ public struct Endpoint<Value>: Requestable {
     queryParameters: QueryParameters? = nil,
     body: HTTPBody? = nil,
     allowMiddlewares: Bool = true,
-    debugRequest: Bool = false
+    debugRequest: Bool = false,
+    retryPolicy: RetryPolicy? = nil
   ) {
     self.path = path
     self.isFullPath = isFullPath
@@ -59,5 +61,6 @@ public struct Endpoint<Value>: Requestable {
     self.body = body
     self.allowMiddlewares = allowMiddlewares
     self.debugRequest = debugRequest
+    self.retryPolicy = retryPolicy
   }
 }
