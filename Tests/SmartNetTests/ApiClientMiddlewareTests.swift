@@ -1,25 +1,16 @@
-import XCTest
+import Testing
+import Foundation
 @testable import SmartNet
 
-final class ApiClientMiddlewareTests: XCTestCase {
+@Suite("ApiClient Middleware Tests", .serialized)
+struct ApiClientMiddlewareTests {
 
-  private var config: NetworkConfiguration!
-  private var client: ApiClient!
+  @Test("Prepare request applies global and path middlewares")
+  func prepareRequestAppliesGlobalAndPathMiddlewares() throws {
+    let config = NetworkConfiguration(baseURL: URL(string: "https://example.com")!)
+    let client = ApiClient(config: config)
+    defer { client.destroy() }
 
-  override func setUp() {
-    super.setUp()
-    config = NetworkConfiguration(baseURL: URL(string: "https://example.com")!)
-    client = ApiClient(config: config)
-  }
-
-  override func tearDown() {
-    client.destroy()
-    client = nil
-    config = nil
-    super.tearDown()
-  }
-
-  func testPrepareRequestAppliesGlobalAndPathMiddlewares() throws {
     let globalMiddleware = TestMiddleware(
       pathComponent: "/",
       preRequestHandler: { request in
@@ -44,11 +35,16 @@ final class ApiClientMiddlewareTests: XCTestCase {
 
     let request = try client.prepareRequest(for: endpoint)
 
-    XCTAssertEqual(request.value(forHTTPHeaderField: "X-Test-Header"), "global")
-    XCTAssertEqual(request.value(forHTTPHeaderField: "X-Path-Header"), "path")
+    #expect(request.value(forHTTPHeaderField: "X-Test-Header") == "global")
+    #expect(request.value(forHTTPHeaderField: "X-Path-Header") == "path")
   }
 
-  func testPrepareRequestSkipsMiddlewaresWhenDisabled() throws {
+  @Test("Prepare request skips middlewares when disabled")
+  func prepareRequestSkipsMiddlewaresWhenDisabled() throws {
+    let config = NetworkConfiguration(baseURL: URL(string: "https://example.com")!)
+    let client = ApiClient(config: config)
+    defer { client.destroy() }
+
     let middleware = TestMiddleware(
       pathComponent: "/",
       preRequestHandler: { request in
@@ -66,10 +62,15 @@ final class ApiClientMiddlewareTests: XCTestCase {
 
     let request = try client.prepareRequest(for: endpoint)
 
-    XCTAssertNil(request.value(forHTTPHeaderField: "X-Should-Not-Exist"))
+    #expect(request.value(forHTTPHeaderField: "X-Should-Not-Exist") == nil)
   }
 
-  func testMiddlewareGroupsSeparatesGlobalAndPathTargets() throws {
+  @Test("Middleware groups separates global and path targets")
+  func middlewareGroupsSeparatesGlobalAndPathTargets() throws {
+    let config = NetworkConfiguration(baseURL: URL(string: "https://example.com")!)
+    let client = ApiClient(config: config)
+    defer { client.destroy() }
+
     let globalMiddleware = TestMiddleware(pathComponent: "/")
     let pathMiddleware = TestMiddleware(pathComponent: "users")
     client.addMiddleware(globalMiddleware)
@@ -78,13 +79,18 @@ final class ApiClientMiddlewareTests: XCTestCase {
     let url = URL(string: "https://example.com/users/profile")!
     let groups = client.middlewareGroups(for: url)
 
-    XCTAssertEqual(groups.global.count, 1)
-    XCTAssertEqual(groups.path.count, 1)
-    XCTAssertEqual(groups.global.first?.id, globalMiddleware.id)
-    XCTAssertEqual(groups.path.first?.id, pathMiddleware.id)
+    #expect(groups.global.count == 1)
+    #expect(groups.path.count == 1)
+    #expect(groups.global.first?.id == globalMiddleware.id)
+    #expect(groups.path.first?.id == pathMiddleware.id)
   }
 
-  func testShouldRetryAfterPostResponseReturnsTrueWhenMiddlewareRequestsRetry() async throws {
+  @Test("Should retry after post response returns true when middleware requests retry")
+  func shouldRetryAfterPostResponseReturnsTrueWhenMiddlewareRequestsRetry() async throws {
+    let config = NetworkConfiguration(baseURL: URL(string: "https://example.com")!)
+    let client = ApiClient(config: config)
+    defer { client.destroy() }
+
     let retryMiddleware = TestMiddleware(
       pathComponent: "/",
       postResponseHandler: { _, _, _ in
@@ -99,10 +105,15 @@ final class ApiClientMiddlewareTests: XCTestCase {
       error: nil
     )
 
-    XCTAssertTrue(shouldRetry)
+    #expect(shouldRetry == true)
   }
 
-  func testShouldRetryAfterPostResponseReturnsFalseWhenMiddlewaresContinue() async throws {
+  @Test("Should retry after post response returns false when middlewares continue")
+  func shouldRetryAfterPostResponseReturnsFalseWhenMiddlewaresContinue() async throws {
+    let config = NetworkConfiguration(baseURL: URL(string: "https://example.com")!)
+    let client = ApiClient(config: config)
+    defer { client.destroy() }
+
     let middleware = TestMiddleware(
       pathComponent: "/",
       postResponseHandler: { _, _, _ in
@@ -117,7 +128,48 @@ final class ApiClientMiddlewareTests: XCTestCase {
       error: nil
     )
 
-    XCTAssertFalse(shouldRetry)
+    #expect(shouldRetry == false)
+  }
+
+  @Test("Remove middleware by path component")
+  func removeMiddlewareByPathComponent() {
+    let config = NetworkConfiguration(baseURL: URL(string: "https://example.com")!)
+    let client = ApiClient(config: config)
+    defer { client.destroy() }
+
+    let middleware1 = TestMiddleware(pathComponent: "users")
+    let middleware2 = TestMiddleware(pathComponent: "posts")
+
+    client.addMiddleware(middleware1)
+    client.addMiddleware(middleware2)
+
+    client.removeMiddleware(for: "users")
+
+    let url = URL(string: "https://example.com/users/1")!
+    let groups = client.middlewareGroups(for: url)
+
+    #expect(groups.path.isEmpty)
+  }
+
+  @Test("Remove specific middleware instance")
+  func removeSpecificMiddlewareInstance() {
+    let config = NetworkConfiguration(baseURL: URL(string: "https://example.com")!)
+    let client = ApiClient(config: config)
+    defer { client.destroy() }
+
+    let middleware1 = TestMiddleware(pathComponent: "/")
+    let middleware2 = TestMiddleware(pathComponent: "/")
+
+    client.addMiddleware(middleware1)
+    client.addMiddleware(middleware2)
+
+    client.removeMiddleware(middleware1)
+
+    let url = URL(string: "https://example.com/test")!
+    let groups = client.middlewareGroups(for: url)
+
+    #expect(groups.global.count == 1)
+    #expect(groups.global.first?.id == middleware2.id)
   }
 }
 

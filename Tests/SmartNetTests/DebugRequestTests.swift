@@ -1,35 +1,43 @@
-import XCTest
+import Testing
+import Foundation
 @testable import SmartNet
 
-final class DebugRequestTests: XCTestCase {
+@Suite("Debug Request Tests")
+struct DebugRequestTests {
 
-  func testRequestableDefaultDebugRequestIsFalse() {
+  @Test("Requestable default debugRequest is false")
+  func requestableDefaultDebugRequestIsFalse() {
     let request = StubRequest()
-    XCTAssertFalse(request.debugRequest)
+    #expect(request.debugRequest == false)
   }
 
-  func testEndpointDebugRequestDefaultsToFalse() {
+  @Test("Endpoint debugRequest defaults to false")
+  func endpointDebugRequestDefaultsToFalse() {
     let endpoint = Endpoint<Data>(path: "users")
-    XCTAssertFalse(endpoint.debugRequest)
+    #expect(endpoint.debugRequest == false)
   }
 
-  func testEndpointDebugRequestCanBeEnabled() {
+  @Test("Endpoint debugRequest can be enabled")
+  func endpointDebugRequestCanBeEnabled() {
     let endpoint = Endpoint<Data>(path: "users", debugRequest: true)
-    XCTAssertTrue(endpoint.debugRequest)
+    #expect(endpoint.debugRequest == true)
   }
 
-  func testDownloadEndpointDebugRequest() {
+  @Test("Download endpoint debugRequest")
+  func downloadEndpointDebugRequest() {
     let endpoint = DownloadEndpoint(path: "file.zip", debugRequest: true)
-    XCTAssertTrue(endpoint.debugRequest)
+    #expect(endpoint.debugRequest == true)
   }
 
-  func testMultipartFormEndpointDebugRequest() {
+  @Test("Multipart form endpoint debugRequest")
+  func multipartFormEndpointDebugRequest() {
     let form = MultipartFormData()
     let endpoint = MultipartFormEndpoint<Data>(path: "upload", form: form, debugRequest: true)
-    XCTAssertTrue(endpoint.debugRequest)
+    #expect(endpoint.debugRequest == true)
   }
 
-  func testDownloadTaskCapturesEndpointDebugIntent() throws {
+  @Test("Download task captures endpoint debug intent")
+  func downloadTaskCapturesEndpointDebugIntent() throws {
     let config = NetworkConfiguration(baseURL: URL(string: "https://example.com")!)
     let endpoint = DownloadEndpoint(path: "file.zip", debugRequest: true)
     let session = URLSession(configuration: .ephemeral)
@@ -41,7 +49,23 @@ final class DebugRequestTests: XCTestCase {
       destination: nil
     )
 
-    XCTAssertTrue(task.shouldDebug)
+    #expect(task.shouldDebug == true)
+  }
+
+  @Test("Download task debug is false by default")
+  func downloadTaskDebugIsFalseByDefault() throws {
+    let config = NetworkConfiguration(baseURL: URL(string: "https://example.com")!)
+    let endpoint = DownloadEndpoint(path: "file.zip")
+    let session = URLSession(configuration: .ephemeral)
+
+    let task = try DownloadTask(
+      session: session,
+      endpoint: endpoint,
+      config: config,
+      destination: nil
+    )
+
+    #expect(task.shouldDebug == false)
   }
 }
 

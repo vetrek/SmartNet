@@ -70,21 +70,21 @@ git checkout -b phase-Y-description
 *Estimated effort: 1-2 weeks*
 
 ### Core Request Tests
-- [ ] Test closure-based `request()` success path
-- [ ] Test closure-based `request()` error paths
-- [ ] Test async/await `request()` success path
-- [ ] Test async/await `request()` error paths
-- [ ] Test Combine publisher success path
-- [ ] Test Combine publisher error paths
+- [x] Test closure-based `request()` success path
+- [x] Test closure-based `request()` error paths
+- [x] Test async/await `request()` success path
+- [x] Test async/await `request()` error paths
+- [x] Test Combine publisher success path
+- [x] Test Combine publisher error paths
 
 ### Error Scenario Tests
-- [ ] Test HTTP 4xx error handling
-- [ ] Test HTTP 5xx error handling
+- [x] Test HTTP 4xx error handling
+- [x] Test HTTP 5xx error handling
 - [ ] Test network timeout behavior
-- [ ] Test network unreachable behavior
-- [ ] Test request cancellation
-- [ ] Test empty response handling
-- [ ] Test JSON parsing failures
+- [x] Test network unreachable behavior
+- [x] Test request cancellation
+- [x] Test empty response handling
+- [x] Test JSON parsing failures
 
 ### File Operation Tests
 - [ ] Test download task creation
@@ -325,7 +325,7 @@ git checkout -b phase-Y-description
 | Phase | Branch | Status | Completion |
 |-------|--------|--------|------------|
 | Phase 1: Safety Fixes | `phase-1-safety-fixes` | Complete | 100% |
-| Phase 2: Test Foundation | `phase-2-test-foundation` | Not Started | 0% |
+| Phase 2: Test Foundation | `phase-2-test-foundation` | In Progress | 50% |
 | Phase 3: Error Handling | `phase-3-error-handling` | Not Started | 0% |
 | Phase 4: Retry Policies | `phase-4-retry-policies` | Not Started | 0% |
 | Phase 5: API Modernization | `phase-5-api-modernization` | Not Started | 0% |
@@ -344,6 +344,9 @@ git checkout -b phase-Y-description
 | Component | Path |
 |-----------|------|
 | ApiClient | `Source/Core/ApiClient.swift` |
+| ApiClientProtocol | `Source/Core/ApiClientProtocol.swift` |
+| DownloadClientProtocol | `Source/Core/DownloadClientProtocol.swift` |
+| UploadClientProtocol | `Source/Core/UploadClientProtocol.swift` |
 | Async Extension | `Source/Core/ApiClient+Async.swift` |
 | Closure Extension | `Source/Core/ApiClient+Closure.swift` |
 | Combine Extension | `Source/Core/ApiClient+Combine.swift` |
@@ -356,3 +359,4 @@ git checkout -b phase-Y-description
 | NetworkError | `Source/Utils/NetworkError.swift` |
 | ThreadSafe | `Source/Utils/ThreadSafe.swift` |
 | Tests | `Tests/SmartNetTests/` |
+| MockApiClient | `Tests/SmartNetTests/MockApiClient.swift` |

@@ -1,13 +1,12 @@
-import XCTest
+import Testing
+import Foundation
 @testable import SmartNet
 
-final class EndpointRequestTests: XCTestCase {
+@Suite("Endpoint Request Tests")
+struct EndpointRequestTests {
 
-  private var config: NetworkConfiguration!
-
-  override func setUp() {
-    super.setUp()
-    config = NetworkConfiguration(
+  private func createConfig() -> NetworkConfiguration {
+    NetworkConfiguration(
       baseURL: URL(string: "https://example.com/api")!,
       headers: ["Authorization": "Bearer global-token"],
       queryParameters: ["lang": "en"],
@@ -15,12 +14,10 @@ final class EndpointRequestTests: XCTestCase {
     )
   }
 
-  override func tearDown() {
-    config = nil
-    super.tearDown()
-  }
+  @Test("URL request builds URL using base path and query parameters")
+  func urlRequestBuildsUrlUsingBasePathAndQueryParameters() throws {
+    let config = createConfig()
 
-  func testUrlRequestBuildsUrlUsingBasePathAndQueryParameters() throws {
     let endpoint = Endpoint<Data>(
       path: "/users/42 profile",
       method: .get,
@@ -28,20 +25,24 @@ final class EndpointRequestTests: XCTestCase {
     )
 
     let request = try endpoint.urlRequest(with: config)
-    let components = URLComponents(url: try XCTUnwrap(request.url), resolvingAgainstBaseURL: false)
+    let url = try #require(request.url)
+    let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
 
-    XCTAssertEqual(components?.scheme, "https")
-    XCTAssertEqual(components?.host, "example.com")
-    XCTAssertEqual(components?.path, "/api/users/42 profile")
-    XCTAssertEqual(components?.percentEncodedPath, "/api/users/42%20profile")
+    #expect(components.scheme == "https")
+    #expect(components.host == "example.com")
+    #expect(components.path == "/api/users/42 profile")
+    #expect(components.percentEncodedPath == "/api/users/42%20profile")
 
-    let queryItems = components?.queryItems ?? []
+    let queryItems = components.queryItems ?? []
     let queryDictionary = Dictionary(uniqueKeysWithValues: queryItems.map { ($0.name, $0.value ?? "") })
-    XCTAssertEqual(queryDictionary["include"], "details")
-    XCTAssertEqual(queryDictionary["lang"], "en")
+    #expect(queryDictionary["include"] == "details")
+    #expect(queryDictionary["lang"] == "en")
   }
 
-  func testHeadersMergeFavorEndpointValues() throws {
+  @Test("Headers merge favor endpoint values")
+  func headersMergeFavorEndpointValues() throws {
+    let config = createConfig()
+
     let endpoint = Endpoint<Data>(
       path: "users",
       method: .get,
@@ -53,12 +54,15 @@ final class EndpointRequestTests: XCTestCase {
 
     let request = try endpoint.urlRequest(with: config)
 
-    XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer endpoint-token")
-    XCTAssertEqual(request.value(forHTTPHeaderField: "X-Custom"), "endpoint")
-    XCTAssertEqual(request.value(forHTTPHeaderField: "Accept"), nil)
+    #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer endpoint-token")
+    #expect(request.value(forHTTPHeaderField: "X-Custom") == "endpoint")
+    #expect(request.value(forHTTPHeaderField: "Accept") == nil)
   }
 
-  func testHeadersSkipConfigWhenUseEndpointHeaderOnlyIsTrue() throws {
+  @Test("Headers skip config when useEndpointHeaderOnly is true")
+  func headersSkipConfigWhenUseEndpointHeaderOnlyIsTrue() throws {
+    let config = createConfig()
+
     let endpoint = Endpoint<Data>(
       path: "users",
       method: .get,
@@ -68,11 +72,14 @@ final class EndpointRequestTests: XCTestCase {
 
     let request = try endpoint.urlRequest(with: config)
 
-    XCTAssertEqual(request.value(forHTTPHeaderField: "X-Only"), "endpoint")
-    XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
+    #expect(request.value(forHTTPHeaderField: "X-Only") == "endpoint")
+    #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
   }
 
-  func testBodyMergesConfigBodyParameters() throws {
+  @Test("Body merges config body parameters")
+  func bodyMergesConfigBodyParameters() throws {
+    let config = createConfig()
+
     let endpoint = Endpoint<Data>(
       path: "users",
       method: .post,
@@ -80,25 +87,57 @@ final class EndpointRequestTests: XCTestCase {
     )
 
     let request = try endpoint.urlRequest(with: config)
-    let bodyData = try XCTUnwrap(request.httpBody)
+    let bodyData = try #require(request.httpBody)
     let payload = try JSONSerialization.jsonObject(with: bodyData) as? [String: Any]
 
-    XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
-    XCTAssertEqual(payload?["localKey"] as? String, "localValue")
-    XCTAssertEqual(payload?["globalKey"] as? String, "globalValue")
+    #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
+    #expect(payload?["localKey"] as? String == "localValue")
+    #expect(payload?["globalKey"] as? String == "globalValue")
   }
 
-  func testBodyFallsBackToConfigBodyWhenEndpointBodyIsNil() throws {
+  @Test("Body falls back to config body when endpoint body is nil")
+  func bodyFallsBackToConfigBodyWhenEndpointBodyIsNil() throws {
+    let config = createConfig()
+
     let endpoint = Endpoint<Data>(
       path: "users",
       method: .post
     )
 
     let request = try endpoint.urlRequest(with: config)
-    let bodyData = try XCTUnwrap(request.httpBody)
+    let bodyData = try #require(request.httpBody)
     let payload = try JSONSerialization.jsonObject(with: bodyData) as? [String: Any]
 
-    XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
-    XCTAssertEqual(payload?["globalKey"] as? String, "globalValue")
+    #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
+    #expect(payload?["globalKey"] as? String == "globalValue")
+  }
+
+  @Test("Full path ignores base URL path")
+  func fullPathIgnoresBaseURLPath() throws {
+    // Use a config without query parameters to test just the path behavior
+    let config = NetworkConfiguration(baseURL: URL(string: "https://example.com/api")!)
+
+    let endpoint = Endpoint<Data>(
+      path: "https://other.com/external",
+      isFullPath: true,
+      method: .get
+    )
+
+    let request = try endpoint.urlRequest(with: config)
+
+    #expect(request.url?.absoluteString == "https://other.com/external")
+  }
+
+  @Test("HTTP method is correctly set")
+  func httpMethodIsCorrectlySet() throws {
+    let config = createConfig()
+
+    let methods: [HTTPMethod] = [.get, .post, .put, .patch, .delete]
+
+    for method in methods {
+      let endpoint = Endpoint<Data>(path: "test", method: method)
+      let request = try endpoint.urlRequest(with: config)
+      #expect(request.httpMethod == method.rawValue.uppercased())
+    }
   }
 }

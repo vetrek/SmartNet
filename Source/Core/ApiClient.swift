@@ -36,7 +36,7 @@ extension URLSessionTask: NetworkCancellable { }
 
 public typealias CompletionHandler<T> = (Response<T>) -> Void
 
-public final class ApiClient: NSObject {
+public final class ApiClient: NSObject, ApiClientProtocol, DownloadClientProtocol, UploadClientProtocol {
   
   /// Network Session Configuration
   @ThreadSafe
@@ -72,15 +72,33 @@ public final class ApiClient: NSObject {
   public init(config: NetworkConfigurable) {
     self.config = config
     super.init()
-    
+
     let sessionConfig = URLSessionConfiguration.default
     sessionConfig.shouldUseExtendedBackgroundIdleMode = true
     sessionConfig.timeoutIntervalForRequest = config.requestTimeout
-    
+
     self.session = URLSession(
       configuration: sessionConfig,
       delegate: self,
       delegateQueue: .main
+    )
+  }
+
+  /// Initialize with custom session configuration (useful for testing with mock protocols)
+  /// - Parameters:
+  ///   - config: Network configuration
+  ///   - sessionConfiguration: Custom URLSessionConfiguration (e.g., with mock protocol classes)
+  ///   - delegateQueue: Queue for delegate callbacks. Defaults to `.main`. Pass `nil` for a serial queue (useful in tests without a main run loop).
+  public init(config: NetworkConfigurable, sessionConfiguration: URLSessionConfiguration, delegateQueue: OperationQueue? = .main) {
+    self.config = config
+    super.init()
+
+    sessionConfiguration.timeoutIntervalForRequest = config.requestTimeout
+
+    self.session = URLSession(
+      configuration: sessionConfiguration,
+      delegate: self,
+      delegateQueue: delegateQueue
     )
   }
   
