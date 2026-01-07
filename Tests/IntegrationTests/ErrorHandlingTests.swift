@@ -195,6 +195,36 @@ struct ErrorHandlingTests {
     }
   }
 
+  @Test("Request timeout returns timeout error")
+  func requestTimeout() async throws {
+    let (client, _) = createMockClient()
+    defer { client.destroy(); MockURLProtocol.removeHandler(for: "/error/timeout") }
+
+    MockURLProtocol.setHandler(for: "/error/timeout") { request in
+      throw URLError(.timedOut)
+    }
+
+    let endpoint = Endpoint<Data>(path: "error/timeout", method: .get)
+
+    let response: Response<Data> = await withCheckedContinuation { continuation in
+      client.request(with: endpoint) { response in
+        continuation.resume(returning: response)
+      }
+    }
+
+    switch response.result {
+    case .success:
+      Issue.record("Expected timeout error but got success")
+    case .failure(let error):
+      if case .generic(let underlyingError) = error,
+         (underlyingError as? URLError)?.code == .timedOut {
+        // Expected - timeout is wrapped in generic
+      } else {
+        Issue.record("Expected timeout error but got \(error)")
+      }
+    }
+  }
+
   @Test("Error data is preserved in response")
   func errorDataPreserved() async throws {
     let (client, _) = createMockClient()
