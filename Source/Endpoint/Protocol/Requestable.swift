@@ -78,7 +78,10 @@ public protocol Requestable {
 
   /// Enables cURL logging for this endpoint regardless of the client's global debug flag.
   var debugRequest: Bool { get }
-  
+
+  /// Custom retry policy for this endpoint. If nil, uses the config's default policy.
+  var retryPolicy: RetryPolicy? { get }
+
   /// Return the `URLRequest` from the Requestable
   func urlRequest(with config: NetworkConfigurable) throws -> URLRequest
 }
@@ -188,4 +191,5 @@ extension Requestable {
 
 public extension Requestable {
   var debugRequest: Bool { false }
+  var retryPolicy: RetryPolicy? { nil }
 }

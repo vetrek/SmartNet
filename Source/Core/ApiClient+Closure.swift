@@ -271,12 +271,14 @@ extension ApiClient {
       }
     }
 
-    guard retryCount < 2 else {
+    // Get effective retry policy (endpoint override or config default)
+    let retryPolicy = endpoint.retryPolicy ?? config.retryPolicy
+
+    // Check if max retries exceeded
+    guard retryCount <= retryPolicy.maxRetries else {
       responseBlock(
         Response(
-          result: .failure(
-            .middlewareMaxRetry
-          ),
+          result: .failure(.middlewareMaxRetry),
           session: session,
           request: request,
           response: nil
@@ -319,36 +321,54 @@ extension ApiClient {
           )
         }
 
-        func scheduleRetry() {
-          do {
-            let retriedRequest = try self.prepareRequest(for: endpoint)
-            _ = self.runDataTask(
-              endpoint: endpoint,
-              request: retriedRequest,
-              queue: queue,
-              progressHUD: progressHUD,
-              retryCount: retryCount + 1,
-              completion: completion
-            )
-          } catch let networkError as NetworkError {
-            responseBlock(
-              Response(
-                result: .failure(networkError),
-                session: self.session,
-                request: currentRequest,
-                response: response
+        /// Schedules a retry with delay based on the retry policy.
+        func scheduleRetryWithDelay(for error: NetworkError? = nil) {
+          let delay = retryPolicy.delay(forAttempt: retryCount, error: error)
+
+          @Sendable func performRetry() {
+            do {
+              let retriedRequest = try self.prepareRequest(for: endpoint)
+              _ = self.runDataTask(
+                endpoint: endpoint,
+                request: retriedRequest,
+                queue: queue,
+                progressHUD: progressHUD,
+                retryCount: retryCount + 1,
+                completion: completion
               )
-            )
-          } catch {
-            responseBlock(
-              Response(
-                result: .failure(.generic(error)),
-                session: self.session,
-                request: currentRequest,
-                response: response
+            } catch let networkError as NetworkError {
+              responseBlock(
+                Response(
+                  result: .failure(networkError),
+                  session: self.session,
+                  request: currentRequest,
+                  response: response
+                )
               )
-            )
+            } catch {
+              responseBlock(
+                Response(
+                  result: .failure(.generic(error)),
+                  session: self.session,
+                  request: currentRequest,
+                  response: response
+                )
+              )
+            }
           }
+
+          if delay > 0 {
+            SmartNetLogger.shared.debug("[Retry] Attempt \(retryCount + 1)/\(retryPolicy.maxRetries) after \(String(format: "%.2f", delay))s delay")
+            DispatchQueue.global().asyncAfter(deadline: .now() + delay) { performRetry() }
+          } else {
+            SmartNetLogger.shared.debug("[Retry] Attempt \(retryCount + 1)/\(retryPolicy.maxRetries) immediately")
+            performRetry()
+          }
+        }
+
+        /// Checks if the error should trigger a retry based on the policy.
+        func shouldRetryForError(_ error: NetworkError) -> Bool {
+          retryCount < retryPolicy.maxRetries && retryPolicy.shouldRetry(for: error, attempt: retryCount)
         }
 
         // Run postResponse Middlewares
@@ -364,8 +384,11 @@ extension ApiClient {
               response: response,
               error: error
             ) {
-              scheduleRetry()
-              return
+              // Middleware requested retry - check if policy allows
+              if retryCount < retryPolicy.maxRetries {
+                scheduleRetryWithDelay()
+                return
+              }
             }
 
             if try await self.shouldRetryAfterPostResponse(
@@ -374,8 +397,11 @@ extension ApiClient {
               response: response,
               error: error
             ) {
-              scheduleRetry()
-              return
+              // Middleware requested retry - check if policy allows
+              if retryCount < retryPolicy.maxRetries {
+                scheduleRetryWithDelay()
+                return
+              }
             }
           } catch {
             responseBlock(
@@ -390,13 +416,19 @@ extension ApiClient {
           }
         }
 
-        // Check error
-        if let networkError = error {
+        // Check error and apply retry policy
+        if let requestError = error {
           let networkError = self.getRequestError(
             data: data,
             response: response,
-            requestError: networkError
+            requestError: requestError
           )
+
+          // Check if we should retry based on the error
+          if shouldRetryForError(networkError) {
+            scheduleRetryWithDelay(for: networkError)
+            return
+          }
 
           responseBlock(
             Response(
@@ -406,7 +438,6 @@ extension ApiClient {
               response: response
             )
           )
-
           return
         }
 
@@ -416,10 +447,16 @@ extension ApiClient {
         }
 
         // Check HTTP response status code is within accepted range
-        if let error = self.validate(response: response, data: data) {
+        if let validationError = self.validate(response: response, data: data) {
+          // Check if we should retry based on the validation error (e.g., 5xx, 429)
+          if shouldRetryForError(validationError) {
+            scheduleRetryWithDelay(for: validationError)
+            return
+          }
+
           responseBlock(
             Response(
-              result: .failure(error),
+              result: .failure(validationError),
               session: self.session,
               request: currentRequest,
               response: response
