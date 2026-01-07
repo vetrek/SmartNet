@@ -146,3 +146,196 @@ extension NSMutableData {
     self.append(data)
   }
 }
+
+// MARK: - MultipartBuilder Result Builder
+
+/// A result builder for declaratively constructing multipart form data.
+///
+/// Example usage:
+/// ```swift
+/// let form = MultipartFormData {
+///   TextField("username", value: "johndoe")
+///   TextField("email", value: "john@example.com")
+///   DataField("avatar", data: imageData, fileName: "photo.png", mimeType: "image/png")
+///   if includeMetadata {
+///     TextField("metadata", value: jsonString)
+///   }
+/// }
+/// ```
+@resultBuilder
+public struct MultipartBuilder {
+  public static func buildBlock(_ components: MultipartFormField...) -> [MultipartFormField] {
+    components
+  }
+
+  public static func buildBlock(_ components: [MultipartFormField]...) -> [MultipartFormField] {
+    components.flatMap { $0 }
+  }
+
+  public static func buildOptional(_ component: [MultipartFormField]?) -> [MultipartFormField] {
+    component ?? []
+  }
+
+  // Both required for if-else support; implementation is intentionally identical
+  public static func buildEither(first component: [MultipartFormField]) -> [MultipartFormField] {
+    component
+  }
+
+  public static func buildEither(second component: [MultipartFormField]) -> [MultipartFormField] {
+    component
+  }
+
+  public static func buildArray(_ components: [[MultipartFormField]]) -> [MultipartFormField] {
+    components.flatMap { $0 }
+  }
+
+  public static func buildExpression(_ expression: MultipartFormField) -> [MultipartFormField] {
+    [expression]
+  }
+
+  public static func buildExpression(_ expression: [MultipartFormField]) -> [MultipartFormField] {
+    expression
+  }
+}
+
+// MARK: - MultipartFormField Protocol
+
+/// A protocol representing a field in a multipart form.
+public protocol MultipartFormField {
+  /// Applies this field to the given multipart form data.
+  func apply(to form: inout MultipartFormData)
+}
+
+// MARK: - TextField
+
+/// A text field for multipart forms.
+///
+/// Example:
+/// ```swift
+/// TextField("username", value: "johndoe")
+/// ```
+public struct TextField: MultipartFormField {
+  public let name: String
+  public let value: String
+
+  public init(_ name: String, value: String) {
+    self.name = name
+    self.value = value
+  }
+
+  public func apply(to form: inout MultipartFormData) {
+    form.addTextField(named: name, value: value)
+  }
+}
+
+// MARK: - DataField
+
+/// A data/file field for multipart forms.
+///
+/// Example:
+/// ```swift
+/// DataField("file", data: fileData)
+/// DataField("image", data: imageData, fileName: "photo.png", mimeType: "image/png")
+/// ```
+public struct DataField: MultipartFormField {
+  public let name: String
+  public let data: Data
+  public let fileName: String?
+  public let mimeType: String?
+
+  public init(_ name: String, data: Data, fileName: String? = nil, mimeType: String? = nil) {
+    self.name = name
+    self.data = data
+    self.fileName = fileName
+    self.mimeType = mimeType
+  }
+
+  public func apply(to form: inout MultipartFormData) {
+    form.addDataField(named: name, data: data, fileName: fileName, mimeType: mimeType)
+  }
+}
+
+// MARK: - FileField
+
+/// A convenience field for file uploads with automatic MIME type detection.
+///
+/// Example:
+/// ```swift
+/// FileField("document", data: pdfData, fileName: "report.pdf")
+/// ```
+public struct FileField: MultipartFormField {
+  public let name: String
+  public let data: Data
+  public let fileName: String
+  public let mimeType: String
+
+  public init(_ name: String, data: Data, fileName: String, mimeType: String? = nil) {
+    self.name = name
+    self.data = data
+    self.fileName = fileName
+    self.mimeType = mimeType ?? Self.detectMimeType(for: fileName)
+  }
+
+  public func apply(to form: inout MultipartFormData) {
+    form.addDataField(named: name, data: data, fileName: fileName, mimeType: mimeType)
+  }
+
+  /// Detects MIME type based on file extension.
+  private static func detectMimeType(for fileName: String) -> String {
+    let ext = (fileName as NSString).pathExtension.lowercased()
+    switch ext {
+    // Images
+    case "jpg", "jpeg": return "image/jpeg"
+    case "png": return "image/png"
+    case "gif": return "image/gif"
+    case "webp": return "image/webp"
+    case "svg": return "image/svg+xml"
+    case "heic": return "image/heic"
+    // Documents
+    case "pdf": return "application/pdf"
+    case "json": return "application/json"
+    case "xml": return "application/xml"
+    case "txt": return "text/plain"
+    case "html", "htm": return "text/html"
+    case "css": return "text/css"
+    case "js": return "application/javascript"
+    // Archives
+    case "zip": return "application/zip"
+    case "gz", "gzip": return "application/gzip"
+    case "tar": return "application/x-tar"
+    // Audio
+    case "mp3": return "audio/mpeg"
+    case "wav": return "audio/wav"
+    case "m4a": return "audio/mp4"
+    // Video
+    case "mp4": return "video/mp4"
+    case "mov": return "video/quicktime"
+    case "avi": return "video/x-msvideo"
+    // Default
+    default: return "application/octet-stream"
+    }
+  }
+}
+
+// MARK: - MultipartFormData Builder Extension
+
+public extension MultipartFormData {
+  /// Creates a multipart form using a result builder.
+  ///
+  /// Example:
+  /// ```swift
+  /// let form = MultipartFormData {
+  ///   TextField("name", value: "John Doe")
+  ///   TextField("email", value: "john@example.com")
+  ///   FileField("avatar", data: imageData, fileName: "avatar.png")
+  /// }
+  /// ```
+  init(@MultipartBuilder _ content: () -> [MultipartFormField]) {
+    self.init()
+    var mutableSelf = self
+    for field in content() {
+      field.apply(to: &mutableSelf)
+    }
+    self = mutableSelf
+  }
+}
