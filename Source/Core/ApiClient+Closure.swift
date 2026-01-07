@@ -51,7 +51,7 @@ public extension ApiClient {
           let responseObject = try decoder.decode(D.self, from: data)
           completion(response.convertedTo(result: .success(responseObject)))
         } catch {
-          print(error)
+          SmartNetLogger.shared.debug("Parsing error: \(error)")
           completion(response.convertedTo(result: .failure(.parsingFailed)))
         }
       case .failure(let error):
@@ -305,12 +305,12 @@ extension ApiClient {
           let elapsed = Date().timeIntervalSince(startTime)
           let ms = Int((elapsed.truncatingRemainder(dividingBy: 1)) * 1000)
           if elapsed < 1 {
-            print("⏱️ SmartNet - [API Time] Took: \(ms) ms")
+            SmartNetLogger.shared.debug("[API Time] Took: \(ms) ms")
           } else {
             let seconds = Int(elapsed)
-            print("⏱️ SmartNet - [API Time] Took: \(seconds)s \(ms)ms")
+            SmartNetLogger.shared.debug("[API Time] Took: \(seconds)s \(ms)ms")
           }
-          
+
           ApiClient.printCurl(
             session: session,
             request: currentRequest,
