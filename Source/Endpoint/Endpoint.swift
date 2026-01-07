@@ -36,10 +36,12 @@ public struct Endpoint<Value>: Requestable {
   public var queryParameters: QueryParameters?
   public var body: HTTPBody?
   public let form: MultipartFormData? = nil
+  public var payload: HTTPPayload?
   public var allowMiddlewares: Bool
   public var debugRequest: Bool
   public var retryPolicy: RetryPolicy?
 
+  /// Creates an endpoint with legacy body parameter.
   public init(
     path: String,
     isFullPath: Bool = false,
@@ -59,6 +61,33 @@ public struct Endpoint<Value>: Requestable {
     self.useEndpointHeaderOnly = useEndpointHeaderOnly
     self.queryParameters = queryParameters
     self.body = body
+    self.payload = nil
+    self.allowMiddlewares = allowMiddlewares
+    self.debugRequest = debugRequest
+    self.retryPolicy = retryPolicy
+  }
+
+  /// Creates an endpoint with the new payload parameter.
+  public init(
+    path: String,
+    isFullPath: Bool = false,
+    method: HTTPMethod = .get,
+    headers: [String: String] = [:],
+    useEndpointHeaderOnly: Bool = false,
+    queryParameters: QueryParameters? = nil,
+    payload: HTTPPayload?,
+    allowMiddlewares: Bool = true,
+    debugRequest: Bool = false,
+    retryPolicy: RetryPolicy? = nil
+  ) {
+    self.path = path
+    self.isFullPath = isFullPath
+    self.method = method
+    self.headers = headers
+    self.useEndpointHeaderOnly = useEndpointHeaderOnly
+    self.queryParameters = queryParameters
+    self.body = nil
+    self.payload = payload
     self.allowMiddlewares = allowMiddlewares
     self.debugRequest = debugRequest
     self.retryPolicy = retryPolicy
@@ -212,5 +241,46 @@ public extension Endpoint {
   /// Disables retries for this endpoint.
   func noRetry() -> Endpoint {
     retry(NoRetryPolicy())
+  }
+
+  // MARK: - Payload Methods
+
+  /// Sets the request payload.
+  func payload(_ payload: HTTPPayload) -> Endpoint {
+    var copy = self
+    copy.payload = payload
+    copy.body = nil
+    return copy
+  }
+
+  /// Sets JSON payload from an Encodable value.
+  func jsonPayload<T: Encodable>(_ value: T, encoder: JSONEncoder = JSONEncoder()) -> Endpoint {
+    payload(.encodable(value, encoder: encoder))
+  }
+
+  /// Sets JSON payload from a dictionary with Any values.
+  /// Use this for dynamic dictionary content that isn't type-safe.
+  func jsonDictPayload(_ dictionary: [String: Any], encoding: BodyEncoding = .json()) -> Endpoint {
+    payload(.json(dictionary, encoding: encoding))
+  }
+
+  /// Sets form URL-encoded payload.
+  func formPayload(_ dictionary: [String: Any]) -> Endpoint {
+    payload(.formUrlEncoded(dictionary))
+  }
+
+  /// Sets multipart form data payload.
+  func multipartPayload(_ form: MultipartFormData) -> Endpoint {
+    payload(.multipart(form))
+  }
+
+  /// Sets raw data payload with content type.
+  func rawPayload(_ data: Data, contentType: String) -> Endpoint {
+    payload(.raw(data, contentType: contentType))
+  }
+
+  /// Sets plain text payload.
+  func textPayload(_ string: String) -> Endpoint {
+    payload(.text(string))
   }
 }

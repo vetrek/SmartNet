@@ -26,7 +26,7 @@ import Foundation
 
 public struct MultipartFormEndpoint<Value>: Requestable {
   public typealias Response = Value
-  
+
   public var path: String
   public var isFullPath: Bool
   public var method: HTTPMethod
@@ -37,8 +37,13 @@ public struct MultipartFormEndpoint<Value>: Requestable {
   public var allowMiddlewares: Bool
   public var form: MultipartFormData?
   public var debugRequest: Bool
-  
-  
+
+  /// Returns the payload derived from the form data.
+  public var payload: HTTPPayload? {
+    guard let form = form else { return nil }
+    return .multipart(form)
+  }
+
   public init(
     path: String,
     isFullPath: Bool = false,

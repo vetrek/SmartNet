@@ -140,24 +140,16 @@ public extension ApiClient {
 
 // MARK: - Main Request Function
 extension ApiClient {
-  func prepareRequest<E>(for endpoint: E) throws -> URLRequest where E: Requestable {
-    do {
-      var request = try endpoint.urlRequest(with: config)
-      if endpoint.allowMiddlewares {
-        do {
-          try applyPreRequestMiddlewares(to: &request)
-        } catch {
-          throw NetworkError.middleware(error)
-        }
+  func prepareRequest<E>(for endpoint: E) throws(NetworkError) -> URLRequest where E: Requestable {
+    var request = try endpoint.urlRequest(with: config)
+    if endpoint.allowMiddlewares {
+      do {
+        try applyPreRequestMiddlewares(to: &request)
+      } catch {
+        throw NetworkError.middleware(error)
       }
-      return request
-    } catch let error as NetworkError {
-      throw error
-    } catch is RequestGenerationError {
-      throw NetworkError.urlGeneration
-    } catch {
-      throw NetworkError.generic(error)
     }
+    return request
   }
 
   @discardableResult
@@ -170,18 +162,10 @@ extension ApiClient {
     let request: URLRequest
     do {
       request = try prepareRequest(for: endpoint)
-    } catch let error as NetworkError {
-      completion(
-        Response(
-          result: .failure(error),
-          session: session
-        )
-      )
-      return nil
     } catch {
       completion(
         Response(
-          result: .failure(.generic(error)),
+          result: .failure(error),
           session: session
         )
       )
@@ -336,19 +320,10 @@ extension ApiClient {
                 retryCount: retryCount + 1,
                 completion: completion
               )
-            } catch let networkError as NetworkError {
-              responseBlock(
-                Response(
-                  result: .failure(networkError),
-                  session: self.session,
-                  request: currentRequest,
-                  response: response
-                )
-              )
             } catch {
               responseBlock(
                 Response(
-                  result: .failure(.generic(error)),
+                  result: .failure(error),
                   session: self.session,
                   request: currentRequest,
                   response: response
