@@ -41,6 +41,23 @@ public enum NetworkError: Error, CustomStringConvertible {
   case dataToStringFailure(data: Data)
   case middleware(Error)
   case generic(Error)
+
+  // MARK: - Specific Network Error Cases
+
+  /// Request timed out
+  case timeout
+
+  /// DNS lookup failed - unable to resolve hostname
+  case dnsLookupFailed
+
+  /// SSL/TLS error - certificate validation failed or secure connection issue
+  case sslError(Error?)
+
+  /// Connection was lost during the request
+  case connectionLost
+
+  /// Server returned 429 Too Many Requests with optional Retry-After header
+  case rateLimited(retryAfter: TimeInterval?)
   
   public var description: String {
     switch self {
@@ -99,6 +116,27 @@ public enum NetworkError: Error, CustomStringConvertible {
       
     case .unableToSaveFile:
       return "Unable to save file to the custom Destination folder"
+
+    case .timeout:
+      return "The request timed out"
+
+    case .dnsLookupFailed:
+      return "DNS lookup failed - unable to resolve hostname"
+
+    case .sslError(let underlyingError):
+      if let error = underlyingError {
+        return "SSL/TLS error: \(error.localizedDescription)"
+      }
+      return "SSL/TLS error - secure connection failed"
+
+    case .connectionLost:
+      return "The network connection was lost"
+
+    case .rateLimited(let retryAfter):
+      if let seconds = retryAfter {
+        return "Rate limited - retry after \(Int(seconds)) seconds"
+      }
+      return "Rate limited (429 Too Many Requests)"
     }
   }
 }

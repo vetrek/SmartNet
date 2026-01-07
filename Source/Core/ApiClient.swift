@@ -218,13 +218,39 @@ extension ApiClient {
     guard
       (error as? NetworkError) == nil
     else { return (error as! NetworkError) }
-    
+
     let code = URLError.Code(rawValue: (error as NSError).code)
     switch code {
+    // Connection errors
     case .notConnectedToInternet:
       return .networkFailure
+
+    // Timeout errors
+    case .timedOut:
+      return .timeout
+
+    // DNS errors
+    case .cannotFindHost, .dnsLookupFailed:
+      return .dnsLookupFailed
+
+    // SSL/TLS errors
+    case .secureConnectionFailed,
+         .serverCertificateHasBadDate,
+         .serverCertificateUntrusted,
+         .serverCertificateHasUnknownRoot,
+         .serverCertificateNotYetValid,
+         .clientCertificateRejected,
+         .clientCertificateRequired:
+      return .sslError(error)
+
+    // Connection lost during request
+    case .networkConnectionLost:
+      return .connectionLost
+
+    // Cancelled
     case .cancelled:
       return .cancelled
+
     default:
       return .generic(error)
     }
@@ -253,7 +279,40 @@ extension ApiClient {
       let httpResponse = response as? HTTPURLResponse,
       !(200..<300).contains(httpResponse.statusCode)
     else { return nil }
+
+    // Handle 429 Too Many Requests with Retry-After header
+    if httpResponse.statusCode == 429 {
+      let retryAfter = parseRetryAfter(from: httpResponse)
+      return .rateLimited(retryAfter: retryAfter)
+    }
+
     return .error(statusCode: httpResponse.statusCode, data: data)
+  }
+
+  /// Parse Retry-After header value
+  /// Supports both seconds (integer) and HTTP-date formats
+  private func parseRetryAfter(from response: HTTPURLResponse) -> TimeInterval? {
+    guard let retryAfterValue = response.value(forHTTPHeaderField: "Retry-After") else {
+      return nil
+    }
+
+    // Try parsing as seconds (integer)
+    if let seconds = TimeInterval(retryAfterValue) {
+      return seconds
+    }
+
+    // Try parsing as HTTP-date (RFC 7231)
+    let dateFormatter = DateFormatter()
+    dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+    dateFormatter.timeZone = TimeZone(identifier: "GMT")
+
+    // Try IMF-fixdate format: "Sun, 06 Nov 1994 08:49:37 GMT"
+    dateFormatter.dateFormat = "EEE, dd MMM yyyy HH:mm:ss zzz"
+    if let date = dateFormatter.date(from: retryAfterValue) {
+      return date.timeIntervalSinceNow
+    }
+
+    return nil
   }
 }
 

@@ -216,11 +216,167 @@ struct ErrorHandlingTests {
     case .success:
       Issue.record("Expected timeout error but got success")
     case .failure(let error):
-      if case .generic(let underlyingError) = error,
-         (underlyingError as? URLError)?.code == .timedOut {
-        // Expected - timeout is wrapped in generic
+      if case .timeout = error {
+        // Expected
       } else {
-        Issue.record("Expected timeout error but got \(error)")
+        Issue.record("Expected .timeout but got \(error)")
+      }
+    }
+  }
+
+  @Test("DNS lookup failure returns dnsLookupFailed error")
+  func dnsLookupFailure() async throws {
+    let (client, _) = createMockClient()
+    defer { client.destroy(); MockURLProtocol.removeHandler(for: "/error/dns") }
+
+    MockURLProtocol.setHandler(for: "/error/dns") { request in
+      throw URLError(.cannotFindHost)
+    }
+
+    let endpoint = Endpoint<Data>(path: "error/dns", method: .get)
+
+    let response: Response<Data> = await withCheckedContinuation { continuation in
+      client.request(with: endpoint) { response in
+        continuation.resume(returning: response)
+      }
+    }
+
+    switch response.result {
+    case .success:
+      Issue.record("Expected DNS error but got success")
+    case .failure(let error):
+      if case .dnsLookupFailed = error {
+        // Expected
+      } else {
+        Issue.record("Expected .dnsLookupFailed but got \(error)")
+      }
+    }
+  }
+
+  @Test("SSL error returns sslError")
+  func sslFailure() async throws {
+    let (client, _) = createMockClient()
+    defer { client.destroy(); MockURLProtocol.removeHandler(for: "/error/ssl") }
+
+    MockURLProtocol.setHandler(for: "/error/ssl") { request in
+      throw URLError(.secureConnectionFailed)
+    }
+
+    let endpoint = Endpoint<Data>(path: "error/ssl", method: .get)
+
+    let response: Response<Data> = await withCheckedContinuation { continuation in
+      client.request(with: endpoint) { response in
+        continuation.resume(returning: response)
+      }
+    }
+
+    switch response.result {
+    case .success:
+      Issue.record("Expected SSL error but got success")
+    case .failure(let error):
+      if case .sslError = error {
+        // Expected
+      } else {
+        Issue.record("Expected .sslError but got \(error)")
+      }
+    }
+  }
+
+  @Test("Connection lost returns connectionLost error")
+  func connectionLost() async throws {
+    let (client, _) = createMockClient()
+    defer { client.destroy(); MockURLProtocol.removeHandler(for: "/error/lost") }
+
+    MockURLProtocol.setHandler(for: "/error/lost") { request in
+      throw URLError(.networkConnectionLost)
+    }
+
+    let endpoint = Endpoint<Data>(path: "error/lost", method: .get)
+
+    let response: Response<Data> = await withCheckedContinuation { continuation in
+      client.request(with: endpoint) { response in
+        continuation.resume(returning: response)
+      }
+    }
+
+    switch response.result {
+    case .success:
+      Issue.record("Expected connection lost error but got success")
+    case .failure(let error):
+      if case .connectionLost = error {
+        // Expected
+      } else {
+        Issue.record("Expected .connectionLost but got \(error)")
+      }
+    }
+  }
+
+  @Test("HTTP 429 returns rateLimited error")
+  func rateLimited() async throws {
+    let (client, _) = createMockClient()
+    defer { client.destroy(); MockURLProtocol.removeHandler(for: "/error/ratelimit") }
+
+    MockURLProtocol.setHandler(for: "/error/ratelimit") { request in
+      let response = HTTPURLResponse(
+        url: request.url!,
+        statusCode: 429,
+        httpVersion: nil,
+        headerFields: ["Retry-After": "60"]
+      )!
+      return (response, "Too Many Requests".data(using: .utf8)!)
+    }
+
+    let endpoint = Endpoint<Data>(path: "error/ratelimit", method: .get)
+
+    let response: Response<Data> = await withCheckedContinuation { continuation in
+      client.request(with: endpoint) { response in
+        continuation.resume(returning: response)
+      }
+    }
+
+    switch response.result {
+    case .success:
+      Issue.record("Expected rate limit error but got success")
+    case .failure(let error):
+      if case .rateLimited(let retryAfter) = error {
+        #expect(retryAfter == 60)
+      } else {
+        Issue.record("Expected .rateLimited but got \(error)")
+      }
+    }
+  }
+
+  @Test("HTTP 429 without Retry-After header")
+  func rateLimitedNoRetryAfter() async throws {
+    let (client, _) = createMockClient()
+    defer { client.destroy(); MockURLProtocol.removeHandler(for: "/error/ratelimit2") }
+
+    MockURLProtocol.setHandler(for: "/error/ratelimit2") { request in
+      let response = HTTPURLResponse(
+        url: request.url!,
+        statusCode: 429,
+        httpVersion: nil,
+        headerFields: nil
+      )!
+      return (response, "Too Many Requests".data(using: .utf8)!)
+    }
+
+    let endpoint = Endpoint<Data>(path: "error/ratelimit2", method: .get)
+
+    let response: Response<Data> = await withCheckedContinuation { continuation in
+      client.request(with: endpoint) { response in
+        continuation.resume(returning: response)
+      }
+    }
+
+    switch response.result {
+    case .success:
+      Issue.record("Expected rate limit error but got success")
+    case .failure(let error):
+      if case .rateLimited(let retryAfter) = error {
+        #expect(retryAfter == nil)
+      } else {
+        Issue.record("Expected .rateLimited but got \(error)")
       }
     }
   }
