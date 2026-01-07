@@ -76,8 +76,8 @@ public extension ApiClient {
         switch response.result {
         case .success(let data):
           continuation.resume(returning: data)
-        case .failure:
-          continuation.resume(throwing: response.error!)
+        case .failure(let error):
+          continuation.resume(throwing: error)
         }
       }
     }
