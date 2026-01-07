@@ -32,9 +32,9 @@ public struct QueryParameters {
   }
   
   public init(encodable: Encodable) throws {
-    guard
-      let parameters = try encodable.toDictionary()
-    else { fatalError("Unable to convert this object \(encodable) to dictionary") }
+    guard let parameters = try encodable.toDictionary() else {
+      throw NetworkError.parsingFailed
+    }
     self.parameters = parameters
   }
 }

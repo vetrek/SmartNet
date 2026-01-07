@@ -147,8 +147,20 @@ public final class DownloadTask: NetworkCancellable, Hashable {
       state = .error
       return
     }
-    
-    guard let httpResponse = urlResponse as? HTTPURLResponse else { return }
+
+    // Handle network error
+    if let error = error {
+      let networkError: NetworkError = (error as? NetworkError) ?? .generic(error)
+      response.queue.async { response.closure(Response(result: .failure(networkError))) }
+      state = .error
+      return
+    }
+
+    guard let httpResponse = urlResponse as? HTTPURLResponse else {
+      response.queue.async { response.closure(Response(result: .failure(.emptyResponse))) }
+      state = .error
+      return
+    }
     
     guard (200..<300).contains(httpResponse.statusCode)
     else {
@@ -278,14 +290,16 @@ public extension ApiClient {
         destination: destination
       )
     else { return nil }
-    
-    if downloadsTasks.count < maxConcurrentDownloads {
-      downloadsTasks.insert(downloadTask)
-      downloadTask.startDownload()
-    } else {
-      pendingDownloads.append(downloadTask)
+
+    downloadQueue.sync {
+      if downloadsTasks.count < maxConcurrentDownloads {
+        downloadsTasks.insert(downloadTask)
+        downloadTask.startDownload()
+      } else {
+        pendingDownloads.append(downloadTask)
+      }
     }
-    
+
     return downloadTask
   }
   
@@ -328,12 +342,16 @@ public extension ApiClient {
   ) -> DownloadTask? {
     guard let session = session else { return nil }
     let downloadTask = DownloadTask(session: session, url: url)
-    if downloadsTasks.count < maxConcurrentDownloads {
-      downloadsTasks.insert(downloadTask)
-      downloadTask.startDownload()
-    } else {
-      pendingDownloads.append(downloadTask)
+
+    downloadQueue.sync {
+      if downloadsTasks.count < maxConcurrentDownloads {
+        downloadsTasks.insert(downloadTask)
+        downloadTask.startDownload()
+      } else {
+        pendingDownloads.append(downloadTask)
+      }
     }
+
     return downloadTask
   }
 }

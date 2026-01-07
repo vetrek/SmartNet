@@ -60,13 +60,14 @@ public final class ApiClient: NSObject {
   var pendingUploads = [AnyProgressiveTransferTask]()
   
   let maxConcurrentDownloads = 6
-  
-  let maxConcurrentUploads = 60_000_000
-  
+
+  let maxConcurrentUploads = 6
+
   let downloadQueue = DispatchQueue(label: "com.smartnet.downloadQueue")
   let uploadQueue = DispatchQueue(label: "com.smartnet.uploadQueue")
-  
-  var middlewares: [MiddlewareProtocol] = []
+
+  @ThreadSafe
+  var middlewares: [any MiddlewareProtocol] = []
 
   public init(config: NetworkConfigurable) {
     self.config = config

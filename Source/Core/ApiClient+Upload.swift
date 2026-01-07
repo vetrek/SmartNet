@@ -243,17 +243,17 @@ extension UploadTask where ResponseType: Decodable {
       guard let self else { return }
       
       let (isValid, responseError) = self.handleCommonResponse(data: data, response: response, error: error)
-      
+
       guard isValid else {
-        self.handleErrorResponse(error: responseError!)
+        self.handleErrorResponse(error: responseError ?? .emptyResponse)
         return
       }
-      
+
       guard let data else {
-        self.handleErrorResponse(error: .invalidDownloadFileData)
+        self.handleErrorResponse(error: .emptyResponse)
         return
       }
-      
+
       do {
         let responseObject = try JSONDecoder().decode(ResponseType.self, from: data)
         self.handleSuccessResponse(responseObject: responseObject)
@@ -272,14 +272,14 @@ extension UploadTask where ResponseType == Void {
   func start() {
     task = session.uploadTask(with: remoteURLRequest, from: uploadData) { [weak self] data, response, error in
       guard let self else { return }
-      
+
       let (isValid, responseError) = self.handleCommonResponse(data: data, response: response, error: error)
-      
+
       guard isValid else {
-        self.handleErrorResponse(error: responseError!)
+        self.handleErrorResponse(error: responseError ?? .emptyResponse)
         return
       }
-      
+
       self.handleSuccessResponse(responseObject: ())
     }
     observeUploadProgress()
@@ -293,25 +293,25 @@ extension UploadTask where ResponseType == String {
   func start() {
     task = session.uploadTask(with: remoteURLRequest, from: uploadData) { [weak self] data, response, error in
       guard let self else { return }
-      
+
       let (isValid, responseError) = self.handleCommonResponse(data: data, response: response, error: error)
-      
+
       guard isValid else {
-        self.handleErrorResponse(error: responseError!)
+        self.handleErrorResponse(error: responseError ?? .emptyResponse)
         return
       }
-      
+
       guard let data else {
-        self.handleErrorResponse(error: .invalidDownloadFileData)
+        self.handleErrorResponse(error: .emptyResponse)
         return
       }
-      
+
       guard let string = String(data: data, encoding: .utf8)
       else {
         self.handleErrorResponse(error: .dataToStringFailure(data: data))
         return
       }
-      
+
       self.handleSuccessResponse(responseObject: string)
     }
     observeUploadProgress()
@@ -325,16 +325,16 @@ extension UploadTask where ResponseType == Data {
   func start() {
     task = session.uploadTask(with: remoteURLRequest, from: uploadData) { [weak self] data, response, error in
       guard let self else { return }
-      
+
       let (isValid, responseError) = self.handleCommonResponse(data: data, response: response, error: error)
-      
+
       guard isValid else {
-        self.handleErrorResponse(error: responseError!)
+        self.handleErrorResponse(error: responseError ?? .emptyResponse)
         return
       }
-      
+
       guard let data else {
-        self.handleErrorResponse(error: .invalidDownloadFileData)
+        self.handleErrorResponse(error: .emptyResponse)
         return
       }
 
