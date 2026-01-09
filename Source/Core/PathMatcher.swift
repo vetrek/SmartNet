@@ -223,6 +223,144 @@ public struct WildcardPathMatcher: PathMatcher {
   }
 }
 
+/// A path matcher that supports multi-segment wildcards (`**`) in patterns.
+///
+/// This matcher uses `**` to match zero or more path segments, and `*` to match
+/// exactly one segment. Use this for flexible path matching across nested routes.
+///
+/// Matching rules:
+/// - `**` matches zero or more consecutive path segments
+/// - `*` matches exactly one path segment (same as `WildcardPathMatcher`)
+/// - Non-wildcard segments must match exactly (case-sensitive)
+/// - Both pattern and path are normalized (leading/trailing slashes stripped)
+///
+/// Example usage:
+/// ```swift
+/// // Trailing **
+/// let matcher = GlobPathMatcher(pattern: "/api/**")
+/// matcher.matches(path: "/api")                    // true (zero segments)
+/// matcher.matches(path: "/api/v1")                 // true (one segment)
+/// matcher.matches(path: "/api/v1/users/123")       // true (multiple segments)
+///
+/// // Middle **
+/// let middle = GlobPathMatcher(pattern: "/api/**/details")
+/// middle.matches(path: "/api/details")             // true (zero segments)
+/// middle.matches(path: "/api/v1/details")          // true (one segment)
+/// middle.matches(path: "/api/v1/users/details")    // true (multiple segments)
+///
+/// // Leading **
+/// let leading = GlobPathMatcher(pattern: "**/users")
+/// leading.matches(path: "/users")                  // true
+/// leading.matches(path: "/api/v1/users")           // true
+///
+/// // Mixed * and **
+/// let mixed = GlobPathMatcher(pattern: "/api/*/v1/**")
+/// mixed.matches(path: "/api/test/v1")              // true
+/// mixed.matches(path: "/api/test/v1/users/123")    // true
+/// ```
+public struct GlobPathMatcher: PathMatcher {
+  public let pattern: String
+
+  /// Creates a new glob matcher with the specified pattern.
+  ///
+  /// - Parameter pattern: The pattern containing `**` for multi-segment and `*` for single-segment matching.
+  public init(pattern: String) {
+    self.pattern = pattern
+  }
+
+  public func matches(path: String) -> Bool {
+    let patternSegments = segments(from: pattern)
+    let pathSegments = segments(from: path)
+
+    return matchSegments(patternSegments, pathSegments)
+  }
+
+  /// Recursively matches pattern segments against path segments.
+  ///
+  /// - Parameters:
+  ///   - pattern: Remaining pattern segments to match
+  ///   - path: Remaining path segments to match against
+  /// - Returns: `true` if the pattern matches the path
+  private func matchSegments(_ pattern: [String], _ path: [String]) -> Bool {
+    var pIdx = 0  // Pattern index
+    var pathIdx = 0  // Path index
+
+    // Stack for backtracking when ** needs to consume more segments
+    // Each entry is (patternIndex, pathIndex) to resume from
+    var backtrackStack: [(Int, Int)] = []
+
+    while pIdx < pattern.count || pathIdx < path.count {
+      if pIdx < pattern.count {
+        let segment = pattern[pIdx]
+
+        if segment == "**" {
+          // ** can match zero or more segments
+          // Save backtrack point: try matching rest of pattern against rest of path
+          // If that fails, we'll come back and let ** consume one more segment
+          if pIdx + 1 < pattern.count {
+            // More pattern after ** - save backtrack point
+            backtrackStack.append((pIdx, pathIdx + 1))
+          } else {
+            // ** is at end of pattern - matches everything remaining
+            return true
+          }
+          pIdx += 1
+          continue
+        }
+
+        if pathIdx < path.count {
+          if segment == "*" {
+            // * matches exactly one segment
+            pIdx += 1
+            pathIdx += 1
+            continue
+          } else if segment == path[pathIdx] {
+            // Literal match
+            pIdx += 1
+            pathIdx += 1
+            continue
+          }
+        }
+      }
+
+      // No match at current position - try backtracking
+      if let (savedPIdx, savedPathIdx) = backtrackStack.popLast() {
+        if savedPathIdx <= path.count {
+          pIdx = savedPIdx
+          pathIdx = savedPathIdx
+          // Re-push backtrack point for potentially consuming more
+          if savedPathIdx < path.count {
+            backtrackStack.append((savedPIdx, savedPathIdx + 1))
+          }
+          pIdx += 1  // Move past ** in pattern
+          continue
+        }
+      }
+
+      // No backtrack available - no match
+      return false
+    }
+
+    return true
+  }
+
+  /// Splits a path into segments, stripping empty segments from edges.
+  private func segments(from path: String) -> [String] {
+    let parts = path.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
+
+    // Strip empty segments from edges (handles leading/trailing slashes)
+    var result = parts
+    while result.first == "" {
+      result.removeFirst()
+    }
+    while result.last == "" {
+      result.removeLast()
+    }
+
+    return result
+  }
+}
+
 // MARK: - Factory Methods
 
 public extension PathMatcher where Self == ContainsPathMatcher {
@@ -279,5 +417,28 @@ public extension PathMatcher where Self == WildcardPathMatcher {
   /// ```
   static func wildcard(_ pattern: String) -> WildcardPathMatcher {
     WildcardPathMatcher(pattern: pattern)
+  }
+}
+
+public extension PathMatcher where Self == GlobPathMatcher {
+  /// Creates a path matcher that supports multi-segment wildcards.
+  ///
+  /// Use `**` to match zero or more path segments, and `*` to match exactly one.
+  /// This is the most flexible matcher for hierarchical path patterns.
+  ///
+  /// - Parameter pattern: The pattern containing `**` and/or `*` wildcards.
+  /// - Returns: A `GlobPathMatcher` configured with the given pattern.
+  ///
+  /// Example:
+  /// ```swift
+  /// let matcher = PathMatcher.glob("/api/**")
+  /// matcher.matches(path: "/api")              // true
+  /// matcher.matches(path: "/api/v1/users")     // true
+  ///
+  /// let mixed = PathMatcher.glob("/api/*/v1/**")
+  /// mixed.matches(path: "/api/test/v1/users")  // true
+  /// ```
+  static func glob(_ pattern: String) -> GlobPathMatcher {
+    GlobPathMatcher(pattern: pattern)
   }
 }
