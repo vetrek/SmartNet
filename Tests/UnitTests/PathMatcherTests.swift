@@ -211,4 +211,115 @@ struct PathMatcherTests {
 
     #expect(!matcher.matches(path: ""))
   }
+
+  // MARK: - WildcardPathMatcher Tests
+
+  @Test("Wildcard matcher matches single trailing wildcard")
+  func wildcardMatcherMatchesSingleTrailingWildcard() {
+    let matcher = WildcardPathMatcher(pattern: "/users/*")
+
+    #expect(matcher.matches(path: "/users/123"))
+    #expect(matcher.matches(path: "/users/abc"))
+    #expect(matcher.matches(path: "/users/any-segment"))
+  }
+
+  @Test("Wildcard matcher does not match different segment counts")
+  func wildcardMatcherDoesNotMatchDifferentSegmentCounts() {
+    let matcher = WildcardPathMatcher(pattern: "/users/*")
+
+    #expect(!matcher.matches(path: "/users"))  // Too few segments
+    #expect(!matcher.matches(path: "/users/123/posts"))  // Too many segments
+    #expect(!matcher.matches(path: "/users/123/settings/profile"))  // Too many segments
+  }
+
+  @Test("Wildcard matcher matches middle wildcard")
+  func wildcardMatcherMatchesMiddleWildcard() {
+    let matcher = WildcardPathMatcher(pattern: "/api/*/details")
+
+    #expect(matcher.matches(path: "/api/users/details"))
+    #expect(matcher.matches(path: "/api/posts/details"))
+    #expect(matcher.matches(path: "/api/123/details"))
+  }
+
+  @Test("Wildcard matcher matches multiple wildcards")
+  func wildcardMatcherMatchesMultipleWildcards() {
+    let matcher = WildcardPathMatcher(pattern: "/*/items/*")
+
+    #expect(matcher.matches(path: "/users/items/123"))
+    #expect(matcher.matches(path: "/orders/items/abc"))
+    #expect(matcher.matches(path: "/any/items/thing"))
+  }
+
+  @Test("Wildcard matcher matches wildcard at start")
+  func wildcardMatcherMatchesWildcardAtStart() {
+    let matcher = WildcardPathMatcher(pattern: "*/users")
+
+    #expect(matcher.matches(path: "api/users"))
+    #expect(matcher.matches(path: "v1/users"))
+    #expect(matcher.matches(path: "/v2/users"))  // Leading slash normalized
+  }
+
+  @Test("Wildcard matcher single wildcard pattern")
+  func wildcardMatcherSingleWildcardPattern() {
+    let matcher = WildcardPathMatcher(pattern: "*")
+
+    #expect(matcher.matches(path: "anything"))
+    #expect(matcher.matches(path: "users"))
+    #expect(matcher.matches(path: "/segment"))  // Normalizes to "segment"
+    #expect(!matcher.matches(path: "a/b"))  // Two segments
+    #expect(!matcher.matches(path: "/a/b"))  // Two segments
+  }
+
+  @Test("Wildcard matcher handles leading and trailing slash normalization")
+  func wildcardMatcherHandlesSlashNormalization() {
+    let matcher = WildcardPathMatcher(pattern: "/users/*/profile")
+
+    #expect(matcher.matches(path: "/users/123/profile"))
+    #expect(matcher.matches(path: "users/123/profile"))  // No leading slash
+    #expect(matcher.matches(path: "/users/123/profile/"))  // Trailing slash
+    #expect(matcher.matches(path: "users/123/profile/"))  // Both
+  }
+
+  @Test("Wildcard matcher is case sensitive for non-wildcard segments")
+  func wildcardMatcherIsCaseSensitive() {
+    let matcher = WildcardPathMatcher(pattern: "/Users/*")
+
+    #expect(matcher.matches(path: "/Users/123"))
+    #expect(!matcher.matches(path: "/users/123"))  // lowercase "users" doesn't match "Users"
+    #expect(!matcher.matches(path: "/USERS/123"))  // uppercase doesn't match
+  }
+
+  @Test("Wildcard matcher handles empty path")
+  func wildcardMatcherHandlesEmptyPath() {
+    let matcher = WildcardPathMatcher(pattern: "/users/*")
+
+    #expect(!matcher.matches(path: ""))
+  }
+
+  @Test("Wildcard matcher empty pattern matches empty path")
+  func wildcardMatcherEmptyPatternMatchesEmptyPath() {
+    let matcher = WildcardPathMatcher(pattern: "")
+
+    #expect(matcher.matches(path: ""))
+    #expect(matcher.matches(path: "/"))  // Normalizes to empty
+    #expect(!matcher.matches(path: "/users"))
+  }
+
+  @Test("Wildcard factory method creates correct matcher")
+  func wildcardFactoryMethodCreatesCorrectMatcher() {
+    let matcher: WildcardPathMatcher = .wildcard("/users/*")
+
+    #expect(matcher.pattern == "/users/*")
+    #expect(matcher.matches(path: "/users/123"))
+    #expect(!matcher.matches(path: "/users/123/posts"))
+  }
+
+  @Test("Wildcard matcher pattern property returns original pattern")
+  func wildcardMatcherPatternPropertyReturnsOriginalPattern() {
+    let matcher = WildcardPathMatcher(pattern: "/api/*/details")
+    #expect(matcher.pattern == "/api/*/details")
+
+    let starMatcher = WildcardPathMatcher(pattern: "*")
+    #expect(starMatcher.pattern == "*")
+  }
 }
