@@ -487,4 +487,177 @@ struct PathMatcherTests {
     #expect(matcher.matches(path: "/a/middle/b"))
     #expect(matcher.matches(path: "/a/b/middle/c/d"))
   }
+
+  // MARK: - RegexPathMatcher Tests
+
+  @Test("Regex matcher matches pattern with numeric ID")
+  func regexMatcherMatchesNumericIdPattern() {
+    let matcher = RegexPathMatcher(pattern: "^/users/\\d+$")
+
+    #expect(matcher != nil)
+    #expect(matcher?.matches(path: "/users/123") == true)
+    #expect(matcher?.matches(path: "/users/456789") == true)
+    #expect(matcher?.matches(path: "/users/abc") == false)
+    #expect(matcher?.matches(path: "/users/123abc") == false)
+  }
+
+  @Test("Regex matcher supports character classes")
+  func regexMatcherSupportsCharacterClasses() {
+    let matcher = RegexPathMatcher(pattern: "^/api/v[12]/users$")
+
+    #expect(matcher != nil)
+    #expect(matcher?.matches(path: "/api/v1/users") == true)
+    #expect(matcher?.matches(path: "/api/v2/users") == true)
+    #expect(matcher?.matches(path: "/api/v3/users") == false)
+  }
+
+  @Test("Regex matcher supports quantifiers")
+  func regexMatcherSupportsQuantifiers() {
+    let matcher = RegexPathMatcher(pattern: "^/items/[a-z]+$")
+
+    #expect(matcher != nil)
+    #expect(matcher?.matches(path: "/items/abc") == true)
+    #expect(matcher?.matches(path: "/items/a") == true)
+    #expect(matcher?.matches(path: "/items/") == false)  // + requires at least one
+    #expect(matcher?.matches(path: "/items/ABC") == false)  // uppercase not matched
+  }
+
+  @Test("Regex matcher supports alternation")
+  func regexMatcherSupportsAlternation() {
+    let matcher = RegexPathMatcher(pattern: "^/(users|posts)/\\d+$")
+
+    #expect(matcher != nil)
+    #expect(matcher?.matches(path: "/users/123") == true)
+    #expect(matcher?.matches(path: "/posts/456") == true)
+    #expect(matcher?.matches(path: "/comments/789") == false)
+  }
+
+  @Test("Regex matcher returns nil for invalid pattern")
+  func regexMatcherReturnsNilForInvalidPattern() {
+    let invalidMatcher = RegexPathMatcher(pattern: "[invalid")
+
+    #expect(invalidMatcher == nil)
+  }
+
+  @Test("Regex matcher throwing init throws on invalid pattern")
+  func regexMatcherThrowingInitThrowsOnInvalidPattern() {
+    #expect(throws: Error.self) {
+      _ = try RegexPathMatcher(validatingPattern: "[invalid")
+    }
+  }
+
+  @Test("Regex matcher throwing init succeeds for valid pattern")
+  func regexMatcherThrowingInitSucceedsForValidPattern() throws {
+    let matcher = try RegexPathMatcher(validatingPattern: "^/users/\\d+$")
+
+    #expect(matcher.matches(path: "/users/123"))
+    #expect(!matcher.matches(path: "/users/abc"))
+  }
+
+  @Test("Regex matcher without anchors matches substring")
+  func regexMatcherWithoutAnchorsMatchesSubstring() {
+    let matcher = RegexPathMatcher(pattern: "users")
+
+    #expect(matcher != nil)
+    #expect(matcher?.matches(path: "/users") == true)
+    #expect(matcher?.matches(path: "/users/123") == true)
+    #expect(matcher?.matches(path: "/api/users/profile") == true)
+    #expect(matcher?.matches(path: "/posts") == false)
+  }
+
+  @Test("Regex matcher with anchors matches exact path")
+  func regexMatcherWithAnchorsMatchesExactPath() {
+    let matcher = RegexPathMatcher(pattern: "^/users$")
+
+    #expect(matcher != nil)
+    #expect(matcher?.matches(path: "/users") == true)
+    #expect(matcher?.matches(path: "/users/123") == false)
+    #expect(matcher?.matches(path: "/api/users") == false)
+  }
+
+  @Test("Regex matcher empty pattern is invalid")
+  func regexMatcherEmptyPatternIsInvalid() {
+    // NSRegularExpression does not accept empty patterns
+    let matcher = RegexPathMatcher(pattern: "")
+
+    #expect(matcher == nil)
+  }
+
+  @Test("Regex matcher dot star pattern matches any path")
+  func regexMatcherDotStarPatternMatchesAnyPath() {
+    // Use ".*" to match any path (equivalent to "match anything")
+    let matcher = RegexPathMatcher(pattern: ".*")
+
+    #expect(matcher != nil)
+    #expect(matcher?.matches(path: "") == true)
+    #expect(matcher?.matches(path: "/users") == true)
+    #expect(matcher?.matches(path: "/api/v1") == true)
+  }
+
+  @Test("Regex factory method creates correct matcher")
+  func regexFactoryMethodCreatesCorrectMatcher() {
+    let matcher: RegexPathMatcher? = .regex("^/users/\\d+$")
+
+    #expect(matcher != nil)
+    #expect(matcher?.pattern == "^/users/\\d+$")
+    #expect(matcher?.matches(path: "/users/123") == true)
+    #expect(matcher?.matches(path: "/users/abc") == false)
+  }
+
+  @Test("Regex factory method returns nil for invalid pattern")
+  func regexFactoryMethodReturnsNilForInvalidPattern() {
+    let matcher: RegexPathMatcher? = .regex("[invalid")
+
+    #expect(matcher == nil)
+  }
+
+  @Test("Regex matcher pattern property returns original pattern")
+  func regexMatcherPatternPropertyReturnsOriginalPattern() {
+    let matcher = RegexPathMatcher(pattern: "^/api/v\\d+$")
+
+    #expect(matcher?.pattern == "^/api/v\\d+$")
+  }
+
+  @Test("Regex matcher handles path with special regex chars as literals")
+  func regexMatcherHandlesPathWithSpecialChars() {
+    // Pattern looks for literal ".html" (dot escaped in regex)
+    let matcher = RegexPathMatcher(pattern: "\\.html$")
+
+    #expect(matcher != nil)
+    #expect(matcher?.matches(path: "/page.html") == true)
+    #expect(matcher?.matches(path: "/docs/file.html") == true)
+    #expect(matcher?.matches(path: "/pageXhtml") == false)  // dot must be literal
+  }
+
+  @Test("Regex matcher with capture groups works")
+  func regexMatcherWithCaptureGroupsWorks() {
+    // Even though we don't expose captures, the matcher should work
+    let matcher = RegexPathMatcher(pattern: "^/users/(\\d+)/posts/(\\d+)$")
+
+    #expect(matcher != nil)
+    #expect(matcher?.matches(path: "/users/123/posts/456") == true)
+    #expect(matcher?.matches(path: "/users/abc/posts/def") == false)
+  }
+
+  @Test("Regex matcher case insensitive with inline flag")
+  func regexMatcherCaseInsensitiveWithInlineFlag() {
+    let matcher = RegexPathMatcher(pattern: "(?i)^/users$")
+
+    #expect(matcher != nil)
+    #expect(matcher?.matches(path: "/users") == true)
+    #expect(matcher?.matches(path: "/Users") == true)
+    #expect(matcher?.matches(path: "/USERS") == true)
+  }
+
+  @Test("Regex matcher complex pattern")
+  func regexMatcherComplexPattern() {
+    let matcher = RegexPathMatcher(pattern: "^/api/v[12]/users/[a-z]+\\d*$")
+
+    #expect(matcher != nil)
+    #expect(matcher?.matches(path: "/api/v1/users/john") == true)
+    #expect(matcher?.matches(path: "/api/v2/users/jane123") == true)
+    #expect(matcher?.matches(path: "/api/v1/users/JOHN") == false)  // uppercase
+    #expect(matcher?.matches(path: "/api/v3/users/john") == false)  // v3 not allowed
+    #expect(matcher?.matches(path: "/api/v1/users/123john") == false)  // starts with digit
+  }
 }
