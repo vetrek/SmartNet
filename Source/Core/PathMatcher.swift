@@ -139,6 +139,90 @@ public struct ExactPathMatcher: PathMatcher {
   }
 }
 
+/// A path matcher that supports single-segment wildcards in patterns.
+///
+/// This matcher uses `*` to match any single path segment. Each `*` matches
+/// exactly one segment (not zero, not multiple). For multi-segment wildcards,
+/// use `GlobPathMatcher` with `**` patterns.
+///
+/// Matching rules:
+/// - Both pattern and path are split by "/" into segments
+/// - Leading and trailing empty segments are stripped (normalizes slashes)
+/// - Pattern and path must have the same number of segments
+/// - `*` in a pattern segment matches any single path segment
+/// - Non-wildcard segments must match exactly (case-sensitive)
+///
+/// Example usage:
+/// ```swift
+/// let matcher = WildcardPathMatcher(pattern: "/users/*")
+/// matcher.matches(path: "/users/123")           // true
+/// matcher.matches(path: "/users/abc")           // true
+/// matcher.matches(path: "/users")               // false (missing segment)
+/// matcher.matches(path: "/users/123/posts")     // false (too many segments)
+///
+/// let middle = WildcardPathMatcher(pattern: "/api/*/details")
+/// middle.matches(path: "/api/users/details")    // true
+/// middle.matches(path: "/api/posts/details")    // true
+///
+/// let multi = WildcardPathMatcher(pattern: "/*/items/*")
+/// multi.matches(path: "/users/items/123")       // true
+/// multi.matches(path: "/orders/items/abc")      // true
+/// ```
+public struct WildcardPathMatcher: PathMatcher {
+  public let pattern: String
+
+  /// Creates a new wildcard matcher with the specified pattern.
+  ///
+  /// - Parameter pattern: The pattern containing `*` wildcards for single-segment matching.
+  public init(pattern: String) {
+    self.pattern = pattern
+  }
+
+  public func matches(path: String) -> Bool {
+    let patternSegments = segments(from: pattern)
+    let pathSegments = segments(from: path)
+
+    // Segment count must match (single-segment wildcard only)
+    guard patternSegments.count == pathSegments.count else {
+      return false
+    }
+
+    // Empty pattern only matches empty path
+    if patternSegments.isEmpty {
+      return pathSegments.isEmpty
+    }
+
+    // Check each segment
+    for (patternSegment, pathSegment) in zip(patternSegments, pathSegments) {
+      if patternSegment == "*" {
+        // Wildcard matches any single segment
+        continue
+      } else if patternSegment != pathSegment {
+        // Exact match required for non-wildcard segments
+        return false
+      }
+    }
+
+    return true
+  }
+
+  /// Splits a path into segments, stripping empty segments from edges.
+  private func segments(from path: String) -> [String] {
+    let parts = path.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
+
+    // Strip empty segments from edges (handles leading/trailing slashes)
+    var result = parts
+    while result.first == "" {
+      result.removeFirst()
+    }
+    while result.last == "" {
+      result.removeLast()
+    }
+
+    return result
+  }
+}
+
 // MARK: - Factory Methods
 
 public extension PathMatcher where Self == ContainsPathMatcher {
@@ -175,5 +259,25 @@ public extension PathMatcher where Self == ExactPathMatcher {
   /// ```
   static func exact(_ path: String) -> ExactPathMatcher {
     ExactPathMatcher(pattern: path)
+  }
+}
+
+public extension PathMatcher where Self == WildcardPathMatcher {
+  /// Creates a path matcher that supports single-segment wildcards.
+  ///
+  /// Use `*` to match any single path segment. The pattern and path must have
+  /// the same number of segments for a match.
+  ///
+  /// - Parameter pattern: The pattern containing `*` wildcards.
+  /// - Returns: A `WildcardPathMatcher` configured with the given pattern.
+  ///
+  /// Example:
+  /// ```swift
+  /// let matcher = PathMatcher.wildcard("/users/*")
+  /// matcher.matches(path: "/users/123")      // true
+  /// matcher.matches(path: "/users/123/posts")  // false
+  /// ```
+  static func wildcard(_ pattern: String) -> WildcardPathMatcher {
+    WildcardPathMatcher(pattern: pattern)
   }
 }
