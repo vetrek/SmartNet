@@ -361,6 +361,68 @@ public struct GlobPathMatcher: PathMatcher {
   }
 }
 
+/// A path matcher that uses regular expressions for flexible pattern matching.
+///
+/// This matcher uses Foundation's `NSRegularExpression` for full regex support.
+/// The regex is compiled once at initialization for optimal performance.
+///
+/// The matcher checks if the regex pattern has at least one match in the path.
+/// Use anchors (`^` and `$`) for exact matching behavior.
+///
+/// Example usage:
+/// ```swift
+/// // Match paths with numeric IDs
+/// let matcher = RegexPathMatcher(pattern: "^/users/\\d+$")
+/// matcher?.matches(path: "/users/123")      // true
+/// matcher?.matches(path: "/users/abc")      // false
+///
+/// // Match any path containing "api"
+/// let apiMatcher = RegexPathMatcher(pattern: "api")
+/// apiMatcher?.matches(path: "/api/v1")      // true
+/// apiMatcher?.matches(path: "/v1/api/users")// true
+///
+/// // Case insensitive matching (use regex flags)
+/// let caseInsensitive = RegexPathMatcher(pattern: "(?i)users")
+/// caseInsensitive?.matches(path: "/Users")  // true
+/// caseInsensitive?.matches(path: "/USERS")  // true
+/// ```
+public struct RegexPathMatcher: PathMatcher {
+  public let pattern: String
+
+  /// The compiled regular expression for efficient matching.
+  private let regex: NSRegularExpression
+
+  /// Creates a new regex matcher with the specified pattern.
+  ///
+  /// Returns `nil` if the pattern is not a valid regular expression.
+  ///
+  /// - Parameter pattern: A valid regular expression pattern string.
+  public init?(pattern: String) {
+    do {
+      self.regex = try NSRegularExpression(pattern: pattern)
+      self.pattern = pattern
+    } catch {
+      return nil
+    }
+  }
+
+  /// Creates a new regex matcher with the specified pattern, throwing on invalid patterns.
+  ///
+  /// Use this initializer when you want detailed error information for invalid patterns.
+  ///
+  /// - Parameter validatingPattern: A regular expression pattern string to compile.
+  /// - Throws: An `NSError` if the pattern cannot be compiled.
+  public init(validatingPattern: String) throws {
+    self.regex = try NSRegularExpression(pattern: validatingPattern)
+    self.pattern = validatingPattern
+  }
+
+  public func matches(path: String) -> Bool {
+    let range = NSRange(path.startIndex..., in: path)
+    return regex.firstMatch(in: path, options: [], range: range) != nil
+  }
+}
+
 // MARK: - Factory Methods
 
 public extension PathMatcher where Self == ContainsPathMatcher {
@@ -440,5 +502,33 @@ public extension PathMatcher where Self == GlobPathMatcher {
   /// ```
   static func glob(_ pattern: String) -> GlobPathMatcher {
     GlobPathMatcher(pattern: pattern)
+  }
+}
+
+public extension PathMatcher where Self == RegexPathMatcher {
+  /// Creates a path matcher using a regular expression pattern.
+  ///
+  /// This is the most powerful matcher, offering full regex capabilities.
+  /// The regex is compiled once at creation time for optimal performance.
+  ///
+  /// Use anchors (`^` and `$`) for exact matching. Without anchors, the pattern
+  /// matches if it appears anywhere in the path.
+  ///
+  /// - Parameter pattern: A valid regular expression pattern string.
+  /// - Returns: A `RegexPathMatcher` if the pattern is valid, `nil` otherwise.
+  ///
+  /// Example:
+  /// ```swift
+  /// let matcher = PathMatcher.regex("^/users/\\d+$")
+  /// matcher?.matches(path: "/users/123")    // true
+  /// matcher?.matches(path: "/users/abc")    // false
+  ///
+  /// // Substring matching (no anchors)
+  /// let api = PathMatcher.regex("api")
+  /// api?.matches(path: "/api/v1")           // true
+  /// api?.matches(path: "/v1/api/users")     // true
+  /// ```
+  static func regex(_ pattern: String) -> RegexPathMatcher? {
+    RegexPathMatcher(pattern: pattern)
   }
 }
