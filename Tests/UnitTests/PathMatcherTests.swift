@@ -322,4 +322,169 @@ struct PathMatcherTests {
     let starMatcher = WildcardPathMatcher(pattern: "*")
     #expect(starMatcher.pattern == "*")
   }
+
+  // MARK: - GlobPathMatcher Tests
+
+  @Test("Glob matcher matches trailing ** pattern")
+  func globMatcherMatchesTrailingDoubleWildcard() {
+    let matcher = GlobPathMatcher(pattern: "/api/**")
+
+    // ** matches zero or more segments
+    #expect(matcher.matches(path: "/api"))  // Zero segments after api
+    #expect(matcher.matches(path: "/api/v1"))  // One segment
+    #expect(matcher.matches(path: "/api/v1/users"))  // Two segments
+    #expect(matcher.matches(path: "/api/v1/users/123"))  // Three segments
+  }
+
+  @Test("Glob matcher trailing ** does not match different prefix")
+  func globMatcherTrailingDoesNotMatchDifferentPrefix() {
+    let matcher = GlobPathMatcher(pattern: "/api/**")
+
+    #expect(!matcher.matches(path: "/other"))
+    #expect(!matcher.matches(path: "/apiv2"))  // Not a segment match
+    #expect(!matcher.matches(path: "/other/api/v1"))  // api not at right position
+  }
+
+  @Test("Glob matcher matches middle ** pattern")
+  func globMatcherMatchesMiddleDoubleWildcard() {
+    let matcher = GlobPathMatcher(pattern: "/api/**/details")
+
+    // ** matches zero or more segments in the middle
+    #expect(matcher.matches(path: "/api/details"))  // Zero segments
+    #expect(matcher.matches(path: "/api/v1/details"))  // One segment
+    #expect(matcher.matches(path: "/api/v1/users/details"))  // Two segments
+    #expect(matcher.matches(path: "/api/v1/users/123/details"))  // Three segments
+  }
+
+  @Test("Glob matcher middle ** does not match wrong ending")
+  func globMatcherMiddleDoesNotMatchWrongEnding() {
+    let matcher = GlobPathMatcher(pattern: "/api/**/details")
+
+    #expect(!matcher.matches(path: "/api/v1/other"))
+    #expect(!matcher.matches(path: "/api/v1/detailsX"))  // Not exact match
+    #expect(!matcher.matches(path: "/other/details"))  // Wrong prefix
+  }
+
+  @Test("Glob matcher matches leading ** pattern")
+  func globMatcherMatchesLeadingDoubleWildcard() {
+    let matcher = GlobPathMatcher(pattern: "**/users")
+
+    // ** matches zero or more segments at start
+    #expect(matcher.matches(path: "/users"))  // Zero segments before
+    #expect(matcher.matches(path: "/api/users"))  // One segment before
+    #expect(matcher.matches(path: "/api/v1/users"))  // Two segments before
+  }
+
+  @Test("Glob matcher leading ** does not match wrong ending")
+  func globMatcherLeadingDoesNotMatchWrongEnding() {
+    let matcher = GlobPathMatcher(pattern: "**/users")
+
+    #expect(!matcher.matches(path: "/users/123"))  // Extra segment after
+    #expect(!matcher.matches(path: "/api/user"))  // Not "users"
+  }
+
+  @Test("Glob matcher matches multiple ** patterns")
+  func globMatcherMatchesMultipleDoubleWildcards() {
+    let matcher = GlobPathMatcher(pattern: "/**/api/**")
+
+    #expect(matcher.matches(path: "/api"))  // Zero on both sides
+    #expect(matcher.matches(path: "/v1/api"))  // One before, zero after
+    #expect(matcher.matches(path: "/api/users"))  // Zero before, one after
+    #expect(matcher.matches(path: "/v1/api/users"))  // One on each side
+    #expect(matcher.matches(path: "/v1/v2/api/users/123"))  // Multiple on each side
+  }
+
+  @Test("Glob matcher matches mixed * and ** patterns")
+  func globMatcherMatchesMixedWildcards() {
+    let matcher = GlobPathMatcher(pattern: "/api/*/v1/**")
+
+    // * requires exactly one segment, ** allows zero or more
+    #expect(matcher.matches(path: "/api/test/v1"))  // * matches "test", ** matches zero
+    #expect(matcher.matches(path: "/api/prod/v1/users"))  // ** matches one
+    #expect(matcher.matches(path: "/api/staging/v1/users/123"))  // ** matches two
+  }
+
+  @Test("Glob matcher mixed wildcards * still requires one segment")
+  func globMatcherMixedWildcardsSingleRequiresSegment() {
+    let matcher = GlobPathMatcher(pattern: "/api/*/v1/**")
+
+    #expect(!matcher.matches(path: "/api/v1"))  // Missing segment for *
+    #expect(!matcher.matches(path: "/api/v1/users"))  // Missing segment for *
+  }
+
+  @Test("Glob matcher ** alone matches any path")
+  func globMatcherDoubleWildcardAloneMatchesAny() {
+    let matcher = GlobPathMatcher(pattern: "**")
+
+    #expect(matcher.matches(path: ""))
+    #expect(matcher.matches(path: "/"))
+    #expect(matcher.matches(path: "/users"))
+    #expect(matcher.matches(path: "/api/v1/users/123"))
+  }
+
+  @Test("Glob matcher handles empty pattern")
+  func globMatcherHandlesEmptyPattern() {
+    let matcher = GlobPathMatcher(pattern: "")
+
+    #expect(matcher.matches(path: ""))
+    #expect(matcher.matches(path: "/"))  // Normalizes to empty
+    #expect(!matcher.matches(path: "/users"))
+  }
+
+  @Test("Glob matcher handles slash normalization")
+  func globMatcherHandlesSlashNormalization() {
+    let matcher = GlobPathMatcher(pattern: "/api/**/details")
+
+    #expect(matcher.matches(path: "/api/v1/details"))
+    #expect(matcher.matches(path: "api/v1/details"))  // No leading slash
+    #expect(matcher.matches(path: "/api/v1/details/"))  // Trailing slash
+    #expect(matcher.matches(path: "api/v1/details/"))  // Both
+  }
+
+  @Test("Glob matcher is case sensitive for literal segments")
+  func globMatcherIsCaseSensitive() {
+    let matcher = GlobPathMatcher(pattern: "/Api/**/Details")
+
+    #expect(matcher.matches(path: "/Api/v1/Details"))
+    #expect(!matcher.matches(path: "/api/v1/details"))  // Lowercase doesn't match
+    #expect(!matcher.matches(path: "/API/v1/DETAILS"))  // Uppercase doesn't match
+  }
+
+  @Test("Glob factory method creates correct matcher")
+  func globFactoryMethodCreatesCorrectMatcher() {
+    let matcher: GlobPathMatcher = .glob("/api/**")
+
+    #expect(matcher.pattern == "/api/**")
+    #expect(matcher.matches(path: "/api/v1/users"))
+    #expect(!matcher.matches(path: "/other"))
+  }
+
+  @Test("Glob matcher pattern property returns original pattern")
+  func globMatcherPatternPropertyReturnsOriginalPattern() {
+    let matcher = GlobPathMatcher(pattern: "/api/**/details")
+    #expect(matcher.pattern == "/api/**/details")
+
+    let starMatcher = GlobPathMatcher(pattern: "**")
+    #expect(starMatcher.pattern == "**")
+  }
+
+  @Test("Glob matcher handles complex nested patterns")
+  func globMatcherHandlesComplexNestedPatterns() {
+    let matcher = GlobPathMatcher(pattern: "/api/*/v*/**/end")
+
+    // This tests * matching segments with literal characters mixed
+    // Note: * matches entire segment, not partial - so v* is literal "v*"
+    #expect(!matcher.matches(path: "/api/test/v1/end"))  // "v1" != "v*"
+  }
+
+  @Test("Glob matcher ** at multiple positions")
+  func globMatcherMultipleDoubleWildcardsAtDifferentPositions() {
+    let matcher = GlobPathMatcher(pattern: "/**/middle/**")
+
+    #expect(matcher.matches(path: "/middle"))  // Zero on both sides
+    #expect(matcher.matches(path: "/a/middle"))
+    #expect(matcher.matches(path: "/middle/b"))
+    #expect(matcher.matches(path: "/a/middle/b"))
+    #expect(matcher.matches(path: "/a/b/middle/c/d"))
+  }
 }
