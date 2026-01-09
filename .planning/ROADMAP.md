@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Path Matching Foundation** - Core protocol and infrastructure for pattern matchers
 - [x] **Phase 2: Exact Path Matching** - Match exact paths only (not subpaths)
 - [x] **Phase 3: Wildcard Matching** - Single segment wildcards (`/users/*`)
-- [ ] **Phase 4: Glob Pattern Matching** - Multi-segment wildcards (`/api/**`)
+- [x] **Phase 4: Glob Pattern Matching** - Multi-segment wildcards (`/api/**`)
 - [ ] **Phase 5: Regex Path Matching** - Full regex pattern support
 
 ## Phase Details
@@ -58,7 +58,7 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 04-01: TBD
+- [x] 04-01: GlobPathMatcher implementation
 
 ### Phase 5: Regex Path Matching
 **Goal**: Implement `RegexPathMatcher` for full regex pattern support using Foundation's NSRegularExpression
@@ -79,5 +79,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. Path Matching Foundation | 1/1 | Complete | 2026-01-09 |
 | 2. Exact Path Matching | 1/1 | Complete | 2026-01-09 |
 | 3. Wildcard Matching | 1/1 | Complete | 2026-01-09 |
-| 4. Glob Pattern Matching | 0/TBD | Not started | - |
+| 4. Glob Pattern Matching | 1/1 | Complete | 2026-01-09 |
 | 5. Regex Path Matching | 0/TBD | Not started | - |
