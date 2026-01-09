@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Path Matching Foundation** - Core protocol and infrastructure for pattern matchers
 - [x] **Phase 2: Exact Path Matching** - Match exact paths only (not subpaths)
-- [ ] **Phase 3: Wildcard Matching** - Single segment wildcards (`/users/*`)
+- [x] **Phase 3: Wildcard Matching** - Single segment wildcards (`/users/*`)
 - [ ] **Phase 4: Glob Pattern Matching** - Multi-segment wildcards (`/api/**`)
 - [ ] **Phase 5: Regex Path Matching** - Full regex pattern support
 
@@ -49,7 +49,7 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 03-01: TBD
+- [x] 03-01: WildcardPathMatcher implementation
 
 ### Phase 4: Glob Pattern Matching
 **Goal**: Implement `GlobPathMatcher` supporting multi-segment wildcards (e.g., `/api/**` matches `/api/v1/users/123`)
@@ -78,6 +78,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Path Matching Foundation | 1/1 | Complete | 2026-01-09 |
 | 2. Exact Path Matching | 1/1 | Complete | 2026-01-09 |
-| 3. Wildcard Matching | 0/TBD | Not started | - |
+| 3. Wildcard Matching | 1/1 | Complete | 2026-01-09 |
 | 4. Glob Pattern Matching | 0/TBD | Not started | - |
 | 5. Regex Path Matching | 0/TBD | Not started | - |
