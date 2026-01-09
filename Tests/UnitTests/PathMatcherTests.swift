@@ -127,4 +127,88 @@ struct PathMatcherTests {
     #expect(matcher.matches(path: "/123/users"))
     #expect(!matcher.matches(path: "/users/1234"))
   }
+
+  // MARK: - ExactPathMatcher Tests
+
+  @Test("Exact matcher matches identical path")
+  func exactMatcherMatchesIdenticalPath() {
+    let matcher = ExactPathMatcher(pattern: "/users")
+
+    #expect(matcher.matches(path: "/users"))
+  }
+
+  @Test("Exact matcher does not match subpaths")
+  func exactMatcherDoesNotMatchSubpaths() {
+    let matcher = ExactPathMatcher(pattern: "/users")
+
+    #expect(!matcher.matches(path: "/users/123"))
+    #expect(!matcher.matches(path: "/users/profile"))
+    #expect(!matcher.matches(path: "/users/123/settings"))
+  }
+
+  @Test("Exact matcher does not match parent paths")
+  func exactMatcherDoesNotMatchParentPaths() {
+    let matcher = ExactPathMatcher(pattern: "/users/123")
+
+    #expect(!matcher.matches(path: "/users"))
+    #expect(!matcher.matches(path: "/"))
+  }
+
+  @Test("Exact matcher handles leading slash normalization")
+  func exactMatcherHandlesLeadingSlashNormalization() {
+    let matcherWithSlash = ExactPathMatcher(pattern: "/users")
+    let matcherWithoutSlash = ExactPathMatcher(pattern: "users")
+
+    // Pattern with leading slash matches paths with or without leading slash
+    #expect(matcherWithSlash.matches(path: "/users"))
+    #expect(matcherWithSlash.matches(path: "users"))
+
+    // Pattern without leading slash matches paths with or without leading slash
+    #expect(matcherWithoutSlash.matches(path: "/users"))
+    #expect(matcherWithoutSlash.matches(path: "users"))
+  }
+
+  @Test("Exact matcher handles trailing slash normalization")
+  func exactMatcherHandlesTrailingSlashNormalization() {
+    let matcher = ExactPathMatcher(pattern: "/users")
+
+    #expect(matcher.matches(path: "/users/"))
+    #expect(matcher.matches(path: "/users"))
+    #expect(matcher.matches(path: "users/"))
+  }
+
+  @Test("Exact matcher is case sensitive")
+  func exactMatcherIsCaseSensitive() {
+    let matcher = ExactPathMatcher(pattern: "/Users")
+
+    #expect(!matcher.matches(path: "/users"))
+    #expect(!matcher.matches(path: "/USERS"))
+    #expect(matcher.matches(path: "/Users"))
+  }
+
+  @Test("Exact global pattern matches only root")
+  func exactGlobalPatternMatchesOnlyRoot() {
+    let matcher = ExactPathMatcher(pattern: "/")
+
+    #expect(matcher.matches(path: "/"))
+    #expect(matcher.matches(path: ""))
+    #expect(!matcher.matches(path: "/users"))
+    #expect(!matcher.matches(path: "/api/v1"))
+  }
+
+  @Test("Exact factory method creates correct matcher")
+  func exactFactoryMethodCreatesCorrectMatcher() {
+    let matcher: ExactPathMatcher = .exact("/users")
+
+    #expect(matcher.pattern == "/users")
+    #expect(matcher.matches(path: "/users"))
+    #expect(!matcher.matches(path: "/users/123"))
+  }
+
+  @Test("Exact matcher handles empty path")
+  func exactMatcherHandlesEmptyPath() {
+    let matcher = ExactPathMatcher(pattern: "users")
+
+    #expect(!matcher.matches(path: ""))
+  }
 }
