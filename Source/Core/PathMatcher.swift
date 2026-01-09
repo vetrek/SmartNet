@@ -80,6 +80,65 @@ public struct ContainsPathMatcher: PathMatcher {
   }
 }
 
+/// A path matcher that checks if a path matches exactly (after normalization).
+///
+/// This matcher normalizes both the pattern and path before comparing:
+/// - Strips leading "/" from both if present
+/// - Strips trailing "/" from both if present
+/// - Compares strings exactly (case-sensitive)
+///
+/// Use this matcher when you need to target a specific path without matching
+/// subpaths or parent paths.
+///
+/// Example usage:
+/// ```swift
+/// let matcher = ExactPathMatcher(pattern: "/users")
+/// matcher.matches(path: "/users")          // true
+/// matcher.matches(path: "/users/")         // true (trailing slash normalized)
+/// matcher.matches(path: "users")           // true (leading slash normalized)
+/// matcher.matches(path: "/users/123")      // false (subpath)
+/// matcher.matches(path: "/api/users")      // false (different path)
+///
+/// let root = ExactPathMatcher(pattern: "/")
+/// root.matches(path: "/")                  // true
+/// root.matches(path: "")                   // true
+/// root.matches(path: "/users")             // false
+/// ```
+public struct ExactPathMatcher: PathMatcher {
+  public let pattern: String
+
+  /// Creates a new exact matcher with the specified pattern.
+  ///
+  /// - Parameter pattern: The exact path to match. Use "/" for root-only matching.
+  public init(pattern: String) {
+    self.pattern = pattern
+  }
+
+  public func matches(path: String) -> Bool {
+    let normalizedPattern = normalize(pattern)
+    let normalizedPath = normalize(path)
+
+    return normalizedPattern == normalizedPath
+  }
+
+  /// Normalizes a path by stripping leading and trailing slashes.
+  private func normalize(_ path: String) -> String {
+    var result = path
+
+    // Strip leading slash
+    if result.hasPrefix("/") {
+      result = String(result.dropFirst())
+    }
+
+    // Strip trailing slash
+    if result.hasSuffix("/") {
+      result = String(result.dropLast())
+    }
+
+    return result
+  }
+}
+
 // MARK: - Factory Methods
 
 public extension PathMatcher where Self == ContainsPathMatcher {
@@ -96,5 +155,25 @@ public extension PathMatcher where Self == ContainsPathMatcher {
   /// ```
   static func contains(_ component: String) -> ContainsPathMatcher {
     ContainsPathMatcher(pattern: component)
+  }
+}
+
+public extension PathMatcher where Self == ExactPathMatcher {
+  /// Creates a path matcher that matches only the exact path (after normalization).
+  ///
+  /// Unlike `contains(_:)`, this matcher does not match subpaths or parent paths.
+  /// Leading and trailing slashes are normalized before comparison.
+  ///
+  /// - Parameter path: The exact path to match. Use "/" for root-only matching.
+  /// - Returns: An `ExactPathMatcher` configured with the given path.
+  ///
+  /// Example:
+  /// ```swift
+  /// let matcher = PathMatcher.exact("/users")
+  /// matcher.matches(path: "/users")      // true
+  /// matcher.matches(path: "/users/123")  // false
+  /// ```
+  static func exact(_ path: String) -> ExactPathMatcher {
+    ExactPathMatcher(pattern: path)
   }
 }
