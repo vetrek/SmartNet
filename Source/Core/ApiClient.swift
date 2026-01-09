@@ -184,7 +184,7 @@ public extension ApiClient {
   ///   removeMiddleware(for: "user")
   ///   ```
   func removeMiddleware(for component: String) {
-    middlewares.removeAll { $0.pathComponent == component }
+    middlewares.removeAll { $0.pathMatcher.pattern == component }
   }
   
   /// Removes a specific middleware from the list of registered middlewares.

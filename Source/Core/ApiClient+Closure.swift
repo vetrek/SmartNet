@@ -201,15 +201,16 @@ extension ApiClient {
   }
 
   func middlewareGroups(for url: URL) -> (global: [any MiddlewareProtocol], path: [any MiddlewareProtocol]) {
-    let pathComponents = url.pathComponents
+    let path = url.path
 
     var globalMiddlewares = [any MiddlewareProtocol]()
     var pathMiddlewares = [any MiddlewareProtocol]()
 
     middlewares.forEach {
-      if $0.pathComponent == "/" {
+      // Global matchers (pattern "/") go to global group
+      if $0.pathMatcher.pattern == "/" {
         globalMiddlewares.append($0)
-      } else if pathComponents.contains($0.pathComponent) {
+      } else if $0.pathMatcher.matches(path: path) {
         pathMiddlewares.append($0)
       }
     }
