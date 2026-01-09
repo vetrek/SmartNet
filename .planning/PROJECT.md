@@ -23,13 +23,14 @@ Provide flexible, type-safe HTTP networking that adapts to any Swift project's p
 - `@MultipartBuilder` result builder for declarative form construction — existing
 - `EndpointBuilder<T>` for fluent endpoint configuration — existing
 - `SmartNetLogger` with configurable log levels via os_log — existing
+- ✓ Exact path matching for middleware — v1.0
+- ✓ Wildcard path matching for middleware (`/users/*`) — v1.0
+- ✓ Glob pattern matching for middleware (`/api/**`) — v1.0
+- ✓ Regex path matching for middleware — v1.0
 
 ### Active
 
-- [ ] Exact path matching for middleware (e.g., match only `/users` not `/users/123`)
-- [ ] Regex path matching for middleware
-- [ ] Glob pattern matching for middleware (e.g., `/users/*`, `/api/**`)
-- [ ] Wildcard support in path matching
+(No active requirements for next milestone)
 
 ### Out of Scope
 
@@ -49,7 +50,12 @@ SmartNet has completed phases 1-5 of its improvement roadmap:
 - Phase 4: Retry policies (protocol-based with configurable conditions)
 - Phase 5: API modernization (typed throws, HTTPPayload, builders)
 
-Current middleware system uses simple `pathComponent` string matching that checks if a path contains the component. This is insufficient for complex routing scenarios.
+**v1.0 Advanced Path Matching shipped (2026-01-09):**
+- PathMatcher protocol with extensible pattern matching system
+- 5 matchers: ContainsPathMatcher, ExactPathMatcher, WildcardPathMatcher, GlobPathMatcher, RegexPathMatcher
+- Factory methods: `PathMatcher.contains(_:)`, `.exact(_:)`, `.wildcard(_:)`, `.glob(_:)`, `.regex(_:)`
+- Backward compatible: existing `pathComponent` continues working with deprecation warning
+- 11,241 LOC Swift, 305 tests (66 PathMatcher tests)
 
 ## Constraints
 
@@ -62,8 +68,14 @@ Current middleware system uses simple `pathComponent` string matching that check
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Focus on path matching only | User prioritizes flexible routing over control flow changes | — Pending |
-| Defer middleware control features | Keep scope focused, can add in Phase 6.5 if needed | — Pending |
+| Focus on path matching only | User prioritizes flexible routing over control flow changes | ✓ Good — shipped complete matching system |
+| Defer middleware control features | Keep scope focused, can add in Phase 6.5 if needed | ✓ Good — scope stayed focused |
+| pathMatcher property with default impl | Backward compatibility - existing code works unchanged | ✓ Good |
+| pathComponent deprecated, not removed | Warns users to migrate while keeping code compiling | ✓ Good |
+| Global matching via pattern "/" check | Consistent approach, ContainsPathMatcher handles actual matching | ✓ Good |
+| Segment-based wildcard matching | Clear semantics: `*` = one segment, `**` = multiple | ✓ Good |
+| Backtracking algorithm for glob | Efficient handling of `**` with variable segment counts | ✓ Good |
+| Dual regex initializers (failable + throwing) | Different param names to avoid Swift signature collision | ✓ Good |
 
 ---
-*Last updated: 2026-01-09 after initialization*
+*Last updated: 2026-01-09 after v1.0 milestone*

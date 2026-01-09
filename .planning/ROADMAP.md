@@ -1,83 +1,32 @@
-# Roadmap: SmartNet Phase 6 - Advanced Path Matching
+# Roadmap: SmartNet
 
-## Overview
+## Milestones
 
-Transform SmartNet's middleware path matching from simple string contains to a flexible, pattern-based system supporting exact matches, wildcards, globs, and regex. Each phase builds on the previous, starting with a solid protocol foundation and progressing through increasingly powerful matching capabilities.
+- [v1.0 Advanced Path Matching](milestones/v1.0-ROADMAP.md) (Phases 1-5) — SHIPPED 2026-01-09
 
-## Domain Expertise
+## Completed Milestones
 
-None
+<details>
+<summary>v1.0 Advanced Path Matching (Phases 1-5) — SHIPPED 2026-01-09</summary>
 
-## Phases
+**Overview:** Transform SmartNet's middleware path matching from simple string contains to a flexible, pattern-based system supporting exact matches, wildcards, globs, and regex.
 
-**Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+- [x] Phase 1: Path Matching Foundation (1/1 plans) — completed 2026-01-09
+- [x] Phase 2: Exact Path Matching (1/1 plans) — completed 2026-01-09
+- [x] Phase 3: Wildcard Matching (1/1 plans) — completed 2026-01-09
+- [x] Phase 4: Glob Pattern Matching (1/1 plans) — completed 2026-01-09
+- [x] Phase 5: Regex Path Matching (1/1 plans) — completed 2026-01-09
 
-Decimal phases appear between their surrounding integers in numeric order.
+**See:** [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) for full details
 
-- [x] **Phase 1: Path Matching Foundation** - Core protocol and infrastructure for pattern matchers
-- [x] **Phase 2: Exact Path Matching** - Match exact paths only (not subpaths)
-- [x] **Phase 3: Wildcard Matching** - Single segment wildcards (`/users/*`)
-- [x] **Phase 4: Glob Pattern Matching** - Multi-segment wildcards (`/api/**`)
-- [x] **Phase 5: Regex Path Matching** - Full regex pattern support
-
-## Phase Details
-
-### Phase 1: Path Matching Foundation
-**Goal**: Create the `PathMatcher` protocol and integrate it into the middleware system while maintaining backward compatibility with existing `pathComponent` string matching
-**Depends on**: Nothing (first phase)
-**Research**: Unlikely (established Swift protocol patterns)
-**Plans**: TBD
-
-Plans:
-- [x] 01-01: PathMatcher protocol and ContainsPathMatcher
-
-### Phase 2: Exact Path Matching
-**Goal**: Implement `ExactPathMatcher` that matches only the exact path string (e.g., `/users` matches `/users` but not `/users/123`)
-**Depends on**: Phase 1
-**Research**: Unlikely (simple string comparison)
-**Plans**: TBD
-
-Plans:
-- [x] 02-01: ExactPathMatcher implementation
-
-### Phase 3: Wildcard Matching
-**Goal**: Implement `WildcardPathMatcher` supporting single-segment wildcards (e.g., `/users/*` matches `/users/123` but not `/users/123/posts`)
-**Depends on**: Phase 2
-**Research**: Unlikely (standard glob patterns)
-**Plans**: TBD
-
-Plans:
-- [x] 03-01: WildcardPathMatcher implementation
-
-### Phase 4: Glob Pattern Matching
-**Goal**: Implement `GlobPathMatcher` supporting multi-segment wildcards (e.g., `/api/**` matches `/api/v1/users/123`)
-**Depends on**: Phase 3
-**Research**: Unlikely (building on phase 3)
-**Plans**: TBD
-
-Plans:
-- [x] 04-01: GlobPathMatcher implementation
-
-### Phase 5: Regex Path Matching
-**Goal**: Implement `RegexPathMatcher` for full regex pattern support using Foundation's NSRegularExpression
-**Depends on**: Phase 4
-**Research**: Unlikely (Foundation NSRegularExpression API)
-**Plans**: TBD
-
-Plans:
-- [x] 05-01: RegexPathMatcher implementation
+</details>
 
 ## Progress
 
-**Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Path Matching Foundation | 1/1 | Complete | 2026-01-09 |
-| 2. Exact Path Matching | 1/1 | Complete | 2026-01-09 |
-| 3. Wildcard Matching | 1/1 | Complete | 2026-01-09 |
-| 4. Glob Pattern Matching | 1/1 | Complete | 2026-01-09 |
-| 5. Regex Path Matching | 1/1 | Complete | 2026-01-09 |
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Path Matching Foundation | v1.0 | 1/1 | Complete | 2026-01-09 |
+| 2. Exact Path Matching | v1.0 | 1/1 | Complete | 2026-01-09 |
+| 3. Wildcard Matching | v1.0 | 1/1 | Complete | 2026-01-09 |
+| 4. Glob Pattern Matching | v1.0 | 1/1 | Complete | 2026-01-09 |
+| 5. Regex Path Matching | v1.0 | 1/1 | Complete | 2026-01-09 |
