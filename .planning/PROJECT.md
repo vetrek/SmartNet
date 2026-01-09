@@ -1,0 +1,81 @@
+# SmartNet
+
+## What This Is
+
+A Swift HTTP networking library for iOS 13+ and macOS 10.15+ with zero external dependencies. Supports async/await, Combine, and closure-based APIs with type-safe endpoints, middleware interception, and configurable retry policies.
+
+## Core Value
+
+Provide flexible, type-safe HTTP networking that adapts to any Swift project's programming paradigm while maintaining zero dependencies and thread safety.
+
+## Requirements
+
+### Validated
+
+- Type-safe HTTP networking with `Endpoint<T>` generic struct — existing
+- Three programming paradigms: async/await, Combine, closures — existing
+- Middleware system with path-component matching — existing
+- Retry policies: exponential backoff, linear, immediate, none — existing
+- `@ThreadSafe` property wrapper for concurrent access — existing
+- Comprehensive error handling with `NetworkError` enum — existing
+- Upload/download operations with progress tracking — existing
+- `HTTPPayload` enum for body encoding (JSON, form URL encoded, multipart, raw) — existing
+- `@MultipartBuilder` result builder for declarative form construction — existing
+- `EndpointBuilder<T>` for fluent endpoint configuration — existing
+- `SmartNetLogger` with configurable log levels via os_log — existing
+- ✓ Exact path matching for middleware — v1.0
+- ✓ Wildcard path matching for middleware (`/users/*`) — v1.0
+- ✓ Glob pattern matching for middleware (`/api/**`) — v1.0
+- ✓ Regex path matching for middleware — v1.0
+
+### Active
+
+(No active requirements for next milestone)
+
+### Out of Scope
+
+- Middleware priority/ordering system — deferred to future phase
+- Halting middleware pipeline — deferred to future phase
+- Per-endpoint middleware configuration — deferred to future phase
+- `.skip` middleware result — deferred to future phase
+- `.retryWithRequest(URLRequest)` for modified retries — deferred to future phase
+- Phases 7-12 (caching, security, reachability, advanced features, documentation, platforms) — future roadmap
+
+## Context
+
+SmartNet has completed phases 1-5 of its improvement roadmap:
+- Phase 1: Critical safety fixes (force unwraps, thread safety, bugs)
+- Phase 2: Test foundation (comprehensive test coverage)
+- Phase 3: Error handling improvements (specific error cases, logging)
+- Phase 4: Retry policies (protocol-based with configurable conditions)
+- Phase 5: API modernization (typed throws, HTTPPayload, builders)
+
+**v1.0 Advanced Path Matching shipped (2026-01-09):**
+- PathMatcher protocol with extensible pattern matching system
+- 5 matchers: ContainsPathMatcher, ExactPathMatcher, WildcardPathMatcher, GlobPathMatcher, RegexPathMatcher
+- Factory methods: `PathMatcher.contains(_:)`, `.exact(_:)`, `.wildcard(_:)`, `.glob(_:)`, `.regex(_:)`
+- Backward compatible: existing `pathComponent` continues working with deprecation warning
+- 11,241 LOC Swift, 305 tests (66 PathMatcher tests)
+
+## Constraints
+
+- **Zero dependencies**: Use only Foundation/Swift stdlib for pattern matching implementation
+- **Backward compatibility**: Existing middleware registrations with `pathComponent: "/"` and simple strings must continue working
+- **Thread safety**: Any new pattern matchers must be thread-safe
+- **Platform support**: Must work on iOS 13+ and macOS 10.15+
+
+## Key Decisions
+
+| Decision | Rationale | Outcome |
+|----------|-----------|---------|
+| Focus on path matching only | User prioritizes flexible routing over control flow changes | ✓ Good — shipped complete matching system |
+| Defer middleware control features | Keep scope focused, can add in Phase 6.5 if needed | ✓ Good — scope stayed focused |
+| pathMatcher property with default impl | Backward compatibility - existing code works unchanged | ✓ Good |
+| pathComponent deprecated, not removed | Warns users to migrate while keeping code compiling | ✓ Good |
+| Global matching via pattern "/" check | Consistent approach, ContainsPathMatcher handles actual matching | ✓ Good |
+| Segment-based wildcard matching | Clear semantics: `*` = one segment, `**` = multiple | ✓ Good |
+| Backtracking algorithm for glob | Efficient handling of `**` with variable segment counts | ✓ Good |
+| Dual regex initializers (failable + throwing) | Different param names to avoid Swift signature collision | ✓ Good |
+
+---
+*Last updated: 2026-01-09 after v1.0 milestone*

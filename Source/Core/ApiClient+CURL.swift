@@ -34,12 +34,12 @@ extension ApiClient {
     response: URLResponse? = nil,
     data: Data? = nil
   ) {
-    var tag = "🟡 SmartNet - cUrl 🟡"
+    let tag = "cUrl"
     guard
       let url = request.url,
       let method = request.httpMethod
     else {
-      print(tag, "$ curl command could not be created")
+      SmartNetLogger.shared.warning("\(tag) - curl command could not be created")
       return
     }
     
@@ -100,18 +100,19 @@ extension ApiClient {
     components.append("\"\(url.absoluteString)\"")
     
     let curl = components.joined(separator: " \\\n\t")
-    
-    print(tag, curl)
-    
-    tag = "🟢 SmartNet - Response with StatusCode: \((response as? HTTPURLResponse)?.statusCode ?? 0) 🟢"
-    
+
+    SmartNetLogger.shared.debug("\(tag) \(curl)")
+
+    let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+    let responseTag = "Response [\(statusCode)]"
+
     if let data = data, let jsonString = String(data: data, encoding: .utf8) {
       if let jsonObject = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
         let prettyData = try? JSONSerialization.data(withJSONObject: jsonObject, options: .prettyPrinted)
         let prettyString = String(data: prettyData ?? data, encoding: .utf8) ?? jsonString
-        print(tag, prettyString)
+        SmartNetLogger.shared.debug("\(responseTag) \(prettyString)")
       } else {
-        print(tag, jsonString)
+        SmartNetLogger.shared.debug("\(responseTag) \(jsonString)")
       }
     }
   }

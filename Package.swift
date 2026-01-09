@@ -1,4 +1,4 @@
-// swift-tools-version:5.3
+// swift-tools-version:5.9
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -29,10 +29,14 @@ let package = Package(
             exclude: ["Info.plist"]
         ),
         .testTarget(
-            name: "SmartNetTests",
+            name: "SmartNetIntegrationTests",
             dependencies: ["SmartNet"],
-            path: "Tests",
-            exclude: ["Info.plist"]
+            path: "Tests/IntegrationTests"
+        ),
+        .testTarget(
+            name: "SmartNetUnitTests",
+            dependencies: ["SmartNet"],
+            path: "Tests/UnitTests"
         ),
     ]
 )

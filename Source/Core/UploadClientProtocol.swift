@@ -1,5 +1,5 @@
 //
-//  SmartNet.swift
+//  UploadClientProtocol.swift
 //
 //  Copyright (c) 2021 Valerio69 (valerio.alsebas@gmail.com)
 //
@@ -22,29 +22,20 @@
 //  THE SOFTWARE.
 //
 
-import XCTest
-@testable import SmartNet
+import Foundation
 
-class SmartNetTests: XCTestCase {
+/// Protocol for upload operations. Separate from ApiClientProtocol for modularity.
+public protocol UploadClientProtocol: AnyObject {
 
-    override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-    }
+  /// Uploads data using the specified endpoint and expects a Decodable response.
+  func upload<D: Decodable>(with endpoint: MultipartFormEndpoint<D>) throws -> UploadTask<D>
 
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
-    }
+  /// Uploads data using the specified endpoint and expects a String response.
+  func upload(with endpoint: MultipartFormEndpoint<String>) throws -> UploadTask<String>
 
-    func testExample() throws {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-    }
+  /// Uploads data using the specified endpoint with no expected response body.
+  func upload(with endpoint: MultipartFormEndpoint<Void>) throws -> UploadTask<Void>
 
-    func testPerformanceExample() throws {
-        // This is an example of a performance test case.
-        self.measure {
-            // Put the code you want to measure the time of here.
-        }
-    }
-
+  /// Uploads data using the specified endpoint and expects raw Data response.
+  func upload(with endpoint: MultipartFormEndpoint<Data>) throws -> UploadTask<Data>
 }

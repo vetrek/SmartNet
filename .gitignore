@@ -89,3 +89,6 @@ fastlane/test_output
 
 iOSInjectionProject/
 Example/.DS_Store
+
+# Local planning files
+TODO.md
