@@ -24,7 +24,7 @@
 
 import Foundation
 
-public enum NetworkError: Error, CustomStringConvertible {
+public enum NetworkError: Error, CustomStringConvertible, Equatable {
   case error(statusCode: Int, data: Data?)
   case parsedError(error: Decodable)
   case parsingFailed
@@ -143,4 +143,64 @@ public enum NetworkError: Error, CustomStringConvertible {
 
 extension NetworkError: LocalizedError {
   public var errorDescription: String? { description }
+}
+
+// MARK: - Equatable
+
+extension NetworkError {
+  public static func == (lhs: NetworkError, rhs: NetworkError) -> Bool {
+    switch (lhs, rhs) {
+    case (.error(let lhsCode, let lhsData), .error(let rhsCode, let rhsData)):
+      return lhsCode == rhsCode && lhsData == rhsData
+
+    case (.parsedError(let lhsError), .parsedError(let rhsError)):
+      // Compare by string representation since Decodable isn't Equatable
+      return String(describing: lhsError) == String(describing: rhsError)
+
+    case (.parsingFailed, .parsingFailed),
+         (.emptyResponse, .emptyResponse),
+         (.invalidSessions, .invalidSessions),
+         (.invalidDownloadUrl, .invalidDownloadUrl),
+         (.invalidDownloadFileData, .invalidDownloadFileData),
+         (.cancelled, .cancelled),
+         (.middlewareMaxRetry, .middlewareMaxRetry),
+         (.networkFailure, .networkFailure),
+         (.urlGeneration, .urlGeneration),
+         (.invalidFormData, .invalidFormData),
+         (.timeout, .timeout),
+         (.dnsLookupFailed, .dnsLookupFailed),
+         (.connectionLost, .connectionLost):
+      return true
+
+    case (.unableToSaveFile(let lhsURL), .unableToSaveFile(let rhsURL)):
+      return lhsURL == rhsURL
+
+    case (.dataToStringFailure(let lhsData), .dataToStringFailure(let rhsData)):
+      return lhsData == rhsData
+
+    case (.middleware(let lhsError), .middleware(let rhsError)):
+      // Compare by localizedDescription since Error isn't Equatable
+      return lhsError.localizedDescription == rhsError.localizedDescription
+
+    case (.generic(let lhsError), .generic(let rhsError)):
+      // Compare by localizedDescription since Error isn't Equatable
+      return lhsError.localizedDescription == rhsError.localizedDescription
+
+    case (.sslError(let lhsError), .sslError(let rhsError)):
+      switch (lhsError, rhsError) {
+      case (.none, .none):
+        return true
+      case (.some(let lhs), .some(let rhs)):
+        return lhs.localizedDescription == rhs.localizedDescription
+      default:
+        return false
+      }
+
+    case (.rateLimited(let lhsRetry), .rateLimited(let rhsRetry)):
+      return lhsRetry == rhsRetry
+
+    default:
+      return false
+    }
+  }
 }
