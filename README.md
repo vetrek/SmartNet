@@ -138,3 +138,138 @@ let endpoint = Endpoint<User>(
 )
 ```
 
+## Retry Policies
+
+SmartNet automatically retries failed requests based on configurable policies. The default is exponential backoff with jitter.
+
+**Built-in policies:**
+- `ExponentialBackoffRetryPolicy` (default) - delays: 1s, 2s, 4s, 8s...
+- `LinearBackoffRetryPolicy` - delays: 1s, 2s, 3s, 4s...
+- `ImmediateRetryPolicy` - retry immediately
+- `NoRetryPolicy` - disable retries
+
+**Per-endpoint retry configuration:**
+```swift
+let endpoint = Endpoint<User>(path: "users/1")
+    .retryPolicy(ExponentialBackoffRetryPolicy(
+        maxRetries: 5,
+        conditions: [.timeout, .connectionLost, .serverError]
+    ))
+```
+
+**RetryCondition options:**
+- `.timeout` - request timed out
+- `.connectionLost` - network connection lost
+- `.networkFailure` - general network failure
+- `.serverError` - HTTP 5xx responses
+- `.rateLimited` - HTTP 429 (respects `Retry-After` header)
+- `.dnsFailure` - DNS lookup failed
+
+## Middleware
+
+Intercept requests and responses with path-matched middleware. Uses the `PathMatcher` system for flexible routing.
+
+**Global middleware (all requests):**
+```swift
+client.addMiddleware(
+    ApiClient.Middleware(
+        pathMatcher: PathMatcher.contains("/"),
+        preRequestCallback: { request in
+            var req = request
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            return req
+        },
+        postResponseCallback: { data, response, error in
+            return .next
+        }
+    )
+)
+```
+
+**Path-specific middleware:**
+```swift
+client.addMiddleware(
+    ApiClient.Middleware(
+        pathMatcher: PathMatcher.contains("users"),
+        preRequestCallback: { request in
+            print("User request: \(request.url?.path ?? "")")
+            return request
+        },
+        postResponseCallback: { _, _, _ in .next }
+    )
+)
+```
+
+**PathMatcher patterns:**
+
+| Factory Method | Description | Example |
+|---------------|-------------|---------|
+| `.contains("/")` | Global (all paths) | Matches everything |
+| `.contains("users")` | Contains segment | `/api/users/123` |
+| `.exact("/users")` | Exact match | `/users` only |
+| `.wildcard("/users/*")` | Single segment wildcard | `/users/123` but not `/users/123/posts` |
+| `.glob("/api/**")` | Multi-segment wildcard | `/api`, `/api/v1/users` |
+| `.regex("^/users/\\d+$")` | Regular expression | `/users/123` |
+
+## File Operations
+
+**Upload with multipart form:**
+```swift
+let uploadTask = try client.upload(
+    with: MultipartFormEndpoint(
+        path: "upload",
+        form: MultipartFormData {
+            TextField("name", value: "avatar")
+            FileField("file", data: imageData, fileName: "photo.jpg")
+        }
+    )
+)
+.progress { progress in
+    print("Upload: \(progress.fractionCompleted * 100)%")
+}
+.response { response in
+    print("Done: \(response.result)")
+}
+```
+
+**Download with progress:**
+```swift
+let downloadTask = client.download(url: URL(string: "https://example.com/file.zip")!)?
+    .downloadProgress { progress, _ in
+        print("Download: \(progress.fractionCompleted * 100)%")
+    }
+    .response { response in
+        print("Saved to: \(response.result)")
+    }
+```
+
+## Error Handling
+
+All errors are returned as `NetworkError`:
+
+```swift
+do {
+    let user: User = try await client.request(with: endpoint)
+} catch let error as NetworkError {
+    switch error {
+    case .error(let statusCode, let data):
+        print("HTTP \(statusCode)")
+    case .timeout:
+        print("Request timed out")
+    case .connectionLost:
+        print("Connection lost")
+    case .parsingFailed(let error):
+        print("Decoding failed: \(error)")
+    default:
+        print("Error: \(error)")
+    }
+}
+```
+
+## Projects Using SmartNet
+
+- [YourVPN](https://yourvpn.world/)
+
+## License
+
+SmartNet is available under the MIT license.
