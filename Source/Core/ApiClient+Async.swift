@@ -24,7 +24,17 @@
 
 import Foundation
 
+// MARK: - Networking Async
+
 public extension ApiClient {
+  /// Sends a request to the provided endpoint and expects a decoded response.
+  ///
+  /// - Parameters:
+  ///   - endpoint: The endpoint to send the request to.
+  ///   - decoder: The JSON decoder to use for decoding the response. Default value is the standard `JSONDecoder`.
+  ///   - progressHUD: An optional progress HUD to show loading state.
+  /// - Returns: The decoded response object.
+  /// - Throws: ``NetworkError/parsingFailed`` if decoding fails, or other ``NetworkError`` cases for network failures.
   func request<D, E>(
     with endpoint: E,
     decoder: JSONDecoder = .default,
@@ -37,16 +47,30 @@ public extension ApiClient {
     } catch let error {
       SmartNetLogger.shared.debug("Parsing error: \(String(describing: error))")
       throw NetworkError.parsingFailed
-    }   
+    }
   }
-  
+
+  /// Sends a request to the provided endpoint and expects a data response.
+  ///
+  /// - Parameters:
+  ///   - endpoint: The endpoint to send the request to.
+  ///   - progressHUD: An optional progress HUD to show loading state.
+  /// - Returns: The raw `Data` from the response.
+  /// - Throws: ``NetworkError`` cases for network failures.
   func request<E>(
     with endpoint: E,
     progressHUD: SNProgressHUD? = nil
   ) async throws -> E.Response where E : Requestable, E.Response == Data {
     try await dataRequest(endpoint: endpoint, progressHUD: progressHUD)
   }
-  
+
+  /// Sends a request to the provided endpoint and expects a string response.
+  ///
+  /// - Parameters:
+  ///   - endpoint: The endpoint to send the request to.
+  ///   - progressHUD: An optional progress HUD to show loading state.
+  /// - Returns: The response body as a UTF-8 `String`.
+  /// - Throws: ``NetworkError/dataToStringFailure(data:)`` if UTF-8 decoding fails, or other ``NetworkError`` cases for network failures.
   func request<E>(
     with endpoint: E,
     progressHUD: SNProgressHUD? = nil
@@ -57,7 +81,13 @@ public extension ApiClient {
     }
     return string
   }
-  
+
+  /// Sends a request to the provided endpoint and does not expect a specific response (void).
+  ///
+  /// - Parameters:
+  ///   - endpoint: The endpoint to send the request to.
+  ///   - progressHUD: An optional progress HUD to show loading state.
+  /// - Throws: ``NetworkError`` cases for network failures.
   @discardableResult
   func request<E>(
     with endpoint: E,
