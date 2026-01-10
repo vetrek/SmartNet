@@ -82,7 +82,7 @@ public enum NetworkError: Error, CustomStringConvertible {
       return "The network request has been cancelled"
       
     case .middlewareMaxRetry:
-      return "Middleware max rety request reached"
+      return "Middleware max retry request reached"
     
     case .networkFailure:
       return "Unable to perform the request."
@@ -112,7 +112,7 @@ public enum NetworkError: Error, CustomStringConvertible {
       return "Invalid download File Data"
       
     case .middleware(let error):
-      return "Middlware error \(error.localizedDescription)"
+      return "Middleware error \(error.localizedDescription)"
       
     case .unableToSaveFile:
       return "Unable to save file to the custom Destination folder"

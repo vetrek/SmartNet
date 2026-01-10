@@ -148,23 +148,23 @@ public extension ApiClient {
   ///
   /// - Example:
   ///   ```
-  ///   let userPreRequestMiddleware = Middleware(pathComponent: "user", preRequestCallbak: { request in
+  ///   let userPreRequestMiddleware = Middleware(pathComponent: "user", preRequestCallback: { request in
   ///       // Modify the request, e.g., add a specific header
   ///       var headers = request.allHTTPHeaderFields ?? [:]
   ///       headers["Authorization"] = "Bearer token"
   ///       request.allHTTPHeaderFields = headers
-  ///   }, postResponseCallbak: { response in
+  ///   }, postResponseCallback: { response in
   ///       // Process the response, e.g., logging or error handling
   ///   })
   ///
   ///   apiClient.addMiddleware(userPreRequestMiddleware)
   ///
-  ///   let globalMiddleware = Middleware(pathComponent: "/", preRequestCallbak: { request in
+  ///   let globalMiddleware = Middleware(pathComponent: "/", preRequestCallback: { request in
   ///       // Applies to every API call
   ///       var headers = request.allHTTPHeaderFields ?? [:]
   ///       headers["App-Version"] = "1.0.0"
   ///       request.allHTTPHeaderFields = headers
-  ///   }, postResponseCallbak: { response in
+  ///   }, postResponseCallback: { response in
   ///       // Global response handling
   ///   })
   ///

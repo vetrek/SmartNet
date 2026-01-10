@@ -46,8 +46,8 @@ public final class NetworkConfiguration: NetworkConfigurable {
   /// Default Request query parameters
   public var queryParameters: [String: String] = [:]
   
-  /// Defatult Post body parameters
-  /// This could be usefull if you need to add the same key/value to the body of each post.
+  /// Default POST body parameters
+  /// This could be useful if you need to add the same key/value to the body of each post.
   public var bodyParameters: [String: Any] = [:]
   
   /// Unsecure trusted domains
