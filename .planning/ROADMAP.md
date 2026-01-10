@@ -36,7 +36,7 @@
 
 </details>
 
-### 🚧 v2.1 Retry Policy Ergonomics (In Progress)
+### ✅ v2.1 Retry Policy Ergonomics (Complete)
 
 **Milestone Goal:** Improve retry policy API ergonomics and change default behavior to no-retry
 
@@ -45,10 +45,10 @@
 **Goal**: Change default retry policy to NoRetry and add static factory methods for cleaner API
 **Depends on**: Phase 8
 **Research**: Unlikely (internal patterns)
-**Plans**: TBD
+**Plans**: 1/1 complete
 
 Plans:
-- [ ] 09-01: TBD (run /gsd:plan-phase 9 to break down)
+- [x] 09-01: Retry policy ergonomics — completed 2026-01-10
 
 ## Progress
 
@@ -62,4 +62,4 @@ Plans:
 | 6. API Polish Pass | v1.1 | 1/1 | Complete | 2026-01-10 |
 | 7. README Overhaul | v1.1 | 1/1 | Complete | 2026-01-10 |
 | 8. In-Code Documentation | v1.1 | 1/1 | Complete | 2026-01-10 |
-| 9. Retry Policy Ergonomics | v2.1 | 0/? | Not started | - |
+| 9. Retry Policy Ergonomics | v2.1 | 1/1 | Complete | 2026-01-10 |
