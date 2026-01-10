@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ [v1.0 Advanced Path Matching](milestones/v1.0-ROADMAP.md) (Phases 1-5) — SHIPPED 2026-01-09
-- 🚧 **v1.1 Production Ready** — Phases 6-8 (in progress)
+- ✅ [v2.0 Production Ready](milestones/v2.0-ROADMAP.md) (Phases 6-8) — SHIPPED 2026-01-10
 
 ## Completed Milestones
 
@@ -22,39 +22,18 @@
 
 </details>
 
-### 🚧 v1.1 Production Ready (In Progress)
+<details>
+<summary>v2.0 Production Ready (Phases 6-8) — SHIPPED 2026-01-10</summary>
 
-**Milestone Goal:** Polish the developer experience for public release - clean API, great docs, clear value proposition
+**Overview:** Polish the developer experience for public release - clean API, great docs, clear value proposition.
 
-#### Phase 6: API Polish Pass — Complete
+- [x] Phase 6: API Polish Pass (1/1 plans) — completed 2026-01-10
+- [x] Phase 7: README Overhaul (1/1 plans) — completed 2026-01-10
+- [x] Phase 8: In-Code Documentation (1/1 plans) — completed 2026-01-10
 
-**Goal**: Review and improve public API surface - naming consistency, visibility audit, ergonomics check
-**Depends on**: v1.0 complete
-**Research**: Unlikely (internal patterns)
-**Plans**: 1/1
+**See:** [milestones/v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md) for full details
 
-Plans:
-- [x] 06-01: Documentation & Typo Fixes — completed 2026-01-10
-
-#### Phase 7: README Overhaul — Complete
-
-**Goal**: Create concise, developer-friendly README with quick start, feature showcase, and differentiators
-**Depends on**: Phase 6
-**Research**: Unlikely (documentation work)
-**Plans**: 1/1
-
-Plans:
-- [x] 07-01: README overhaul — completed 2026-01-10
-
-#### Phase 8: In-Code Documentation — Complete
-
-**Goal**: Add detailed READMEs within source directories and DocC comments on public APIs
-**Depends on**: Phase 7
-**Research**: Unlikely (documentation work)
-**Plans**: 1/1
-
-Plans:
-- [x] 08-01: DocC documentation for public APIs — completed 2026-01-10
+</details>
 
 ## Progress
 

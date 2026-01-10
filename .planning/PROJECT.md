@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A Swift HTTP networking library for iOS 13+ and macOS 10.15+ with zero external dependencies. Supports async/await, Combine, and closure-based APIs with type-safe endpoints, middleware interception, and configurable retry policies.
+A Swift HTTP networking library for iOS 13+ and macOS 10.15+ with zero external dependencies. Supports async/await, Combine, and closure-based APIs with type-safe endpoints, pattern-based middleware routing, and configurable retry policies. Production-ready with comprehensive documentation.
 
 ## Core Value
 
@@ -27,10 +27,13 @@ Provide flexible, type-safe HTTP networking that adapts to any Swift project's p
 - ✓ Wildcard path matching for middleware (`/users/*`) — v1.0
 - ✓ Glob pattern matching for middleware (`/api/**`) — v1.0
 - ✓ Regex path matching for middleware — v1.0
+- ✓ NetworkError Equatable conformance for testing — v2.0
+- ✓ Complete README with PathMatcher documentation — v2.0
+- ✓ DocC documentation on public APIs — v2.0
 
 ### Active
 
-(No active requirements for next milestone)
+(No active requirements — project complete for now)
 
 ### Out of Scope
 
@@ -55,7 +58,12 @@ SmartNet has completed phases 1-5 of its improvement roadmap:
 - 5 matchers: ContainsPathMatcher, ExactPathMatcher, WildcardPathMatcher, GlobPathMatcher, RegexPathMatcher
 - Factory methods: `PathMatcher.contains(_:)`, `.exact(_:)`, `.wildcard(_:)`, `.glob(_:)`, `.regex(_:)`
 - Backward compatible: existing `pathComponent` continues working with deprecation warning
-- 11,241 LOC Swift, 305 tests (66 PathMatcher tests)
+
+**v2.0 Production Ready shipped (2026-01-10):**
+- API polish: 8 typo fixes, NetworkError Equatable conformance
+- README overhaul: complete rewrite with PathMatcher docs, SPM-only installation
+- DocC documentation on ApiClient+Async, DownloadEndpoint, QueryParameters, Response
+- 11,419 LOC Swift, 305 tests
 
 ## Constraints
 
@@ -76,6 +84,8 @@ SmartNet has completed phases 1-5 of its improvement roadmap:
 | Segment-based wildcard matching | Clear semantics: `*` = one segment, `**` = multiple | ✓ Good |
 | Backtracking algorithm for glob | Efficient handling of `**` with variable segment counts | ✓ Good |
 | Dual regex initializers (failable + throwing) | Different param names to avoid Swift signature collision | ✓ Good |
+| SPM-only installation | CocoaPods outdated, SPM is standard | ✓ Good |
+| DocC style from ApiClient+Combine | Consistent documentation across paradigms | ✓ Good |
 
 ---
-*Last updated: 2026-01-09 after v1.0 milestone*
+*Last updated: 2026-01-10 after v2.0 milestone*
