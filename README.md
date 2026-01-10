@@ -25,7 +25,7 @@ Add SmartNet to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/vetrek/SmartNet.git", from: "2.0.0")
+    .package(url: "https://github.com/vetrek/SmartNet.git", from: "2.0.1")
 ]
 ```
 
@@ -49,6 +49,7 @@ let user: User = try await client.request(
 ## Configuration
 
 **Basic:**
+
 ```swift
 let client = ApiClient(config: NetworkConfiguration(
     baseURL: URL(string: "https://api.example.com")!
@@ -56,6 +57,7 @@ let client = ApiClient(config: NetworkConfiguration(
 ```
 
 **With headers and timeout:**
+
 ```swift
 let config = NetworkConfiguration(
     baseURL: URL(string: "https://api.example.com")!,
@@ -111,6 +113,7 @@ client.request(with: Endpoint<User>(path: "users/1")) { response in
 ## Endpoints
 
 **GET with query parameters:**
+
 ```swift
 let endpoint = Endpoint<User>(
     path: "users",
@@ -122,6 +125,7 @@ let endpoint = Endpoint<User>(
 ```
 
 **POST with body:**
+
 ```swift
 struct CreateUserRequest: Codable {
     let name: String
@@ -143,12 +147,14 @@ let endpoint = Endpoint<User>(
 SmartNet automatically retries failed requests based on configurable policies. The default is exponential backoff with jitter.
 
 **Built-in policies:**
+
 - `ExponentialBackoffRetryPolicy` (default) - delays: 1s, 2s, 4s, 8s...
 - `LinearBackoffRetryPolicy` - delays: 1s, 2s, 3s, 4s...
 - `ImmediateRetryPolicy` - retry immediately
 - `NoRetryPolicy` - disable retries
 
 **Per-endpoint retry configuration:**
+
 ```swift
 let endpoint = Endpoint<User>(path: "users/1")
     .retryPolicy(ExponentialBackoffRetryPolicy(
@@ -158,6 +164,7 @@ let endpoint = Endpoint<User>(path: "users/1")
 ```
 
 **RetryCondition options:**
+
 - `.timeout` - request timed out
 - `.connectionLost` - network connection lost
 - `.networkFailure` - general network failure
@@ -170,6 +177,7 @@ let endpoint = Endpoint<User>(path: "users/1")
 Intercept requests and responses with path-matched middleware. Uses the `PathMatcher` system for flexible routing.
 
 **Global middleware (all requests):**
+
 ```swift
 client.addMiddleware(
     ApiClient.Middleware(
@@ -187,6 +195,7 @@ client.addMiddleware(
 ```
 
 **Path-specific middleware:**
+
 ```swift
 client.addMiddleware(
     ApiClient.Middleware(
@@ -202,18 +211,19 @@ client.addMiddleware(
 
 **PathMatcher patterns:**
 
-| Factory Method | Description | Example |
-|---------------|-------------|---------|
-| `.contains("/")` | Global (all paths) | Matches everything |
-| `.contains("users")` | Contains segment | `/api/users/123` |
-| `.exact("/users")` | Exact match | `/users` only |
-| `.wildcard("/users/*")` | Single segment wildcard | `/users/123` but not `/users/123/posts` |
-| `.glob("/api/**")` | Multi-segment wildcard | `/api`, `/api/v1/users` |
-| `.regex("^/users/\\d+$")` | Regular expression | `/users/123` |
+| Factory Method            | Description             | Example                                 |
+| ------------------------- | ----------------------- | --------------------------------------- |
+| `.contains("/")`          | Global (all paths)      | Matches everything                      |
+| `.contains("users")`      | Contains segment        | `/api/users/123`                        |
+| `.exact("/users")`        | Exact match             | `/users` only                           |
+| `.wildcard("/users/*")`   | Single segment wildcard | `/users/123` but not `/users/123/posts` |
+| `.glob("/api/**")`        | Multi-segment wildcard  | `/api`, `/api/v1/users`                 |
+| `.regex("^/users/\\d+$")` | Regular expression      | `/users/123`                            |
 
 ## File Operations
 
 **Upload with multipart form:**
+
 ```swift
 let uploadTask = try client.upload(
     with: MultipartFormEndpoint(
@@ -233,6 +243,7 @@ let uploadTask = try client.upload(
 ```
 
 **Download with progress:**
+
 ```swift
 let downloadTask = client.download(url: URL(string: "https://example.com/file.zip")!)?
     .downloadProgress { progress, _ in
