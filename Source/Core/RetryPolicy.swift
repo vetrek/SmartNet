@@ -245,6 +245,110 @@ public struct NoRetryPolicy: RetryPolicy {
   }
 }
 
+// MARK: - Static Factory Methods
+
+/// Factory methods for creating retry policies with a clean, discoverable API.
+///
+/// Use these static methods on `RetryPolicy` to create policy instances:
+/// ```swift
+/// // Exponential backoff (default settings)
+/// let config = NetworkConfiguration(baseURL: url, retryPolicy: .exponential())
+///
+/// // Customized exponential backoff
+/// let config = NetworkConfiguration(baseURL: url, retryPolicy: .exponential(maxRetries: 5, jitter: false))
+///
+/// // Linear backoff
+/// let config = NetworkConfiguration(baseURL: url, retryPolicy: .linear(delay: 2.0))
+///
+/// // Immediate retry (no delay)
+/// let config = NetworkConfiguration(baseURL: url, retryPolicy: .immediate())
+///
+/// // Disable retries (this is the default)
+/// let config = NetworkConfiguration(baseURL: url, retryPolicy: .none)
+/// ```
+public extension RetryPolicy where Self == ExponentialBackoffRetryPolicy {
+  /// Creates an exponential backoff retry policy.
+  ///
+  /// Delays increase exponentially: `baseDelay * 2^attempt`, with an optional
+  /// random jitter to prevent thundering herd problems.
+  ///
+  /// - Parameters:
+  ///   - maxRetries: Maximum retry attempts. Default is 3.
+  ///   - baseDelay: Initial delay in seconds. Default is 1.0.
+  ///   - maxDelay: Maximum delay cap in seconds. Default is 60.0.
+  ///   - jitter: Whether to add randomness to delays. Default is true.
+  ///   - conditions: Conditions under which to retry. Default is `.default`.
+  /// - Returns: An exponential backoff retry policy.
+  static func exponential(
+    maxRetries: Int = 3,
+    baseDelay: TimeInterval = 1.0,
+    maxDelay: TimeInterval = 60.0,
+    jitter: Bool = true,
+    conditions: RetryCondition = .default
+  ) -> ExponentialBackoffRetryPolicy {
+    ExponentialBackoffRetryPolicy(
+      maxRetries: maxRetries,
+      baseDelay: baseDelay,
+      maxDelay: maxDelay,
+      jitter: jitter,
+      conditions: conditions
+    )
+  }
+}
+
+public extension RetryPolicy where Self == LinearBackoffRetryPolicy {
+  /// Creates a linear backoff retry policy.
+  ///
+  /// Delays increase linearly: `delay * (attempt + 1)`.
+  ///
+  /// - Parameters:
+  ///   - maxRetries: Maximum retry attempts. Default is 3.
+  ///   - delay: Base delay in seconds. Default is 1.0.
+  ///   - conditions: Conditions under which to retry. Default is `.default`.
+  /// - Returns: A linear backoff retry policy.
+  static func linear(
+    maxRetries: Int = 3,
+    delay: TimeInterval = 1.0,
+    conditions: RetryCondition = .default
+  ) -> LinearBackoffRetryPolicy {
+    LinearBackoffRetryPolicy(
+      maxRetries: maxRetries,
+      delay: delay,
+      conditions: conditions
+    )
+  }
+}
+
+public extension RetryPolicy where Self == ImmediateRetryPolicy {
+  /// Creates an immediate retry policy.
+  ///
+  /// Retries happen immediately without any delay between attempts.
+  ///
+  /// - Parameters:
+  ///   - maxRetries: Maximum retry attempts. Default is 1.
+  ///   - conditions: Conditions under which to retry. Default is `.default`.
+  /// - Returns: An immediate retry policy.
+  static func immediate(
+    maxRetries: Int = 1,
+    conditions: RetryCondition = .default
+  ) -> ImmediateRetryPolicy {
+    ImmediateRetryPolicy(
+      maxRetries: maxRetries,
+      conditions: conditions
+    )
+  }
+}
+
+public extension RetryPolicy where Self == NoRetryPolicy {
+  /// A retry policy that never retries failed requests.
+  ///
+  /// This is the default retry policy. Use one of the other factory methods
+  /// (`.exponential()`, `.linear()`, `.immediate()`) to enable retries.
+  static var none: NoRetryPolicy {
+    NoRetryPolicy()
+  }
+}
+
 // MARK: - NetworkError Extension
 
 extension NetworkError {
