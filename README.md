@@ -1,37 +1,27 @@
 # SmartNet
 
-SmartNet is a modern Swift HTTP networking library designed for iOS development. It provides a clean, type-safe API for making network requests with support for multiple programming paradigms and advanced features like middleware, file operations, and debugging tools.
+**Type-safe Swift HTTP networking**
+
+[![Platform](https://img.shields.io/badge/platform-iOS%2013%2B%20%7C%20macOS%2010.15%2B-blue.svg)](https://developer.apple.com/swift/)
+[![Swift](https://img.shields.io/badge/Swift-5.5%2B-orange.svg)](https://swift.org)
+[![SPM](https://img.shields.io/badge/SPM-compatible-brightgreen.svg)](https://swift.org/package-manager/)
+
+SmartNet provides flexible, type-safe HTTP networking that adapts to any Swift project's programming paradigm. Zero dependencies, thread-safe by design.
 
 ## Features
 
-### Core Features
-
-- **Flexible Configuration**: Comprehensive network configuration with support for base URLs, headers, query parameters, and more
-- **Multiple Programming Paradigms**: Support for Async/Await, Combine, and closure-based callbacks
-- **Type-Safe Request Building**: Generic `Endpoint<Value>` type for type-safe responses and flexible request configuration
-
-### Advanced Features
-
-- **Middleware System**:
-  - Pre-request middleware for request modification
-  - Post-response middleware for response handling
-  - Path-specific middleware support
-  - Async middleware support
-- **File Operations**:
-  - Multipart form data uploads
-  - File downloads with progress tracking
-  - Concurrent upload/download support
-- **Debugging Tools**:
-  - Debug mode configuration
-
-## Projects using SmartNet
-- [YourVPN](https://yourvpn.world/)
+- **Three programming paradigms**: async/await, Combine, closures
+- **Type-safe generic endpoints**: `Endpoint<T>` with automatic decoding
+- **Flexible path matching**: exact, wildcard, glob, regex patterns
+- **Configurable retry policies**: exponential backoff, linear, immediate
+- **Middleware system**: request/response interception with pattern matching
+- **File operations**: upload/download with progress tracking
+- **Zero external dependencies**
+- **Thread-safe by design**
 
 ## Installation
 
-### Swift Package Manager
-
-Add the following to your `Package.swift`:
+Add SmartNet to your `Package.swift`:
 
 ```swift
 dependencies: [
@@ -39,91 +29,53 @@ dependencies: [
 ]
 ```
 
-### CocoaPods
-
-Add the following to your `Podfile`:
-
-```ruby
-pod 'SmartNet'
-```
-
-## Usage
-
-### Configuring the ApiClient
+## Quick Start
 
 ```swift
-let apiClient = ApiClient(
-  config: NetworkConfiguration(
-    baseURL: URL(string: "https://api.publicapis.org")!
-  )
-)
-```
+let client = ApiClient(config: NetworkConfiguration(
+    baseURL: URL(string: "https://api.example.com")!
+))
 
-**Advanced**
-```swift
-let config = NetworkConfiguration(
-    baseURL: URL(string: "https://api.publicapis.org")!,
-    headers: ["Content-Type": "application/json"],
-    queryParameters: ["userid": "xxxxxx"],
-    trustedDomains: ["api.publicapis.org"],
-    requestTimeout: 120
-)
-let network = ApiClient(config: config)
-```
-
-### Endpoints
-```swift
-// MARK: - Define Response DTO
-struct Person: Codable {
-  let name: string?
-  let age: Int?
+struct User: Codable {
+    let id: Int
+    let name: String
 }
 
-// MARK: - GET
-let getEndpoint = Endpoint<Person>(
-  path: "person",
-  queryParameters: QueryParameters(
-    parameters: [
-      "name": "Jhon",
-      "age": 18
-    ]
-  )
-)
-
-// MARK: - POST
-let postEndpoint = Endpoint<Person>(
-  path: "person",
-  method: .post,
-  body: HTTPBody(
-    encodable: PersonRequst(
-      name: "Jhon",
-      age: 18
-    )
-  )
+let user: User = try await client.request(
+    with: Endpoint(path: "users/1")
 )
 ```
 
-### Async
+## Configuration
+
+**Basic:**
+```swift
+let client = ApiClient(config: NetworkConfiguration(
+    baseURL: URL(string: "https://api.example.com")!
+))
+```
+
+**With headers and timeout:**
+```swift
+let config = NetworkConfiguration(
+    baseURL: URL(string: "https://api.example.com")!,
+    headers: ["Content-Type": "application/json"],
+    queryParameters: ["apiKey": "your-key"],
+    requestTimeout: 30
+)
+let client = ApiClient(config: config)
+```
+
+## Making Requests
+
+### Async/Await
 
 ```swift
 do {
-  let person = try await apiClient.request(with: getEndpoint)
-  print(person.name)
+    let user: User = try await client.request(with: Endpoint(path: "users/1"))
+    print(user.name)
 } catch {
     print(error)
-}
-```
-
-### Closures
-
-```swift
-apiClient.request(with: postEndpoint) { response in
-    switch response.result {
-    case let .success(person):
-        print(person.name)
-    case let .failure(error):
-        print(error.localizedDescription)
-    }
 }
 ```
 
@@ -132,107 +84,57 @@ apiClient.request(with: postEndpoint) { response in
 ```swift
 var subscriptions = Set<AnyCancellable>()
 
-apiClient.request(with: getEndpoint)
+client.request(with: Endpoint<User>(path: "users/1"))
     .sink(receiveCompletion: { completion in
         if case .failure(let error) = completion {
             print("Error: \(error)")
         }
-    }, receiveValue: { person in
-        print(person.name)
+    }, receiveValue: { user in
+        print(user.name)
     })
     .store(in: &subscriptions)
 ```
 
-### Middleware
-
-Intercept every request and response with middleware.
+### Closures
 
 ```swift
-// MARK: - Add a global middleware
-network.addMiddleware(
-  ApiClient.Middleware(
-    pathComponent: "/",
-    preRequestCallback: { request in
-      print("Request: \(request)")
-      throw NSError(
-        domain: "smartnet",
-        code: 1, 
-        userInfo: [
-          NSLocalizedDescriptionKey: "Invalid API Request"
-        ]
-      )
-    },
-    postResponseCallback: { _, _, _ in
-      await testAsync()
-      throw NSError(
-        domain: "smartnet", 
-        code: 2,
-        userInfo: [
-          NSLocalizedDescriptionKey: "Invalid Token Refres"
-        ]
-      )
+client.request(with: Endpoint<User>(path: "users/1")) { response in
+    switch response.result {
+    case .success(let user):
+        print(user.name)
+    case .failure(let error):
+        print(error.localizedDescription)
     }
-  )
-)
-
-// MARK: - Add path specific middleware
-network.addMiddleware(
-  ApiClient.Middleware(
-    pathComponent: "person",
-    preRequestCallback: { request in
-      print("Request: \(request)")
-      throw NSError(
-        domain: "smartnet",
-        code: 1, 
-        userInfo: [
-          NSLocalizedDescriptionKey: "Invalid API Request"
-        ]
-      )
-    },
-    postResponseCallback: { _, _, _ in
-      print("Response received")
-      throw NSError(
-        domain: "smartnet", 
-        code: 2,
-        userInfo: [
-          NSLocalizedDescriptionKey: "Invalid Token Refres"
-        ]
-      )
-    }
-  )
-)
-```
-
-### Upload
-
-Upload files with multipart/form-data. Progress updates and response handling are supported.
-
-```swift
-let uploadTask = try! network.upload(
-  with: MultipartFormEndpoint(
-    path: "your/upload/path",
-    form: MultipartFormData { form in
-      form.addTextField(named: "key-1", value: "value-1")
-      form.addDataField(named: "file", data: fileData, fileName: "example.jpg", mimeType: "image/jpeg")
-    }
-  )
-).progress { progress in
-  print("Upload Progress: \(progress.fractionCompleted)")
-}.response { response in
-  print("Upload Response: \(response)")
 }
 ```
 
-### Downloading Files
+## Endpoints
 
-Download files with progress tracking and easy response handling.
-
+**GET with query parameters:**
 ```swift
-let downloadTask = network.download(url: URL(string: "https://example.com/file.zip")!)?
-  .downloadProgress { progress, _ in
-    print("Download Progress: \(progress.fractionCompleted)")
-  }
-  .response { response in
-    print("Download Response: \(response.result)")
-  }
+let endpoint = Endpoint<User>(
+    path: "users",
+    queryParameters: QueryParameters(parameters: [
+        "name": "John",
+        "limit": 10
+    ])
+)
 ```
+
+**POST with body:**
+```swift
+struct CreateUserRequest: Codable {
+    let name: String
+    let email: String
+}
+
+let endpoint = Endpoint<User>(
+    path: "users",
+    method: .post,
+    body: HTTPBody(encodable: CreateUserRequest(
+        name: "John",
+        email: "john@example.com"
+    ))
+)
+```
+
