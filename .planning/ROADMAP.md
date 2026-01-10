@@ -4,6 +4,7 @@
 
 - ✅ [v1.0 Advanced Path Matching](milestones/v1.0-ROADMAP.md) (Phases 1-5) — SHIPPED 2026-01-09
 - ✅ [v2.0 Production Ready](milestones/v2.0-ROADMAP.md) (Phases 6-8) — SHIPPED 2026-01-10
+- 🚧 **v2.1 Retry Policy Ergonomics** - Phase 9 (in progress)
 
 ## Completed Milestones
 
@@ -35,6 +36,20 @@
 
 </details>
 
+### 🚧 v2.1 Retry Policy Ergonomics (In Progress)
+
+**Milestone Goal:** Improve retry policy API ergonomics and change default behavior to no-retry
+
+#### Phase 9: Retry Policy Ergonomics
+
+**Goal**: Change default retry policy to NoRetry and add static factory methods for cleaner API
+**Depends on**: Phase 8
+**Research**: Unlikely (internal patterns)
+**Plans**: TBD
+
+Plans:
+- [ ] 09-01: TBD (run /gsd:plan-phase 9 to break down)
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -47,3 +62,4 @@
 | 6. API Polish Pass | v1.1 | 1/1 | Complete | 2026-01-10 |
 | 7. README Overhaul | v1.1 | 1/1 | Complete | 2026-01-10 |
 | 8. In-Code Documentation | v1.1 | 1/1 | Complete | 2026-01-10 |
+| 9. Retry Policy Ergonomics | v2.1 | 0/? | Not started | - |
