@@ -24,6 +24,17 @@
 
 import Foundation
 
+/// A specialized endpoint for file download operations.
+///
+/// Use `DownloadEndpoint` when you need to download files from a remote server.
+/// This endpoint type conforms to ``Requestable`` with a `Void` response type,
+/// as the downloaded file is handled separately through the download API.
+///
+/// Example:
+/// ```swift
+/// let endpoint = DownloadEndpoint(path: "/files/document.pdf")
+/// let url = try await apiClient.download(endpoint, to: destinationURL)
+/// ```
 public struct DownloadEndpoint: Requestable {
   public typealias Response = Void
   
@@ -37,7 +48,18 @@ public struct DownloadEndpoint: Requestable {
   public let form: MultipartFormData? = nil
   public var allowMiddlewares: Bool
   public var debugRequest: Bool
-  
+
+  /// Creates a new download endpoint.
+  ///
+  /// - Parameters:
+  ///   - path: The URL path for the download request.
+  ///   - isFullPath: If `true`, the path is treated as a complete URL. Default is `false`.
+  ///   - method: The HTTP method to use. Default is `.get`.
+  ///   - headers: Additional headers to include in the request.
+  ///   - useEndpointHeaderOnly: If `true`, only endpoint headers are used, ignoring configuration headers.
+  ///   - queryParameters: Optional query parameters to append to the URL.
+  ///   - allowMiddlewares: If `true`, middlewares are applied to this request. Default is `true`.
+  ///   - debugRequest: If `true`, logs the cURL representation of the request.
   public init(
     path: String,
     isFullPath: Bool = false,
