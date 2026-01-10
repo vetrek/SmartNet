@@ -26,15 +26,15 @@
 
 **Milestone Goal:** Polish the developer experience for public release - clean API, great docs, clear value proposition
 
-#### Phase 6: API Polish Pass
+#### Phase 6: API Polish Pass — Complete
 
 **Goal**: Review and improve public API surface - naming consistency, visibility audit, ergonomics check
 **Depends on**: v1.0 complete
 **Research**: Unlikely (internal patterns)
-**Plans**: TBD
+**Plans**: 1/1
 
 Plans:
-- [ ] 06-01: TBD (run /gsd:plan-phase 6 to break down)
+- [x] 06-01: Documentation & Typo Fixes — completed 2026-01-10
 
 #### Phase 7: README Overhaul
 
@@ -65,6 +65,6 @@ Plans:
 | 3. Wildcard Matching | v1.0 | 1/1 | Complete | 2026-01-09 |
 | 4. Glob Pattern Matching | v1.0 | 1/1 | Complete | 2026-01-09 |
 | 5. Regex Path Matching | v1.0 | 1/1 | Complete | 2026-01-09 |
-| 6. API Polish Pass | v1.1 | 0/? | Not started | - |
+| 6. API Polish Pass | v1.1 | 1/1 | Complete | 2026-01-10 |
 | 7. README Overhaul | v1.1 | 0/? | Not started | - |
 | 8. In-Code Documentation | v1.1 | 0/? | Not started | - |
