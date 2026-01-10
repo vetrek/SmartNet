@@ -136,12 +136,18 @@ public final class UnfairLock: RawMutex {
 }
 
 /// Property wrapper that ensures thread-safe access to its value.
+///
+/// This is implemented as a class (not struct) to ensure thread safety when used on class properties.
+/// A struct property wrapper would have its storage embedded in the containing class, leading to
+/// race conditions when multiple threads access the property simultaneously - even with internal
+/// mutex protection, the struct copy-on-write semantics create a data race at the storage level.
+/// Using a class ensures all mutations happen inside the reference type, protected by the mutex.
 @propertyWrapper
 @dynamicMemberLookup
-public struct ThreadSafe<Value> {
+public final class ThreadSafe<Value> {
   private var value: Value
   private let mutex: any ScopedMutex
-  
+
   /// Initializes the property with a value and a mutex.
   /// - Parameters:
   ///   - wrappedValue: The initial value of the property.
@@ -150,18 +156,18 @@ public struct ThreadSafe<Value> {
     self.value = wrappedValue
     self.mutex = mutex
   }
-  
+
   /// The property's value. Access to this value is synchronized.
   public var wrappedValue: Value {
     get { mutex.sync { value } }
     set { mutex.sync { value = newValue } }
   }
-  
+
   public subscript<Property>(dynamicMember keyPath: WritableKeyPath<Value, Property>) -> Property {
     get { mutex.sync { value[keyPath: keyPath] } }
     set { mutex.sync { value[keyPath: keyPath] = newValue } }
   }
-  
+
   public subscript<Property>(dynamicMember keyPath: KeyPath<Value, Property>) -> Property {
     mutex.sync { value[keyPath: keyPath] }
   }
