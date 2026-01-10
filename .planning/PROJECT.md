@@ -30,6 +30,8 @@ Provide flexible, type-safe HTTP networking that adapts to any Swift project's p
 - ✓ NetworkError Equatable conformance for testing — v2.0
 - ✓ Complete README with PathMatcher documentation — v2.0
 - ✓ DocC documentation on public APIs — v2.0
+- ✓ Static factory methods for retry policies (.exponential(), .linear(), .immediate(), .none) — v2.1
+- ✓ NoRetryPolicy as default (explicit opt-in for retries) — v2.1
 
 ### Active
 
@@ -65,6 +67,11 @@ SmartNet has completed phases 1-5 of its improvement roadmap:
 - DocC documentation on ApiClient+Async, DownloadEndpoint, QueryParameters, Response
 - 11,419 LOC Swift, 305 tests
 
+**v2.1 Retry Policy Ergonomics shipped (2026-01-10):**
+- Static factory methods: `.exponential()`, `.linear()`, `.immediate()`, `.none`
+- Default retry policy changed to NoRetryPolicy (explicit opt-in)
+- 12,200 LOC Swift, 313 tests
+
 ## Constraints
 
 - **Zero dependencies**: Use only Foundation/Swift stdlib for pattern matching implementation
@@ -86,6 +93,8 @@ SmartNet has completed phases 1-5 of its improvement roadmap:
 | Dual regex initializers (failable + throwing) | Different param names to avoid Swift signature collision | ✓ Good |
 | SPM-only installation | CocoaPods outdated, SPM is standard | ✓ Good |
 | DocC style from ApiClient+Combine | Consistent documentation across paradigms | ✓ Good |
+| NoRetryPolicy as default | Explicit opt-in is safer than silent retries | ✓ Good |
+| Protocol extensions with `where Self ==` | Factory methods with proper return types on `any RetryPolicy` | ✓ Good |
 
 ---
-*Last updated: 2026-01-10 after v2.0 milestone*
+*Last updated: 2026-01-10 after v2.1 milestone*

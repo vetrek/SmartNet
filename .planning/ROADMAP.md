@@ -4,7 +4,7 @@
 
 - ✅ [v1.0 Advanced Path Matching](milestones/v1.0-ROADMAP.md) (Phases 1-5) — SHIPPED 2026-01-09
 - ✅ [v2.0 Production Ready](milestones/v2.0-ROADMAP.md) (Phases 6-8) — SHIPPED 2026-01-10
-- 🚧 **v2.1 Retry Policy Ergonomics** - Phase 9 (in progress)
+- ✅ [v2.1 Retry Policy Ergonomics](milestones/v2.1-ROADMAP.md) (Phase 9) — SHIPPED 2026-01-10
 
 ## Completed Milestones
 
@@ -36,19 +36,16 @@
 
 </details>
 
-### ✅ v2.1 Retry Policy Ergonomics (Complete)
+<details>
+<summary>v2.1 Retry Policy Ergonomics (Phase 9) — SHIPPED 2026-01-10</summary>
 
-**Milestone Goal:** Improve retry policy API ergonomics and change default behavior to no-retry
+**Overview:** Improve retry policy API ergonomics with static factory methods and explicit opt-in default.
 
-#### Phase 9: Retry Policy Ergonomics
+- [x] Phase 9: Retry Policy Ergonomics (1/1 plans) — completed 2026-01-10
 
-**Goal**: Change default retry policy to NoRetry and add static factory methods for cleaner API
-**Depends on**: Phase 8
-**Research**: Unlikely (internal patterns)
-**Plans**: 1/1 complete
+**See:** [milestones/v2.1-ROADMAP.md](milestones/v2.1-ROADMAP.md) for full details
 
-Plans:
-- [x] 09-01: Retry policy ergonomics — completed 2026-01-10
+</details>
 
 ## Progress
 

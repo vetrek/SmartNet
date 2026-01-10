@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-01-10)
 
 **Core value:** Provide flexible, type-safe HTTP networking that adapts to any Swift project's programming paradigm while maintaining zero dependencies and thread safety.
-**Current focus:** v2.1 Retry Policy Ergonomics — improve retry policy API
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 9 of 9 (Retry Policy Ergonomics)
-Plan: 1 of 1 complete
-Status: Phase complete
-Last activity: 2026-01-10 — Completed 09-01-PLAN.md
+Phase: All complete (9 phases shipped across 3 milestones)
+Plan: N/A
+Status: Milestone v2.1 complete
+Last activity: 2026-01-10 — v2.1 milestone complete
 
 Progress: ██████████ 100%
 
@@ -59,11 +59,11 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-10
-Stopped at: Completed 09-01-PLAN.md (Phase 9 complete)
+Stopped at: v2.1 milestone complete
 Resume file: None
 
 ### Roadmap Evolution
 
 - v1.0 shipped: 2026-01-09 (Phases 1-5) — Advanced Path Matching
 - v2.0 shipped: 2026-01-10 (Phases 6-8) — Production Ready polish
-- v2.1 created: 2026-01-10 (Phase 9) — Retry Policy Ergonomics
+- v2.1 shipped: 2026-01-10 (Phase 9) — Retry Policy Ergonomics

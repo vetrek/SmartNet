@@ -1,5 +1,29 @@
 # Project Milestones: SmartNet
 
+## v2.1 Retry Policy Ergonomics (Shipped: 2026-01-10)
+
+**Delivered:** Static factory methods for retry policies with explicit opt-in default (NoRetryPolicy)
+
+**Phases completed:** 9 (1 plan total)
+
+**Key accomplishments:**
+- Static factory methods: `.exponential()`, `.linear()`, `.immediate()`, `.none`
+- Changed default retry policy from ExponentialBackoffRetryPolicy to NoRetryPolicy
+- 10 new factory method tests
+- Updated README with factory method documentation
+
+**Stats:**
+- 4 files modified
+- 12,200 lines of Swift total
+- 1 phase, 1 plan, 3 tasks
+- 1 day
+
+**Git range:** `feat(09-01)` → `docs(09-01)`
+
+**What's next:** Future middleware enhancements (priority/ordering, halting, per-endpoint config)
+
+---
+
 ## v2.0 Production Ready (Shipped: 2026-01-10)
 
 **Delivered:** Production-ready developer experience with complete documentation, API polish, and DocC comments
