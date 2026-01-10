@@ -432,13 +432,13 @@ struct EndpointRetryPolicyTests {
 @Suite("NetworkConfiguration RetryPolicy Tests")
 struct NetworkConfigurationRetryPolicyTests {
 
-  @Test("Default configuration uses ExponentialBackoffRetryPolicy")
+  @Test("Default configuration uses NoRetryPolicy")
   func defaultRetryPolicy() {
     let config = NetworkConfiguration(baseURL: URL(string: "https://api.example.com")!)
 
-    #expect(config.retryPolicy.maxRetries == 3)
-    // Default is ExponentialBackoffRetryPolicy
-    #expect(config.retryPolicy is ExponentialBackoffRetryPolicy)
+    #expect(config.retryPolicy.maxRetries == 0)
+    // Default is NoRetryPolicy (explicit opt-in for retries)
+    #expect(config.retryPolicy is NoRetryPolicy)
   }
 
   @Test("Configuration with custom retry policy")
@@ -461,5 +461,128 @@ struct NetworkConfigurationRetryPolicyTests {
     )
 
     #expect(config.retryPolicy.maxRetries == 0)
+  }
+}
+
+// MARK: - Factory Method Tests
+
+@Suite("RetryPolicy Factory Method Tests")
+struct RetryPolicyFactoryMethodTests {
+
+  @Test(".exponential() creates ExponentialBackoffRetryPolicy with defaults")
+  func exponentialFactoryDefaults() {
+    let policy: any RetryPolicy = .exponential()
+
+    #expect(policy is ExponentialBackoffRetryPolicy)
+    #expect(policy.maxRetries == 3)
+
+    let exponential = policy as! ExponentialBackoffRetryPolicy
+    #expect(exponential.baseDelay == 1.0)
+    #expect(exponential.maxDelay == 60.0)
+    #expect(exponential.jitter == true)
+    #expect(exponential.conditions == .default)
+  }
+
+  @Test(".exponential() with custom parameters")
+  func exponentialFactoryCustom() {
+    let policy: any RetryPolicy = .exponential(
+      maxRetries: 5,
+      baseDelay: 2.0,
+      maxDelay: 30.0,
+      jitter: false,
+      conditions: .all
+    )
+
+    #expect(policy is ExponentialBackoffRetryPolicy)
+    #expect(policy.maxRetries == 5)
+
+    let exponential = policy as! ExponentialBackoffRetryPolicy
+    #expect(exponential.baseDelay == 2.0)
+    #expect(exponential.maxDelay == 30.0)
+    #expect(exponential.jitter == false)
+    #expect(exponential.conditions == .all)
+  }
+
+  @Test(".linear() creates LinearBackoffRetryPolicy with defaults")
+  func linearFactoryDefaults() {
+    let policy: any RetryPolicy = .linear()
+
+    #expect(policy is LinearBackoffRetryPolicy)
+    #expect(policy.maxRetries == 3)
+
+    let linear = policy as! LinearBackoffRetryPolicy
+    #expect(linear.delay == 1.0)
+    #expect(linear.conditions == .default)
+  }
+
+  @Test(".linear() with custom parameters")
+  func linearFactoryCustom() {
+    let policy: any RetryPolicy = .linear(
+      maxRetries: 10,
+      delay: 5.0,
+      conditions: [.timeout, .serverError]
+    )
+
+    #expect(policy is LinearBackoffRetryPolicy)
+    #expect(policy.maxRetries == 10)
+
+    let linear = policy as! LinearBackoffRetryPolicy
+    #expect(linear.delay == 5.0)
+    #expect(linear.conditions == [.timeout, .serverError])
+  }
+
+  @Test(".immediate() creates ImmediateRetryPolicy with defaults")
+  func immediateFactoryDefaults() {
+    let policy: any RetryPolicy = .immediate()
+
+    #expect(policy is ImmediateRetryPolicy)
+    #expect(policy.maxRetries == 1)
+
+    let immediate = policy as! ImmediateRetryPolicy
+    #expect(immediate.conditions == .default)
+  }
+
+  @Test(".immediate() with custom parameters")
+  func immediateFactoryCustom() {
+    let policy: any RetryPolicy = .immediate(
+      maxRetries: 3,
+      conditions: .all
+    )
+
+    #expect(policy is ImmediateRetryPolicy)
+    #expect(policy.maxRetries == 3)
+
+    let immediate = policy as! ImmediateRetryPolicy
+    #expect(immediate.conditions == .all)
+  }
+
+  @Test(".none creates NoRetryPolicy")
+  func noneFactory() {
+    let policy: any RetryPolicy = .none
+
+    #expect(policy is NoRetryPolicy)
+    #expect(policy.maxRetries == 0)
+    #expect(policy.shouldRetry(for: .timeout, attempt: 0) == false)
+  }
+
+  @Test("Factory methods work in NetworkConfiguration")
+  func factoryMethodsInConfiguration() {
+    let config1 = NetworkConfiguration(
+      baseURL: URL(string: "https://api.example.com")!,
+      retryPolicy: .exponential()
+    )
+    #expect(config1.retryPolicy is ExponentialBackoffRetryPolicy)
+
+    let config2 = NetworkConfiguration(
+      baseURL: URL(string: "https://api.example.com")!,
+      retryPolicy: .linear(maxRetries: 5)
+    )
+    #expect(config2.retryPolicy.maxRetries == 5)
+
+    let config3 = NetworkConfiguration(
+      baseURL: URL(string: "https://api.example.com")!,
+      retryPolicy: .none
+    )
+    #expect(config3.retryPolicy is NoRetryPolicy)
   }
 }

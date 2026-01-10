@@ -144,23 +144,46 @@ let endpoint = Endpoint<User>(
 
 ## Retry Policies
 
-SmartNet automatically retries failed requests based on configurable policies. The default is exponential backoff with jitter.
+By default, SmartNet does not retry failed requests. Enable retries by configuring a retry policy using the static factory methods.
+
+**Enable retries globally:**
+
+```swift
+let config = NetworkConfiguration(
+    baseURL: URL(string: "https://api.example.com")!,
+    retryPolicy: .exponential()  // 3 retries with exponential backoff
+)
+```
 
 **Built-in policies:**
 
-- `ExponentialBackoffRetryPolicy` (default) - delays: 1s, 2s, 4s, 8s...
-- `LinearBackoffRetryPolicy` - delays: 1s, 2s, 3s, 4s...
-- `ImmediateRetryPolicy` - retry immediately
-- `NoRetryPolicy` - disable retries
+| Factory Method | Delay Pattern | Default Retries |
+|----------------|---------------|-----------------|
+| `.exponential()` | 1s, 2s, 4s, 8s... (with jitter) | 3 |
+| `.linear()` | 1s, 2s, 3s, 4s... | 3 |
+| `.immediate()` | No delay | 1 |
+| `.none` | No retries (default) | 0 |
+
+**Customize retry behavior:**
+
+```swift
+// Custom exponential backoff
+let config = NetworkConfiguration(
+    baseURL: url,
+    retryPolicy: .exponential(
+        maxRetries: 5,
+        baseDelay: 2.0,
+        jitter: false,
+        conditions: [.timeout, .serverError]
+    )
+)
+```
 
 **Per-endpoint retry configuration:**
 
 ```swift
 let endpoint = Endpoint<User>(path: "users/1")
-    .retryPolicy(ExponentialBackoffRetryPolicy(
-        maxRetries: 5,
-        conditions: [.timeout, .connectionLost, .serverError]
-    ))
+    .retryPolicy(.exponential(maxRetries: 5))
 ```
 
 **RetryCondition options:**
