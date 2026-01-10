@@ -46,15 +46,15 @@ Plans:
 Plans:
 - [x] 07-01: README overhaul — completed 2026-01-10
 
-#### Phase 8: In-Code Documentation
+#### Phase 8: In-Code Documentation — Complete
 
 **Goal**: Add detailed READMEs within source directories and DocC comments on public APIs
 **Depends on**: Phase 7
 **Research**: Unlikely (documentation work)
-**Plans**: TBD
+**Plans**: 1/1
 
 Plans:
-- [ ] 08-01: TBD (run /gsd:plan-phase 8 to break down)
+- [x] 08-01: DocC documentation for public APIs — completed 2026-01-10
 
 ## Progress
 
@@ -67,4 +67,4 @@ Plans:
 | 5. Regex Path Matching | v1.0 | 1/1 | Complete | 2026-01-09 |
 | 6. API Polish Pass | v1.1 | 1/1 | Complete | 2026-01-10 |
 | 7. README Overhaul | v1.1 | 1/1 | Complete | 2026-01-10 |
-| 8. In-Code Documentation | v1.1 | 0/? | Not started | - |
+| 8. In-Code Documentation | v1.1 | 1/1 | Complete | 2026-01-10 |
