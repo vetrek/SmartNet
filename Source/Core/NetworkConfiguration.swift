@@ -59,7 +59,15 @@ public final class NetworkConfiguration: NetworkConfigurable {
   /// Print cURL and Response
   public var debug: Bool
 
-  /// Default retry policy for all requests
+  /// Default retry policy for all requests.
+  ///
+  /// By default, no retries are performed. To enable retries, configure a policy:
+  /// ```swift
+  /// let config = NetworkConfiguration(
+  ///   baseURL: url,
+  ///   retryPolicy: .exponential()  // or .linear(), .immediate()
+  /// )
+  /// ```
   public var retryPolicy: RetryPolicy
 
   public init(
@@ -70,7 +78,7 @@ public final class NetworkConfiguration: NetworkConfigurable {
     trustedDomains: [String] = [],
     requestTimeout: TimeInterval = 60,
     debug: Bool = true,
-    retryPolicy: RetryPolicy = ExponentialBackoffRetryPolicy()
+    retryPolicy: RetryPolicy = NoRetryPolicy()
   ) {
     self.baseURL = baseURL
     self.headers = headers
