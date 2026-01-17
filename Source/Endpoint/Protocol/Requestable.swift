@@ -176,7 +176,8 @@ extension Requestable {
       path :
       baseURL.appending(finalPath)
 
-    let escapedEndpoint = endpoint.addingPercentEncoding(
+    let decodedEndpoint = endpoint.removingPercentEncoding ?? endpoint
+    let escapedEndpoint = decodedEndpoint.addingPercentEncoding(
       withAllowedCharacters: .urlQueryAllowed
     ) ?? String()
 
