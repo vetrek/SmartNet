@@ -175,16 +175,16 @@ struct ApiClientMiddlewareTests {
 
 // MARK: - Test Helpers
 
-private struct TestMiddleware: MiddlewareProtocol {
+private struct TestMiddleware: MiddlewareProtocol, Sendable {
   let id = UUID()
   let pathComponent: String
-  private let preRequestHandler: ((inout URLRequest) throws -> Void)?
-  private let postResponseHandler: ((Data?, URLResponse?, Error?) async throws -> ApiClient.MiddlewarePostRequestResult)?
+  private let preRequestHandler: (@Sendable (inout URLRequest) throws -> Void)?
+  private let postResponseHandler: (@Sendable (Data?, URLResponse?, Error?) async throws -> ApiClient.MiddlewarePostRequestResult)?
 
   init(
     pathComponent: String,
-    preRequestHandler: ((inout URLRequest) throws -> Void)? = nil,
-    postResponseHandler: ((Data?, URLResponse?, Error?) async throws -> ApiClient.MiddlewarePostRequestResult)? = nil
+    preRequestHandler: (@Sendable (inout URLRequest) throws -> Void)? = nil,
+    postResponseHandler: (@Sendable (Data?, URLResponse?, Error?) async throws -> ApiClient.MiddlewarePostRequestResult)? = nil
   ) {
     self.pathComponent = pathComponent
     self.preRequestHandler = preRequestHandler

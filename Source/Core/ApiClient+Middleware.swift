@@ -9,7 +9,7 @@ extension ApiClient {
   /// This struct defines a middleware with a unique identifier, target URL path matcher,
   /// a callback closure to execute, and specifies whether it should be applied before the request is sent
   /// or after the response is received.
-  public struct Middleware: MiddlewareProtocol {
+  public struct Middleware: MiddlewareProtocol, Sendable {
     public let id = UUID()
 
     /// The path matcher that determines which requests this middleware applies to.
@@ -32,10 +32,10 @@ extension ApiClient {
     public var pathComponent: String { _pathMatcher.pattern }
 
     /// Closure to be executed before the request is sent.
-    let preRequestCallback: (URLRequest) throws -> Void
+    let preRequestCallback: @Sendable (URLRequest) throws -> Void
 
     /// Closure to be executed after the response is received.
-    let postResponseCallback: (Data?, URLResponse?, Error?) async throws -> MiddlewarePostRequestResult
+    let postResponseCallback: @Sendable (Data?, URLResponse?, Error?) async throws -> MiddlewarePostRequestResult
 
     /// Creates a middleware that targets requests matching the specified path matcher.
     ///
@@ -45,8 +45,8 @@ extension ApiClient {
     ///   - postResponseCallback: Closure executed after the response is received.
     public init(
       pathMatcher: PathMatcher,
-      preRequestCallback: @escaping (URLRequest) throws -> Void,
-      postResponseCallback: @escaping (Data?, URLResponse?, Error?) async throws -> MiddlewarePostRequestResult
+      preRequestCallback: @Sendable @escaping (URLRequest) throws -> Void,
+      postResponseCallback: @Sendable @escaping (Data?, URLResponse?, Error?) async throws -> MiddlewarePostRequestResult
     ) {
       self._pathMatcher = pathMatcher
       self.preRequestCallback = preRequestCallback
@@ -63,8 +63,8 @@ extension ApiClient {
     ///   - postResponseCallback: Closure executed after the response is received.
     public init(
       pathComponent: String,
-      preRequestCallback: @escaping (URLRequest) throws -> Void,
-      postResponseCallback: @escaping (Data?, URLResponse?, Error?) async throws -> MiddlewarePostRequestResult
+      preRequestCallback: @Sendable @escaping (URLRequest) throws -> Void,
+      postResponseCallback: @Sendable @escaping (Data?, URLResponse?, Error?) async throws -> MiddlewarePostRequestResult
     ) {
       self._pathMatcher = ContainsPathMatcher(pattern: pathComponent)
       self.preRequestCallback = preRequestCallback
@@ -86,7 +86,7 @@ extension ApiClient {
   }
 }
 
-public protocol MiddlewareProtocol {
+public protocol MiddlewareProtocol: Sendable {
   var id: UUID { get }
 
   /// The path component used for matching. Deprecated in favor of `pathMatcher`.
