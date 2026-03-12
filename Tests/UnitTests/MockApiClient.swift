@@ -87,7 +87,7 @@ public final class MockApiClient: ApiClientProtocol {
     requestedEndpoints.append(endpoint)
     if let error = mockError { throw error }
     guard let response = mockDecodableResponse as? D else {
-      throw NetworkError.parsingFailed
+      throw NetworkError.parsingFailed()
     }
     return response
   }
@@ -141,7 +141,7 @@ public final class MockApiClient: ApiClientProtocol {
       } else if let response = self.mockDecodableResponse as? D {
         completion(Response(result: .success(response)))
       } else {
-        completion(Response(result: .failure(.parsingFailed)))
+        completion(Response(result: .failure(.parsingFailed())))
       }
     }
     return nil
@@ -218,7 +218,7 @@ public final class MockApiClient: ApiClientProtocol {
       return Fail(error: error).eraseToAnyPublisher()
     }
     guard let response = mockDecodableResponse as? D else {
-      return Fail(error: NetworkError.parsingFailed).eraseToAnyPublisher()
+      return Fail(error: NetworkError.parsingFailed()).eraseToAnyPublisher()
     }
     return Just(response)
       .setFailureType(to: Error.self)

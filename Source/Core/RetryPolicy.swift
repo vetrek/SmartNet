@@ -377,7 +377,7 @@ extension NetworkError {
       }
       return false
 
-    case .cancelled, .parsingFailed, .emptyResponse, .urlGeneration,
+    case .cancelled, .parsingFailed(_, _, _, _, _), .emptyResponse, .urlGeneration,
          .dataToStringFailure, .middleware, .generic, .sslError,
          .middlewareMaxRetry, .unableToSaveFile, .parsedError,
          .invalidSessions, .invalidDownloadUrl, .invalidDownloadFileData,

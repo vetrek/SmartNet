@@ -27,7 +27,20 @@ import Foundation
 public enum NetworkError: Error, CustomStringConvertible, Equatable {
   case error(statusCode: Int, data: Data?)
   case parsedError(error: Decodable)
-  case parsingFailed
+  /// JSON parsing failed with optional context about the failure location
+  /// - Parameters:
+  ///   - keyPath: The JSON key path where parsing failed (e.g., "data.recoveryBaseline.recoveryBaseline")
+  ///   - expectedType: The Swift type expected by the model (e.g., "Float", "Int")
+  ///   - actualType: The JSON type received (e.g., "Double", "String")
+  ///   - value: The problematic value as a string (if available)
+  ///   - message: A description of what went wrong
+  case parsingFailed(
+    keyPath: String? = nil,
+    expectedType: String? = nil,
+    actualType: String? = nil,
+    value: String? = nil,
+    message: String? = nil
+  )
   case emptyResponse
   case invalidSessions
   case invalidDownloadUrl
@@ -72,8 +85,25 @@ public enum NetworkError: Error, CustomStringConvertible, Equatable {
             \(body)
             """
     
-    case .parsingFailed:
-      return "Failed to parse the JSON response."
+    case .parsingFailed(let keyPath, let expectedType, let actualType, let value, let message):
+      var description = "Failed to parse the JSON response."
+      if let keyPath = keyPath {
+        description += " Key path: '\(keyPath)'."
+      }
+      if let expectedType = expectedType, let actualType = actualType {
+        description += " Expected type '\(expectedType)' but received '\(actualType)'."
+      } else if let expectedType = expectedType {
+        description += " Expected type '\(expectedType)'."
+      } else if let actualType = actualType {
+        description += " Received type '\(actualType)'."
+      }
+      if let value = value {
+        description += " Value: '\(value)'."
+      }
+      if let message = message {
+        description += " Reason: \(message)"
+      }
+      return description
     
     case .emptyResponse:
       return "The request returned an empty response."
@@ -145,6 +175,148 @@ extension NetworkError: LocalizedError {
   public var errorDescription: String? { description }
 }
 
+// MARK: - DecodingError Helper
+
+extension NetworkError {
+  /// Creates a `parsingFailed` error with context extracted from a `DecodingError`
+  /// - Parameter error: The original error from JSON decoding
+  /// - Returns: A `NetworkError.parsingFailed` with detailed context about the failure location
+  public static func parsingFailed(from error: Error) -> NetworkError {
+    guard let decodingError = error as? DecodingError else {
+      return .parsingFailed(message: error.localizedDescription)
+    }
+    
+    let keyPath: String
+    var expectedType: String? = nil
+    var actualType: String? = nil
+    var value: String? = nil
+    var message: String? = nil
+    
+    switch decodingError {
+    case .keyNotFound(let key, let context):
+      keyPath = Self.formatKeyPath(context.codingPath + [key])
+      message = "Key '\(key.stringValue)' not found"
+      
+    case .valueNotFound(let type, let context):
+      keyPath = Self.formatKeyPath(context.codingPath)
+      expectedType = Self.formatTypeName(type)
+      actualType = "null"
+      message = "Value is required but found null"
+      
+    case .typeMismatch(let type, let context):
+      keyPath = Self.formatKeyPath(context.codingPath)
+      expectedType = Self.formatTypeName(type)
+      actualType = Self.extractActualType(from: context.debugDescription)
+      message = context.debugDescription
+      
+    case .dataCorrupted(let context):
+      keyPath = Self.formatKeyPath(context.codingPath)
+      // Extract the underlying error message for more details
+      if let underlyingError = context.underlyingError as NSError? {
+        let debugDesc = underlyingError.userInfo[NSDebugDescriptionErrorKey] as? String ?? context.debugDescription
+        
+        // Parse messages like "Number 37.11 is not representable in Swift."
+        // This happens when JSON has a decimal (Double) but model expects Int,
+        // or when precision is lost converting to Float/Decimal
+        if debugDesc.contains("Number") && debugDesc.contains("not representable") {
+          let components = debugDesc.components(separatedBy: " ")
+          if components.count > 1 {
+            value = components[1]
+            // Determine if it's a decimal number (has a dot)
+            if let numValue = value, numValue.contains(".") {
+              actualType = "Double (decimal number in JSON)"
+              expectedType = "Int (integer expected by model)"
+              message = "Cannot convert decimal value to integer. Change model property to Double or Float"
+            } else {
+              // Integer that's too large for the target type
+              actualType = "Number (from JSON)"
+              expectedType = "Int/Int32 (model property may be too small)"
+              message = "Number is too large for the expected integer type"
+            }
+          }
+        } else {
+          message = debugDesc
+        }
+      } else {
+        message = context.debugDescription
+      }
+      
+    @unknown default:
+      keyPath = ""
+      message = decodingError.localizedDescription
+    }
+    
+    return .parsingFailed(
+      keyPath: keyPath.isEmpty ? nil : keyPath,
+      expectedType: expectedType,
+      actualType: actualType,
+      value: value,
+      message: message
+    )
+  }
+  
+  /// Formats an array of coding keys into a readable key path string
+  private static func formatKeyPath(_ codingPath: [CodingKey]) -> String {
+    codingPath.map { key in
+      // Check if it's an array index
+      if let intValue = key.intValue {
+        return "[\(intValue)]"
+      }
+      return key.stringValue
+    }.joined(separator: ".")
+    .replacingOccurrences(of: ".[", with: "[") // Clean up array notation
+  }
+  
+  /// Formats a Swift type into a readable string
+  private static func formatTypeName(_ type: Any.Type) -> String {
+    let fullName = String(describing: type)
+    // Simplify common generic types
+    if fullName.hasPrefix("Optional<") {
+      let inner = fullName.dropFirst(9).dropLast(1)
+      return "\(inner)?"
+    }
+    if fullName.hasPrefix("Array<") {
+      let inner = fullName.dropFirst(6).dropLast(1)
+      return "[\(inner)]"
+    }
+    if fullName.hasPrefix("Dictionary<") {
+      return fullName
+        .replacingOccurrences(of: "Dictionary<", with: "[")
+        .replacingOccurrences(of: ", ", with: ": ")
+        .dropLast().appending("]")
+    }
+    return fullName
+  }
+  
+  /// Extracts the actual JSON type from a debug description
+  private static func extractActualType(from debugDescription: String) -> String? {
+    // Common patterns in debug descriptions:
+    // "Expected to decode Double but found a string/data instead."
+    // "Expected to decode Array<Any> but found a dictionary instead."
+    let patterns = [
+      "found a string": "String",
+      "found an array": "Array",
+      "found a dictionary": "Dictionary/Object",
+      "found a number": "Number",
+      "found a boolean": "Bool",
+      "found null": "null",
+      "found string": "String",
+      "found array": "Array",
+      "found dictionary": "Dictionary/Object",
+      "found number": "Number",
+      "found bool": "Bool"
+    ]
+    
+    let lowercased = debugDescription.lowercased()
+    for (pattern, type) in patterns {
+      if lowercased.contains(pattern) {
+        return type
+      }
+    }
+    return nil
+  }
+}
+
 // MARK: - Equatable
 
 extension NetworkError {
@@ -157,7 +329,12 @@ extension NetworkError {
       // Compare by string representation since Decodable isn't Equatable
       return String(describing: lhsError) == String(describing: rhsError)
 
-    case (.parsingFailed, .parsingFailed),
+    case (.parsingFailed(let lhsKeyPath, let lhsExpected, let lhsActual, let lhsValue, let lhsMessage),
+          .parsingFailed(let rhsKeyPath, let rhsExpected, let rhsActual, let rhsValue, let rhsMessage)):
+      return lhsKeyPath == rhsKeyPath && lhsExpected == rhsExpected && lhsActual == rhsActual 
+        && lhsValue == rhsValue && lhsMessage == rhsMessage
+
+    case
          (.emptyResponse, .emptyResponse),
          (.invalidSessions, .invalidSessions),
          (.invalidDownloadUrl, .invalidDownloadUrl),

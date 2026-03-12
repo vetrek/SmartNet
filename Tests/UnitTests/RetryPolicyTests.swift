@@ -382,7 +382,7 @@ struct NetworkErrorConditionMatchingTests {
     let conditions = RetryCondition.all
 
     #expect(!NetworkError.cancelled.matchesCondition(conditions))
-    #expect(!NetworkError.parsingFailed.matchesCondition(conditions))
+    #expect(!NetworkError.parsingFailed().matchesCondition(conditions))
     #expect(!NetworkError.emptyResponse.matchesCondition(conditions))
     #expect(!NetworkError.urlGeneration.matchesCondition(conditions))
     #expect(!NetworkError.middlewareMaxRetry.matchesCondition(conditions))

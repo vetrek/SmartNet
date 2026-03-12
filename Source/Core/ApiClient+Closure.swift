@@ -51,8 +51,9 @@ public extension ApiClient {
           let responseObject = try decoder.decode(D.self, from: data)
           completion(response.convertedTo(result: .success(responseObject)))
         } catch {
-          SmartNetLogger.shared.debug("Parsing error: \(error)")
-          completion(response.convertedTo(result: .failure(.parsingFailed)))
+          let networkError = NetworkError.parsingFailed(from: error)
+          SmartNetLogger.shared.debug("Parsing error: \(networkError.description)")
+          completion(response.convertedTo(result: .failure(networkError)))
         }
       case .failure(let error):
         completion(response.convertedTo(result: .failure(error)))

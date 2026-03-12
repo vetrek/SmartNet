@@ -60,7 +60,7 @@ public struct QueryParameters {
   /// - Throws: ``NetworkError/parsingFailed`` if the conversion fails.
   public init(encodable: Encodable) throws {
     guard let parameters = try encodable.toDictionary() else {
-      throw NetworkError.parsingFailed
+      throw NetworkError.parsingFailed(message: "Failed to convert encodable to query parameters dictionary")
     }
     self.parameters = parameters
   }

@@ -45,8 +45,9 @@ public extension ApiClient {
       let responseObject = try decoder.decode(D.self, from: data)
       return responseObject
     } catch let error {
-      SmartNetLogger.shared.debug("Parsing error: \(String(describing: error))")
-      throw NetworkError.parsingFailed
+      let networkError = NetworkError.parsingFailed(from: error)
+      SmartNetLogger.shared.debug("Parsing error: \(networkError.description)")
+      throw networkError
     }
   }
 

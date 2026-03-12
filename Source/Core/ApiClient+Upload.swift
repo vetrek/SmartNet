@@ -258,7 +258,7 @@ extension UploadTask where ResponseType: Decodable {
         let responseObject = try JSONDecoder().decode(ResponseType.self, from: data)
         self.handleSuccessResponse(responseObject: responseObject)
       } catch {
-        self.handleErrorResponse(error: .parsingFailed)
+        self.handleErrorResponse(error: .parsingFailed(from: error))
       }
     }
     observeUploadProgress()
