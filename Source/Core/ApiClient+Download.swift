@@ -70,7 +70,7 @@ public final class DownloadTask: NetworkCancellable, Hashable {
   private var progressObserver: NSKeyValueObservation?
   private var resumedData: Data?
   private var downloadDestination: DownloadFileDestination?
-  let shouldDebug: Bool
+  let shouldDebug: Bool?
   
   // MARK: - Public Properties
   public var state: DownloadState = .waitingStart
@@ -103,7 +103,7 @@ public final class DownloadTask: NetworkCancellable, Hashable {
     self.session = session
     self.remoteURL = url
     self.remoteURLRequest = URLRequest(url: url)
-    self.shouldDebug = false
+    self.shouldDebug = nil
     commonInit()
   }
   
@@ -376,7 +376,7 @@ extension ApiClient: URLSessionDownloadDelegate {
     // Start pending downloads if any
     startNextPendingDownload()
     
-    if (config.debug || download.shouldDebug),
+    if (download.shouldDebug ?? config.debug),
        let request = downloadTask.currentRequest {
       ApiClient.printCurl(
         session: session,

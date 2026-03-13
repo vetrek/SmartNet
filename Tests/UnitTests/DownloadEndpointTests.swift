@@ -120,10 +120,10 @@ struct DownloadEndpointTests {
 
   // MARK: - Debug Tests
 
-  @Test("DownloadEndpoint debugRequest defaults to false")
-  func debugRequestDefaultsFalse() {
+  @Test("DownloadEndpoint debugRequest defaults to nil")
+  func debugRequestDefaultsNil() {
     let endpoint = DownloadEndpoint(path: "files/download")
-    #expect(endpoint.debugRequest == false)
+    #expect(endpoint.debugRequest == nil)
   }
 
   @Test("DownloadEndpoint debugRequest can be enabled")

@@ -47,7 +47,7 @@ public struct DownloadEndpoint: Requestable {
   public let body: HTTPBody? = nil
   public let form: MultipartFormData? = nil
   public var allowMiddlewares: Bool
-  public var debugRequest: Bool
+  public var debugRequest: Bool?
 
   /// Creates a new download endpoint.
   ///
@@ -59,7 +59,7 @@ public struct DownloadEndpoint: Requestable {
   ///   - useEndpointHeaderOnly: If `true`, only endpoint headers are used, ignoring configuration headers.
   ///   - queryParameters: Optional query parameters to append to the URL.
   ///   - allowMiddlewares: If `true`, middlewares are applied to this request. Default is `true`.
-  ///   - debugRequest: If `true`, logs the cURL representation of the request.
+  ///   - debugRequest: Controls cURL logging. `nil` follows global setting, `true` always logs, `false` never logs.
   public init(
     path: String,
     isFullPath: Bool = false,
@@ -68,7 +68,7 @@ public struct DownloadEndpoint: Requestable {
     useEndpointHeaderOnly: Bool = false,
     queryParameters: QueryParameters? = nil,
     allowMiddlewares: Bool = true,
-    debugRequest: Bool = false
+    debugRequest: Bool? = nil
   ) {
     self.path = path
     self.isFullPath = isFullPath

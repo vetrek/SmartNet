@@ -151,8 +151,11 @@ public protocol Requestable {
   /// Call
   var allowMiddlewares: Bool { get }
 
-  /// Enables cURL logging for this endpoint regardless of the client's global debug flag.
-  var debugRequest: Bool { get }
+  /// Controls cURL logging for this endpoint.
+  /// - `nil` (default): follows the client's global `debug` setting.
+  /// - `true`: always logs, even if global debug is off.
+  /// - `false`: never logs, even if global debug is on.
+  var debugRequest: Bool? { get }
 
   /// Custom retry policy for this endpoint. If nil, uses the config's default policy.
   var retryPolicy: RetryPolicy? { get }
@@ -303,7 +306,7 @@ extension Requestable {
 }
 
 public extension Requestable {
-  var debugRequest: Bool { false }
+  var debugRequest: Bool? { nil }
   var retryPolicy: RetryPolicy? { nil }
   var payload: HTTPPayload? { nil }
 }

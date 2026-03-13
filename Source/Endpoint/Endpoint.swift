@@ -38,7 +38,7 @@ public struct Endpoint<Value>: Requestable {
   public let form: MultipartFormData? = nil
   public var payload: HTTPPayload?
   public var allowMiddlewares: Bool
-  public var debugRequest: Bool
+  public var debugRequest: Bool?
   public var retryPolicy: RetryPolicy?
 
   /// Creates an endpoint with legacy body parameter.
@@ -51,7 +51,7 @@ public struct Endpoint<Value>: Requestable {
     queryParameters: QueryParameters? = nil,
     body: HTTPBody? = nil,
     allowMiddlewares: Bool = true,
-    debugRequest: Bool = false,
+    debugRequest: Bool? = nil,
     retryPolicy: RetryPolicy? = nil
   ) {
     self.path = path
@@ -77,7 +77,7 @@ public struct Endpoint<Value>: Requestable {
     queryParameters: QueryParameters? = nil,
     payload: HTTPPayload?,
     allowMiddlewares: Bool = true,
-    debugRequest: Bool = false,
+    debugRequest: Bool? = nil,
     retryPolicy: RetryPolicy? = nil
   ) {
     self.path = path

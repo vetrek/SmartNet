@@ -289,7 +289,7 @@ extension ApiClient {
         guard let self else { return }
 
         // Print cURL
-        if (self.config.debug || endpoint.debugRequest), let session = self.session {
+        if (endpoint.debugRequest ?? self.config.debug), let session = self.session {
           let elapsed = Date().timeIntervalSince(startTime)
           let ms = Int((elapsed.truncatingRemainder(dividingBy: 1)) * 1000)
           if elapsed < 1 {

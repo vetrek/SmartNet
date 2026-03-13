@@ -47,6 +47,9 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
   
   /// Endpoint information including how to construct the URLRequest.
   private var endpoint: any Requestable
+
+  /// Whether the global debug flag is enabled.
+  private var globalDebug: Bool
   
   /// Observes the progress of the upload task.
   private var progressObserver: NSKeyValueObservation?
@@ -81,6 +84,7 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
   ) throws {
     self.session = session
     self.endpoint = endpoint
+    self.globalDebug = config.debug
     self.onUploadCompleted = onUploadCompleted
     self.remoteURLRequest = try endpoint.urlRequest(with: config)
     self.remoteURLRequest.httpBody = nil
@@ -192,12 +196,14 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
 private extension UploadTask {
   /// Evaluates the HTTP response and error to determine if the response is valid and to identify any network errors.
   func handleCommonResponse(data: Data?, response: URLResponse?, error: Error?) -> (isValid: Bool, error: NetworkError?) {
-    ApiClient.printCurl(
-      session: session,
-      request: remoteURLRequest,
-      response: response,
-      data: data
-    )
+    if endpoint.debugRequest ?? globalDebug {
+      ApiClient.printCurl(
+        session: session,
+        request: remoteURLRequest,
+        response: response,
+        data: data
+      )
+    }
     
     guard error == nil else {
       return (false, .generic(error!))
