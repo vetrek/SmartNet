@@ -23,7 +23,7 @@
 //
 
 import Foundation
-import os.log
+import OSLog
 
 /// Log levels for SmartNet logging
 public enum LogLevel: Int, Comparable {
@@ -36,19 +36,9 @@ public enum LogLevel: Int, Comparable {
   public static func < (lhs: LogLevel, rhs: LogLevel) -> Bool {
     lhs.rawValue < rhs.rawValue
   }
-
-  var osLogType: OSLogType {
-    switch self {
-    case .debug: return .debug
-    case .info: return .info
-    case .warning: return .default
-    case .error: return .error
-    case .none: return .debug
-    }
-  }
 }
 
-/// Internal logger for SmartNet using os_log
+/// Internal logger for SmartNet using Logger
 public final class SmartNetLogger {
   /// Shared instance
   public static let shared = SmartNetLogger()
@@ -59,10 +49,9 @@ public final class SmartNetLogger {
   /// Enable/disable logging entirely
   public var isEnabled: Bool = true
 
-  private let log: OSLog
+  private let logger = Logger(subsystem: "com.smartnet", category: "network")
 
   private init() {
-    self.log = OSLog(subsystem: "com.smartnet", category: "network")
     #if DEBUG
     self.minimumLogLevel = .debug
     #else
@@ -93,6 +82,18 @@ public final class SmartNetLogger {
   /// Log a message at the specified level
   public func log(_ message: @autoclosure () -> String, level: LogLevel) {
     guard isEnabled, level >= minimumLogLevel, level != .none else { return }
-    os_log("%{public}@", log: log, type: level.osLogType, message())
+    let msg = message()
+    switch level {
+    case .debug:
+      logger.debug("\(msg, privacy: .public)")
+    case .info:
+      logger.info("\(msg, privacy: .public)")
+    case .warning:
+      logger.warning("\(msg, privacy: .public)")
+    case .error:
+      logger.error("\(msg, privacy: .public)")
+    case .none:
+      break
+    }
   }
 }
