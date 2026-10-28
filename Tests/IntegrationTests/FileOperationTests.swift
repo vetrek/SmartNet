@@ -141,6 +141,45 @@ struct FileOperationTests {
     #expect(downloadTask == nil)
   }
 
+  @Test("Transport failures free download slots for pending downloads")
+  func transportFailuresFreeDownloadSlots() async {
+    let (client, _) = createMockClient()
+    defer {
+      client.destroy()
+      MockURLProtocol.removeHandler(for: "/slots/lost")
+      MockURLProtocol.removeHandler(for: "/slots/ok")
+    }
+
+    MockURLProtocol.setHandler(for: "/slots/lost") { _ in
+      throw URLError(.networkConnectionLost)
+    }
+    MockURLProtocol.setHandler(for: "/slots/ok") { request in
+      (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, Data("ok".utf8))
+    }
+
+    for index in 0..<client.maxConcurrentDownloads {
+      _ = client.download(with: DownloadEndpoint(path: "slots/lost/\(index)")) as DownloadTask?
+    }
+
+    var continuation: AsyncStream<Bool>.Continuation!
+    let succeeded = AsyncStream<Bool> { continuation = $0 }
+    let pending: DownloadTask? = client.download(with: DownloadEndpoint(path: "slots/ok"))
+    pending?.response(queue: .global()) { [continuation] response in
+      if case .success = response.result {
+        continuation?.yield(true)
+      } else {
+        continuation?.yield(false)
+      }
+    }
+    Task { [continuation] in
+      try? await Task.sleep(nanoseconds: 5_000_000_000)
+      continuation?.yield(false)
+    }
+
+    var iterator = succeeded.makeAsyncIterator()
+    #expect(await iterator.next() == true)
+  }
+
   // MARK: - Download Task Callback Tests
 
   @Test("Download task accepts progress callback")

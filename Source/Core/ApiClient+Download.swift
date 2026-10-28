@@ -387,6 +387,21 @@ extension ApiClient: URLSessionDownloadDelegate {
   
   public func urlSession(
     _ session: URLSession,
+    task: URLSessionTask,
+    didCompleteWithError error: Error?
+  ) {
+    guard
+      let error,
+      let download = downloadsTasks.first(where: { $0.task.taskIdentifier == task.taskIdentifier }),
+      download.state != .paused
+    else { return }
+    downloadsTasks.remove(download)
+    download.downloadHandler(tmpURL: nil, urlResponse: task.response, error: resolve(error: error))
+    startNextPendingDownload()
+  }
+
+  public func urlSession(
+    _ session: URLSession,
     downloadTask: URLSessionDownloadTask,
     didWriteData bytesWritten: Int64,
     totalBytesWritten: Int64,
