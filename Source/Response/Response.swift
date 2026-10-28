@@ -26,7 +26,6 @@ import Foundation
 /// ```
 public struct Response<Value: Sendable>: Sendable {
   /// The result of the network request, either success with a value or failure with an error.
-  /// The result of the network request, either success with a value or failure with an error.
   public let result: Result<Value>
 
   /// The URL request that was sent.
