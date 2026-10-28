@@ -330,6 +330,177 @@ struct FileOperationTests {
     #expect(pending.state != .waitingStart)
   }
 
+  // MARK: - Upload Cancel, Pause and Destroy Tests
+
+  private static func ok(_ request: URLRequest, _ body: String) -> (HTTPURLResponse, Data) {
+    (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, Data(body.utf8))
+  }
+
+  private func record(_ task: UploadTask<String>, into events: EventRecorder) {
+    task.response(queue: .global()) { response in
+      switch response.result {
+      case .success(let value):
+        events.record(value)
+      case .failure(.generic(let error)) where (error as? URLError)?.code == .cancelled:
+        events.record("cancelled")
+      case .failure(let error):
+        events.record("\(error)")
+      }
+    }
+  }
+
+  private func waitFor(_ condition: () -> Bool) async throws {
+    for _ in 0..<150 where !condition() {
+      try await Task.sleep(nanoseconds: 20_000_000)
+    }
+  }
+
+  @Test("Cancelling a queued upload reports cancellation and never sends it")
+  func cancelQueuedUpload() async throws {
+    let (client, _) = createMockClient()
+    let events = EventRecorder()
+    defer {
+      client.destroy()
+      MockURLProtocol.removeHandler(for: "/upqueued/slow")
+      MockURLProtocol.removeHandler(for: "/upqueued/queued")
+    }
+    MockURLProtocol.setHandler(for: "/upqueued/slow") { request in
+      Thread.sleep(forTimeInterval: 0.3)
+      return Self.ok(request, "slow")
+    }
+    MockURLProtocol.setHandler(for: "/upqueued/queued") { request in
+      events.record("sent")
+      return Self.ok(request, "queued")
+    }
+
+    let form = MultipartFormData { $0.addTextField(named: "field", value: "value") }
+    let running = try (0..<client.maxConcurrentUploads).map { _ in
+      try client.upload(with: MultipartFormEndpoint<String>(path: "upqueued/slow", form: form))
+    }
+    let queued = try client.upload(with: MultipartFormEndpoint<String>(path: "upqueued/queued", form: form))
+    record(queued, into: events)
+
+    #expect(Set([queued, queued]).count == 1)
+    queued.cancel()
+
+    #expect(queued.state == .cancelled)
+    #expect(client.pendingUploads.isEmpty)
+    try await waitFor { running.allSatisfy { $0.state == .completed } && client.uploadsTasks.isEmpty }
+    try await Task.sleep(nanoseconds: 100_000_000)
+    #expect(running.allSatisfy { $0.state == .completed })
+    #expect(events.values == ["cancelled"])
+    #expect(queued.state == .cancelled)
+  }
+
+  @Test("Paused upload keeps its slot silently and resume uploads it again")
+  func pauseResumeUpload() async throws {
+    guard #available(iOS 17.0, macOS 14.0, *) else { return }
+    let (client, _) = createMockClient()
+    let events = EventRecorder()
+    let attempts = EventRecorder()
+    defer {
+      client.destroy()
+      MockURLProtocol.removeHandler(for: "/uppause/file")
+    }
+    MockURLProtocol.setHandler(for: "/uppause/file") { request in
+      attempts.record("sent")
+      if attempts.values.count == 1 {
+        Thread.sleep(forTimeInterval: 0.3)
+      }
+      return Self.ok(request, "done")
+    }
+
+    let form = MultipartFormData { $0.addTextField(named: "field", value: "value") }
+    let upload = try client.upload(with: MultipartFormEndpoint<String>(path: "uppause/file", form: form))
+    record(upload, into: events)
+    try await waitFor { !attempts.values.isEmpty }
+
+    upload.pause()
+    try await Task.sleep(nanoseconds: 500_000_000)
+    #expect(upload.state == .paused)
+    #expect(events.values.isEmpty)
+    #expect(client.uploadsTasks.count == 1)
+
+    upload.resume()
+    try await waitFor { upload.state == .completed && !events.values.isEmpty }
+    try await Task.sleep(nanoseconds: 100_000_000)
+    #expect(upload.state == .completed)
+    #expect(events.values == ["done"])
+    #expect(attempts.values.count == 2)
+    #expect(client.uploadsTasks.isEmpty)
+  }
+
+  @Test("Cancelling a paused upload reports cancellation and frees its slot")
+  func cancelPausedUpload() async throws {
+    guard #available(iOS 17.0, macOS 14.0, *) else { return }
+    let (client, _) = createMockClient()
+    let events = EventRecorder()
+    let attempts = EventRecorder()
+    defer {
+      client.destroy()
+      MockURLProtocol.removeHandler(for: "/uppausecancel/file")
+    }
+    MockURLProtocol.setHandler(for: "/uppausecancel/file") { request in
+      attempts.record("sent")
+      Thread.sleep(forTimeInterval: 0.3)
+      return Self.ok(request, "done")
+    }
+
+    let form = MultipartFormData { $0.addTextField(named: "field", value: "value") }
+    let upload = try client.upload(with: MultipartFormEndpoint<String>(path: "uppausecancel/file", form: form))
+    record(upload, into: events)
+    try await waitFor { !attempts.values.isEmpty }
+
+    upload.pause()
+    upload.cancel()
+    try await waitFor { !events.values.isEmpty }
+    try await Task.sleep(nanoseconds: 500_000_000)
+
+    #expect(upload.state == .cancelled)
+    #expect(events.values == ["cancelled"])
+    #expect(client.uploadsTasks.isEmpty)
+  }
+
+  @Test("Destroy cancels running and queued uploads")
+  func destroyCancelsUploads() async throws {
+    let (client, _) = createMockClient()
+    let events = EventRecorder()
+    let sent = EventRecorder()
+    defer {
+      MockURLProtocol.removeHandler(for: "/updestroy/running")
+      MockURLProtocol.removeHandler(for: "/updestroy/queued")
+    }
+    MockURLProtocol.setHandler(for: "/updestroy/running") { request in
+      Thread.sleep(forTimeInterval: 0.3)
+      return Self.ok(request, "running")
+    }
+    MockURLProtocol.setHandler(for: "/updestroy/queued") { request in
+      sent.record("queued")
+      return Self.ok(request, "queued")
+    }
+
+    let form = MultipartFormData { $0.addTextField(named: "field", value: "value") }
+    let running = try (0..<client.maxConcurrentUploads).map { _ in
+      try client.upload(with: MultipartFormEndpoint<String>(path: "updestroy/running", form: form))
+    }
+    let queued = try (0..<2).map { _ in
+      try client.upload(with: MultipartFormEndpoint<String>(path: "updestroy/queued", form: form))
+    }
+    (running + queued).forEach { record($0, into: events) }
+
+    client.destroy()
+
+    #expect(client.uploadsTasks.isEmpty)
+    #expect(client.pendingUploads.isEmpty)
+    #expect(queued.allSatisfy { $0.state == .cancelled })
+    try await waitFor { events.values.count == running.count + queued.count }
+    try await Task.sleep(nanoseconds: 500_000_000)
+    #expect(events.values == Array(repeating: "cancelled", count: running.count + queued.count))
+    #expect(sent.values.isEmpty)
+    #expect(client.uploadsTasks.isEmpty)
+    #expect(client.pendingUploads.isEmpty)
+  }
+
   // MARK: - Upload Response Decoding Tests
 
   private func uploadResult<T: Sendable>(

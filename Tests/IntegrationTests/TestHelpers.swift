@@ -162,3 +162,20 @@ extension SmartNet.Result {
     }
   }
 }
+
+final class EventRecorder: @unchecked Sendable {
+  private let lock = NSLock()
+  private var events = [String]()
+
+  var values: [String] {
+    lock.lock()
+    defer { lock.unlock() }
+    return events
+  }
+
+  func record(_ event: String) {
+    lock.lock()
+    defer { lock.unlock() }
+    events.append(event)
+  }
+}

@@ -51,7 +51,7 @@ public final class ApiClient: NSObject, ApiClientProtocol, DownloadClientProtoco
   var pendingDownloads: [DownloadTask] = []
   
   @ThreadSafe
-  var uploadsTasks = [Int: any AnyUploadTask]()
+  var uploadsTasks = [ObjectIdentifier: any AnyUploadTask]()
   
   @ThreadSafe
   var pendingUploads = [any AnyUploadTask]()
@@ -103,6 +103,14 @@ public final class ApiClient: NSObject, ApiClientProtocol, DownloadClientProtoco
   public func destroy() {
     downloadsTasks.forEach { $0.task.cancel() }
     downloadsTasks.removeAll()
+    let uploads = uploadQueue.sync {
+      defer {
+        pendingUploads.removeAll()
+        uploadsTasks.removeAll()
+      }
+      return pendingUploads + Array(uploadsTasks.values)
+    }
+    uploads.forEach { $0.cancel() }
     session = nil
   }
   

@@ -475,23 +475,6 @@ private struct TestMiddleware: MiddlewareProtocol, Sendable {
   }
 }
 
-private final class EventRecorder: @unchecked Sendable {
-  private let lock = NSLock()
-  private var events = [String]()
-
-  var values: [String] {
-    lock.lock()
-    defer { lock.unlock() }
-    return events
-  }
-
-  func record(_ event: String) {
-    lock.lock()
-    defer { lock.unlock() }
-    events.append(event)
-  }
-}
-
 private struct HUDRecorder: SNProgressHUD {
   let events = EventRecorder()
   func show() { events.record("show") }

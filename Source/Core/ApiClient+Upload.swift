@@ -9,6 +9,7 @@ protocol AnyUploadTask: AnyObject {
   /// A URLSessionUploadTask associated with the conforming instance.
   var task: URLSessionUploadTask! { get }
   func start()
+  func cancel()
 }
 
 /// A concrete class that represents a network upload task for a specific response type.
@@ -57,6 +58,8 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
   
   /// Data representing a partially completed upload, for use with resuming.
   private var resumedData: Data?
+
+  private var generation = 0
   
   // MARK: - Public Properties
   
@@ -72,7 +75,7 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
   private var responseClosures = [(closure: ResultCompletion, queue: DispatchQueue)]()
   
   /// A closure that is called when the upload is completed.
-  private var onUploadCompleted: (_ taskIdentifier: Int) -> Void
+  private var onUploadCompleted: (_ upload: ObjectIdentifier) -> Void
 
   private let decode: (Data?) throws -> ResponseType
   
@@ -84,7 +87,7 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
     endpoint: any Requestable,
     config: NetworkConfigurable,
     decode: @escaping (Data?) throws -> ResponseType,
-    onUploadCompleted: @escaping (_ taskIdentifier: Int) -> Void
+    onUploadCompleted: @escaping (_ upload: ObjectIdentifier) -> Void
   ) throws {
     self.session = session
     self.endpoint = endpoint
@@ -100,8 +103,18 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
   }
   
   func start() {
-    task = session.uploadTask(with: remoteURLRequest, from: uploadData) { [weak self] data, response, error in
-      guard let self else { return }
+    startTask { session.uploadTask(with: remoteURLRequest, from: uploadData, completionHandler: $0) }
+  }
+
+  // MARK: - Private Methods
+
+  private func startTask(
+    _ makeTask: (@escaping @Sendable (Data?, URLResponse?, Error?) -> Void) -> URLSessionUploadTask
+  ) {
+    generation += 1
+    let taskGeneration = generation
+    task = makeTask { [weak self] data, response, error in
+      guard let self, taskGeneration == generation else { return }
       if let responseError = handleCommonResponse(data: data, response: response, error: error) {
         handleErrorResponse(error: responseError)
         return
@@ -117,18 +130,13 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
     state = .uploading
   }
 
-  // MARK: - Private Methods
-  
   /// Resumes an upload from the given data.
   /// This function initiates an upload task with resume data and observes its progress.
   /// Available only on iOS 17.0 and later.
   /// - Parameter data: The data from which the upload should be resumed.
   @available(iOS 17.0, macOS 14.0, *)
   private func resumeUploadWithData(_ data: Data) {
-    task = session.uploadTask(withResumeData: data)
-    observeUploadProgress()
-    task.resume()
-    state = .uploading
+    startTask { session.uploadTask(withResumeData: data, completionHandler: $0) }
   }
   
   /// Sets up observation for the upload progress and handles the progress updates.
@@ -149,8 +157,12 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
   /// Cancels the upload task and marks its state as cancelled.
   public func cancel() {
     progressObserver?.invalidate()
-    task.resume()
-    task.cancel()
+    if state == .waitingStart || state == .paused {
+      handleErrorResponse(error: .generic(URLError(.cancelled)), state: .cancelled)
+      return
+    }
+    task?.resume()
+    task?.cancel()
     state = .cancelled
   }
   
@@ -161,6 +173,8 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
   public func pause() {
     guard state == .uploading else { return }
     progressObserver?.invalidate()
+    generation += 1
+    resumedData = nil
     task.resume()
     task.cancel(byProducingResumeData: { data in
       self.resumedData = data
@@ -178,9 +192,7 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
       resumeUploadWithData(resumedData)
     }
     else {
-      task.cancel()
-      task.resume()
-      state = .uploading
+      start()
     }
   }
   
@@ -204,14 +216,14 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
     return self
   }
   
-  /// Conforms to Hashable by combining the task identifier into the hasher.
+  /// Conforms to Hashable by combining the instance identity into the hasher.
   public func hash(into hasher: inout Hasher) {
-    hasher.combine(task.taskIdentifier)
+    hasher.combine(ObjectIdentifier(self))
   }
   
-  /// Checks equality between two `UploadTask` instances based on their task identifiers.
+  /// Checks equality between two `UploadTask` instances based on their identity.
   public static func == (lhs: UploadTask<ResponseType>, rhs: UploadTask<ResponseType>) -> Bool {
-    lhs.task.taskIdentifier == rhs.task.taskIdentifier
+    lhs === rhs
   }
 }
 
@@ -238,14 +250,14 @@ private extension UploadTask {
   }
   
   /// Processes and distributes an error response to all registered response closures and updates the task state.
-  func handleErrorResponse(error: NetworkError) {
+  func handleErrorResponse(error: NetworkError, state: UploadState = .error) {
     responseClosures.forEach { responseClosure in
       responseClosure.queue.async {
         responseClosure.closure(Response(result: .failure(error)))
       }
     }
-    state = .error
-    onUploadCompleted(task.taskIdentifier)
+    self.state = state
+    onUploadCompleted(ObjectIdentifier(self))
   }
   
   /// Processes and distributes a successful response to all registered response closures and updates the task state.
@@ -256,7 +268,7 @@ private extension UploadTask {
       }
     }
     state = .completed
-    onUploadCompleted(task.taskIdentifier)
+    onUploadCompleted(ObjectIdentifier(self))
   }
 }
 
@@ -286,10 +298,11 @@ extension ApiClient {
       endpoint: endpoint,
       config: config,
       decode: decode,
-      onUploadCompleted: { [weak self] taskIdentifier in
+      onUploadCompleted: { [weak self] upload in
         guard let self else { return }
         uploadQueue.sync {
-          _ = self.uploadsTasks.removeValue(forKey: taskIdentifier)
+          _ = self.uploadsTasks.removeValue(forKey: upload)
+          self.pendingUploads.removeAll { ObjectIdentifier($0) == upload }
         }
         startNextPendingUpload()
       }
@@ -304,7 +317,7 @@ extension ApiClient {
     uploadQueue.sync {
       if uploadsTasks.count < maxConcurrentUploads {
         upload.start()
-        uploadsTasks[upload.task.taskIdentifier] = upload
+        uploadsTasks[ObjectIdentifier(upload)] = upload
       } else {
         pendingUploads.append(upload)
       }
@@ -317,7 +330,7 @@ extension ApiClient {
       while uploadsTasks.count < maxConcurrentUploads && !pendingUploads.isEmpty {
         let pendingUpload = pendingUploads.removeFirst()
         pendingUpload.start()
-        uploadsTasks[pendingUpload.task.taskIdentifier] = pendingUpload
+        uploadsTasks[ObjectIdentifier(pendingUpload)] = pendingUpload
       }
     }
   }
