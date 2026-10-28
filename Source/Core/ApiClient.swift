@@ -25,9 +25,6 @@
 import Foundation
 import Combine
 
-//public typealias PreRequestMiddlewareClosure = (URLRequest) throws -> Void
-//public typealias PostResponseMiddlewareClosure = (Data?, URLResponse?, Error?) async throws -> ApiClient.Middleware.PostRequestResult
-
 public protocol NetworkCancellable {
   func cancel()
 }
@@ -54,10 +51,10 @@ public final class ApiClient: NSObject, ApiClientProtocol, DownloadClientProtoco
   var pendingDownloads: [DownloadTask] = []
   
   @ThreadSafe
-  var uploadsTasks = Set<AnyProgressiveTransferTask>()
+  var uploadsTasks = [Int: any AnyUploadTask]()
   
   @ThreadSafe
-  var pendingUploads = [AnyProgressiveTransferTask]()
+  var pendingUploads = [any AnyUploadTask]()
   
   let maxConcurrentDownloads = 6
 

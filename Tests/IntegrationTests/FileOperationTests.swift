@@ -330,6 +330,140 @@ struct FileOperationTests {
     #expect(pending.state != .waitingStart)
   }
 
+  // MARK: - Upload Response Decoding Tests
+
+  private func uploadResult<T: Sendable>(
+    _ path: String,
+    respond: @escaping MockURLProtocol.Handler,
+    start: (ApiClient, MultipartFormEndpoint<T>) throws -> UploadTask<T>
+  ) async throws -> SmartNet.Result<T> {
+    let (client, _) = createMockClient()
+    defer {
+      client.destroy()
+      MockURLProtocol.removeHandler(for: "/\(path)")
+    }
+    MockURLProtocol.setHandler(for: "/\(path)", handler: respond)
+    let form = MultipartFormData { $0.addTextField(named: "field", value: "value") }
+    let task = try start(client, MultipartFormEndpoint<T>(path: path, form: form))
+    return await withCheckedContinuation { continuation in
+      task.response(queue: .global()) { continuation.resume(returning: $0.result) }
+    }
+  }
+
+  private func reply(_ status: Int, _ body: Data) -> MockURLProtocol.Handler {
+    { request in (HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!, body) }
+  }
+
+  @Test("Decodable upload decodes JSON body")
+  func decodableUploadDecodes() async throws {
+    let user = TestUser(id: 7, name: "Ann", email: "ann@example.com")
+    let result: SmartNet.Result<TestUser> = try await uploadResult(
+      "updecode/json", respond: reply(200, try JSONEncoder().encode(user))
+    ) { try $0.upload(with: $1) }
+    guard case .success(let value) = result else { Issue.record("\(result)"); return }
+    #expect(value == user)
+  }
+
+  @Test("Decodable upload maps decoding errors to parsingFailed")
+  func decodableUploadParsingFailure() async throws {
+    let body = Data("not json".utf8)
+    let result: SmartNet.Result<TestUser> = try await uploadResult(
+      "updecode/badjson", respond: reply(200, body)
+    ) { try $0.upload(with: $1) }
+    let expected = NetworkError.parsingFailed(from: try #require(throws: DecodingError.self) {
+      try JSONDecoder().decode(TestUser.self, from: body)
+    })
+    guard case .failure(let error) = result else { Issue.record("\(result)"); return }
+    #expect(error == expected)
+  }
+
+  @Test("String upload returns UTF-8 body")
+  func stringUploadDecodes() async throws {
+    let result: SmartNet.Result<String> = try await uploadResult(
+      "updecode/text", respond: reply(200, Data("hello".utf8))
+    ) { try $0.upload(with: $1) }
+    guard case .success(let value) = result else { Issue.record("\(result)"); return }
+    #expect(value == "hello")
+  }
+
+  @Test("String upload fails on non UTF-8 body")
+  func stringUploadInvalidUTF8() async throws {
+    let body = Data([0xFF, 0xFE, 0xFD])
+    let result: SmartNet.Result<String> = try await uploadResult(
+      "updecode/binary", respond: reply(200, body)
+    ) { try $0.upload(with: $1) }
+    guard case .failure(.dataToStringFailure(let data)) = result else { Issue.record("\(result)"); return }
+    #expect(data == body)
+  }
+
+  @Test("Void upload succeeds with empty body")
+  func voidUploadSucceeds() async throws {
+    let result: SmartNet.Result<Void> = try await uploadResult(
+      "updecode/void", respond: reply(204, Data())
+    ) { try $0.upload(with: $1) }
+    #expect(result.isSuccess)
+  }
+
+  @Test("Data upload returns raw body")
+  func dataUploadReturnsBody() async throws {
+    let body = Data([0x00, 0xFF, 0x10])
+    let result: SmartNet.Result<Data> = try await uploadResult(
+      "updecode/raw", respond: reply(200, body)
+    ) { try $0.upload(with: $1) }
+    guard case .success(let value) = result else { Issue.record("\(result)"); return }
+    #expect(value == body)
+  }
+
+  @Test("Upload non-2xx maps to status error, including 429")
+  func uploadStatusError() async throws {
+    let body = Data("slow down".utf8)
+    let result: SmartNet.Result<Data> = try await uploadResult(
+      "updecode/limited", respond: reply(429, body)
+    ) { try $0.upload(with: $1) }
+    guard case .failure(let error) = result else { Issue.record("\(result)"); return }
+    #expect(error == .error(statusCode: 429, data: body))
+  }
+
+  @Test("Upload transport errors are wrapped as generic")
+  func uploadTransportError() async throws {
+    let result: SmartNet.Result<Void> = try await uploadResult(
+      "updecode/lost",
+      respond: { _ in throw URLError(.networkConnectionLost) },
+      start: { try $0.upload(with: $1) }
+    )
+    guard case .failure(.generic(let error)) = result else { Issue.record("\(result)"); return }
+    #expect((error as? URLError)?.code == .networkConnectionLost)
+  }
+
+  @Test("Upload delivers response when the caller drops the task")
+  func unretainedUploadDelivers() async throws {
+    let (client, _) = createMockClient()
+    defer {
+      client.destroy()
+      MockURLProtocol.removeHandler(for: "/updecode/unretained")
+    }
+    MockURLProtocol.setHandler(for: "/updecode/unretained", handler: reply(200, Data("kept".utf8)))
+
+    var continuation: AsyncStream<String?>.Continuation!
+    let values = AsyncStream<String?> { continuation = $0 }
+    let form = MultipartFormData { $0.addTextField(named: "field", value: "value") }
+    try client.upload(with: MultipartFormEndpoint<String>(path: "updecode/unretained", form: form))
+      .response(queue: .global()) { [continuation] response in
+        if case .success(let value) = response.result {
+          continuation?.yield(value)
+        } else {
+          continuation?.yield(nil)
+        }
+      }
+    Task { [continuation] in
+      try? await Task.sleep(nanoseconds: 5_000_000_000)
+      continuation?.yield(nil)
+    }
+
+    var iterator = values.makeAsyncIterator()
+    #expect(await iterator.next() == "kept")
+  }
+
   // MARK: - Concurrent Download Limit Tests
 
   @Test("Download tasks respect concurrent limit")

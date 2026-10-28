@@ -31,7 +31,6 @@
 		B908F5EF2B9AFF01004A338A /* NetworkConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkConfiguration.swift; sourceTree = "<group>"; };
 		B908F5F12B9AFF01004A338A /* Result.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Result.swift; sourceTree = "<group>"; };
 		B908F5F22B9AFF01004A338A /* Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Response.swift; sourceTree = "<group>"; };
-		B908F5F42B9AFF01004A338A /* AnyProgressiveTransferTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnyProgressiveTransferTask.swift; sourceTree = "<group>"; };
 		B908F5F52B9AFF01004A338A /* ThreadSafe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreadSafe.swift; sourceTree = "<group>"; };
 		B908F5F62B9AFF01004A338A /* NetworkError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkError.swift; sourceTree = "<group>"; };
 		B908F5F82B9AFF01004A338A /* SNProgressHUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SNProgressHUD.swift; sourceTree = "<group>"; };
@@ -121,7 +120,6 @@
 		B908F5F32B9AFF01004A338A /* Utils */ = {
 			isa = PBXGroup;
 			children = (
-				B908F5F42B9AFF01004A338A /* AnyProgressiveTransferTask.swift */,
 				B908F5F52B9AFF01004A338A /* ThreadSafe.swift */,
 				B908F5F62B9AFF01004A338A /* NetworkError.swift */,
 				B908F5F72B9AFF01004A338A /* Protocols */,

@@ -5,9 +5,10 @@
 import Foundation
 
 /// A protocol defining a generic upload task, requiring a URLSessionUploadTask object.
-protocol AnyUploadTask: Hashable {
+protocol AnyUploadTask: AnyObject {
   /// A URLSessionUploadTask associated with the conforming instance.
   var task: URLSessionUploadTask! { get }
+  func start()
 }
 
 /// A concrete class that represents a network upload task for a specific response type.
@@ -72,6 +73,8 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
   
   /// A closure that is called when the upload is completed.
   private var onUploadCompleted: (_ taskIdentifier: Int) -> Void
+
+  private let decode: (Data?) throws -> ResponseType
   
   // MARK: - Lifecycle
   
@@ -80,11 +83,13 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
     session: URLSession,
     endpoint: any Requestable,
     config: NetworkConfigurable,
+    decode: @escaping (Data?) throws -> ResponseType,
     onUploadCompleted: @escaping (_ taskIdentifier: Int) -> Void
   ) throws {
     self.session = session
     self.endpoint = endpoint
     self.globalDebug = config.debug
+    self.decode = decode
     self.onUploadCompleted = onUploadCompleted
     self.remoteURLRequest = try endpoint.urlRequest(with: config)
     self.remoteURLRequest.httpBody = nil
@@ -94,6 +99,24 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
     self.uploadData = data
   }
   
+  func start() {
+    task = session.uploadTask(with: remoteURLRequest, from: uploadData) { [weak self] data, response, error in
+      guard let self else { return }
+      if let responseError = handleCommonResponse(data: data, response: response, error: error) {
+        handleErrorResponse(error: responseError)
+        return
+      }
+      do {
+        handleSuccessResponse(responseObject: try decode(data))
+      } catch {
+        handleErrorResponse(error: error as? NetworkError ?? .parsingFailed(from: error))
+      }
+    }
+    observeUploadProgress()
+    task.resume()
+    state = .uploading
+  }
+
   // MARK: - Private Methods
   
   /// Resumes an upload from the given data.
@@ -195,7 +218,7 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
 /// Extension to `UploadTask` providing response and error handling utilities.
 private extension UploadTask {
   /// Evaluates the HTTP response and error to determine if the response is valid and to identify any network errors.
-  func handleCommonResponse(data: Data?, response: URLResponse?, error: Error?) -> (isValid: Bool, error: NetworkError?) {
+  func handleCommonResponse(data: Data?, response: URLResponse?, error: Error?) -> NetworkError? {
     if endpoint.debugRequest ?? globalDebug {
       ApiClient.printCurl(
         session: session,
@@ -205,19 +228,13 @@ private extension UploadTask {
       )
     }
     
-    guard error == nil else {
-      return (false, .generic(error!))
+    if let error {
+      return .generic(error)
     }
-    
-    guard let httpResponse = response as? HTTPURLResponse else {
-      return (false, .emptyResponse)
+    guard let statusCode = response?.httpStatusCode else {
+      return .emptyResponse
     }
-    
-    guard (200..<300).contains(httpResponse.statusCode) else {
-      return (false, .error(statusCode: httpResponse.statusCode, data: data))
-    }
-    
-    return (true, nil)
+    return (200..<300).contains(statusCode) ? nil : .error(statusCode: statusCode, data: data)
   }
   
   /// Processes and distributes an error response to all registered response closures and updates the task state.
@@ -243,116 +260,6 @@ private extension UploadTask {
   }
 }
 
-/// Extension for `UploadTask` constrained to `ResponseType: Decodable`. It starts the upload task and handles JSON decoding.
-extension UploadTask where ResponseType: Decodable {
-  func start() {
-    task = session.uploadTask(with: remoteURLRequest, from: uploadData) { [weak self] data, response, error in
-      guard let self else { return }
-      
-      let (isValid, responseError) = self.handleCommonResponse(data: data, response: response, error: error)
-
-      guard isValid else {
-        self.handleErrorResponse(error: responseError ?? .emptyResponse)
-        return
-      }
-
-      guard let data else {
-        self.handleErrorResponse(error: .emptyResponse)
-        return
-      }
-
-      do {
-        let responseObject = try JSONDecoder().decode(ResponseType.self, from: data)
-        self.handleSuccessResponse(responseObject: responseObject)
-      } catch {
-        self.handleErrorResponse(error: .parsingFailed(from: error))
-      }
-    }
-    observeUploadProgress()
-    task.resume()
-    state = .uploading
-  }
-}
-
-/// Extension for `UploadTask` constrained to `ResponseType == Void`. It starts the upload task for cases expecting no response body.
-extension UploadTask where ResponseType == Void {
-  func start() {
-    task = session.uploadTask(with: remoteURLRequest, from: uploadData) { [weak self] data, response, error in
-      guard let self else { return }
-
-      let (isValid, responseError) = self.handleCommonResponse(data: data, response: response, error: error)
-
-      guard isValid else {
-        self.handleErrorResponse(error: responseError ?? .emptyResponse)
-        return
-      }
-
-      self.handleSuccessResponse(responseObject: ())
-    }
-    observeUploadProgress()
-    task.resume()
-    state = .uploading
-  }
-}
-
-/// Extension for `UploadTask` constrained to `ResponseType == String`. It starts the upload task and expects a string response.
-extension UploadTask where ResponseType == String {
-  func start() {
-    task = session.uploadTask(with: remoteURLRequest, from: uploadData) { [weak self] data, response, error in
-      guard let self else { return }
-
-      let (isValid, responseError) = self.handleCommonResponse(data: data, response: response, error: error)
-
-      guard isValid else {
-        self.handleErrorResponse(error: responseError ?? .emptyResponse)
-        return
-      }
-
-      guard let data else {
-        self.handleErrorResponse(error: .emptyResponse)
-        return
-      }
-
-      guard let string = String(data: data, encoding: .utf8)
-      else {
-        self.handleErrorResponse(error: .dataToStringFailure(data: data))
-        return
-      }
-
-      self.handleSuccessResponse(responseObject: string)
-    }
-    observeUploadProgress()
-    task.resume()
-    state = .uploading
-  }
-}
-
-/// Extension for `UploadTask` constrained to `ResponseType == Data`. It starts the upload task expecting raw data as a response.
-extension UploadTask where ResponseType == Data {
-  func start() {
-    task = session.uploadTask(with: remoteURLRequest, from: uploadData) { [weak self] data, response, error in
-      guard let self else { return }
-
-      let (isValid, responseError) = self.handleCommonResponse(data: data, response: response, error: error)
-
-      guard isValid else {
-        self.handleErrorResponse(error: responseError ?? .emptyResponse)
-        return
-      }
-
-      guard let data else {
-        self.handleErrorResponse(error: .emptyResponse)
-        return
-      }
-
-      self.handleSuccessResponse(responseObject: data)
-    }
-    observeUploadProgress()
-    task.resume()
-    state = .uploading
-  }
-}
-
 // MARK: - Upload MultipartFormEndpoint
 
 /// Extension of `ApiClient` to provide upload functionality
@@ -366,7 +273,10 @@ extension ApiClient {
   /// - Parameter endpoint: The endpoint that defines the URL, HTTP method, headers, and other request details.
   /// - Returns: An initialized `UploadTask` object ready to start the upload process.
   /// - Throws: `NetworkError.invalidSessions` if the URLSession is not available.
-  func createUploadTask<T>(with endpoint: MultipartFormEndpoint<T>) throws -> UploadTask<T> {
+  func createUploadTask<T>(
+    with endpoint: MultipartFormEndpoint<T>,
+    decode: @escaping (Data?) throws -> T
+  ) throws -> UploadTask<T> {
     guard let session = session else {
       throw NetworkError.invalidSessions
     }
@@ -375,26 +285,31 @@ extension ApiClient {
       session: session,
       endpoint: endpoint,
       config: config,
+      decode: decode,
       onUploadCompleted: { [weak self] taskIdentifier in
         guard let self else { return }
         uploadQueue.sync {
-          guard let task = self.uploadsTasks.first(where: { $0.identifier == taskIdentifier }) else { return }
-          self.uploadsTasks.remove(task)
+          _ = self.uploadsTasks.removeValue(forKey: taskIdentifier)
         }
         startNextPendingUpload()
       }
     )
   }
 
-  func enqueueUpload(_ upload: AnyProgressiveTransferTask) {
+  func enqueueUpload<T>(
+    _ endpoint: MultipartFormEndpoint<T>,
+    decode: @escaping (Data?) throws -> T
+  ) throws -> UploadTask<T> {
+    let upload = try createUploadTask(with: endpoint, decode: decode)
     uploadQueue.sync {
       if uploadsTasks.count < maxConcurrentUploads {
         upload.start()
-        uploadsTasks.insert(upload)
+        uploadsTasks[upload.task.taskIdentifier] = upload
       } else {
         pendingUploads.append(upload)
       }
     }
+    return upload
   }
 
   func startNextPendingUpload() {
@@ -402,7 +317,7 @@ extension ApiClient {
       while uploadsTasks.count < maxConcurrentUploads && !pendingUploads.isEmpty {
         let pendingUpload = pendingUploads.removeFirst()
         pendingUpload.start()
-        uploadsTasks.insert(pendingUpload)
+        uploadsTasks[pendingUpload.task.taskIdentifier] = pendingUpload
       }
     }
   }
@@ -417,9 +332,10 @@ extension ApiClient {
   public func upload<D>(
     with endpoint: MultipartFormEndpoint<D>
   ) throws -> UploadTask<D> where D: Decodable {
-    let uploadTask = try createUploadTask(with: endpoint)
-    enqueueUpload(AnyProgressiveTransferTask(uploadTask, start: uploadTask.start))
-    return uploadTask
+    try enqueueUpload(endpoint) { data in
+      guard let data else { throw NetworkError.emptyResponse }
+      return try JSONDecoder().decode(D.self, from: data)
+    }
   }
   
   /// Initiates an upload task for a decodable response type using the specified endpoint.
@@ -432,9 +348,11 @@ extension ApiClient {
   public func upload(
     with endpoint: MultipartFormEndpoint<String>
   ) throws -> UploadTask<String> {
-    let uploadTask = try createUploadTask(with: endpoint)
-    enqueueUpload(AnyProgressiveTransferTask(uploadTask, start: uploadTask.start))
-    return uploadTask
+    try enqueueUpload(endpoint) { data in
+      guard let data else { throw NetworkError.emptyResponse }
+      guard let string = String(data: data, encoding: .utf8) else { throw NetworkError.dataToStringFailure(data: data) }
+      return string
+    }
   }
   
   /// Initiates an upload task for a decodable response type using the specified endpoint.
@@ -447,9 +365,7 @@ extension ApiClient {
   public func upload(
     with endpoint: MultipartFormEndpoint<Void>
   ) throws -> UploadTask<Void> {
-    let uploadTask = try createUploadTask(with: endpoint)
-    enqueueUpload(AnyProgressiveTransferTask(uploadTask, start: uploadTask.start))
-    return uploadTask
+    try enqueueUpload(endpoint) { _ in }
   }
   
   /// Initiates an upload task for a decodable response type using the specified endpoint.
@@ -462,8 +378,9 @@ extension ApiClient {
   public func upload(
     with endpoint: MultipartFormEndpoint<Data>
   ) throws -> UploadTask<Data> {
-    let uploadTask = try createUploadTask(with: endpoint)
-    enqueueUpload(AnyProgressiveTransferTask(uploadTask, start: uploadTask.start))
-    return uploadTask
+    try enqueueUpload(endpoint) { data in
+      guard let data else { throw NetworkError.emptyResponse }
+      return data
+    }
   }
 }
