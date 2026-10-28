@@ -53,9 +53,7 @@ public protocol RetryPolicy: Sendable {
 
 public extension RetryPolicy {
   func delay(forAttempt attempt: Int, error: NetworkError?) -> TimeInterval {
-    if let error = error, case .rateLimited(let retryAfter) = error, let serverDelay = retryAfter {
-      return serverDelay
-    }
+    if case .rateLimited(let retryAfter?)? = error { return retryAfter }
     return 0
   }
 }
@@ -133,28 +131,15 @@ public struct ExponentialBackoffRetryPolicy: RetryPolicy {
   }
 
   public func shouldRetry(for error: NetworkError, attempt: Int) -> Bool {
-    guard attempt < maxRetries else { return false }
-    return error.matchesCondition(conditions)
+    attempt < maxRetries && error.matchesCondition(conditions)
   }
 
   public func delay(forAttempt attempt: Int, error: NetworkError?) -> TimeInterval {
-    // Handle rate limiting with server-provided delay
-    if let error = error, case .rateLimited(let retryAfter) = error, let serverDelay = retryAfter {
-      return serverDelay
-    }
-
-    // Calculate exponential delay: baseDelay * 2^attempt
-    let exponentialDelay = baseDelay * pow(2.0, Double(attempt))
-    let cappedDelay = min(exponentialDelay, maxDelay)
-
-    if jitter {
-      // Add jitter: random value between 0 and cappedDelay
-      let jitterRange = cappedDelay * 0.5
-      let randomJitter = Double.random(in: -jitterRange...jitterRange)
-      return max(0, cappedDelay + randomJitter)
-    }
-
-    return cappedDelay
+    if case .rateLimited(let retryAfter?)? = error { return retryAfter }
+    let cappedDelay = min(baseDelay * pow(2.0, Double(attempt)), maxDelay)
+    guard jitter else { return cappedDelay }
+    let jitterRange = cappedDelay * 0.5
+    return max(0, cappedDelay + Double.random(in: -jitterRange...jitterRange))
   }
 }
 
@@ -184,16 +169,11 @@ public struct LinearBackoffRetryPolicy: RetryPolicy {
   }
 
   public func shouldRetry(for error: NetworkError, attempt: Int) -> Bool {
-    guard attempt < maxRetries else { return false }
-    return error.matchesCondition(conditions)
+    attempt < maxRetries && error.matchesCondition(conditions)
   }
 
   public func delay(forAttempt attempt: Int, error: NetworkError?) -> TimeInterval {
-    // Handle rate limiting with server-provided delay
-    if let error = error, case .rateLimited(let retryAfter) = error, let serverDelay = retryAfter {
-      return serverDelay
-    }
-
+    if case .rateLimited(let retryAfter?)? = error { return retryAfter }
     return delay * Double(attempt + 1)
   }
 }
@@ -218,15 +198,11 @@ public struct ImmediateRetryPolicy: RetryPolicy {
   }
 
   public func shouldRetry(for error: NetworkError, attempt: Int) -> Bool {
-    guard attempt < maxRetries else { return false }
-    return error.matchesCondition(conditions)
+    attempt < maxRetries && error.matchesCondition(conditions)
   }
 
   public func delay(forAttempt attempt: Int, error: NetworkError?) -> TimeInterval {
-    // Handle rate limiting with server-provided delay
-    if let error = error, case .rateLimited(let retryAfter) = error, let serverDelay = retryAfter {
-      return serverDelay
-    }
+    if case .rateLimited(let retryAfter?)? = error { return retryAfter }
     return 0
   }
 }
@@ -374,17 +350,9 @@ extension NetworkError {
       return condition.contains(.rateLimited)
 
     case .error(let statusCode, _):
-      // 5xx server errors
-      if (500...599).contains(statusCode) {
-        return condition.contains(.serverError)
-      }
-      return false
+      return (500...599).contains(statusCode) && condition.contains(.serverError)
 
-    case .cancelled, .parsingFailed(_, _, _, _, _), .emptyResponse, .urlGeneration,
-         .dataToStringFailure, .middleware, .generic, .sslError,
-         .middlewareMaxRetry, .unableToSaveFile, .parsedError,
-         .invalidSessions, .invalidDownloadUrl, .invalidDownloadFileData,
-         .invalidFormData:
+    default:
       return false
     }
   }

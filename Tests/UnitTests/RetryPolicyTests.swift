@@ -616,3 +616,85 @@ struct CustomRetryPolicyTests {
     #expect(policy.delay(forAttempt: 0, error: .rateLimited(retryAfter: 7)) == 7)
   }
 }
+
+@Suite("RetryPolicy Characterization Tests")
+struct RetryPolicyCharacterizationTests {
+
+  @Test("Rate limited without Retry-After falls through to policy delay")
+  func rateLimitedWithoutRetryAfter() {
+    let error = NetworkError.rateLimited(retryAfter: nil)
+
+    #expect(ExponentialBackoffRetryPolicy(jitter: false).delay(forAttempt: 2, error: error) == 4)
+    #expect(LinearBackoffRetryPolicy(delay: 2).delay(forAttempt: 1, error: error) == 4)
+    #expect(ImmediateRetryPolicy().delay(forAttempt: 3, error: error) == 0)
+    #expect(NoRetryPolicy().delay(forAttempt: 0, error: error) == 0)
+  }
+
+  @Test("Retry-After bypasses cap and jitter")
+  func retryAfterBypassesCapAndJitter() {
+    let policy = ExponentialBackoffRetryPolicy(maxDelay: 10, jitter: true)
+
+    #expect(policy.delay(forAttempt: 8, error: .rateLimited(retryAfter: 120)) == 120)
+    #expect(policy.delay(forAttempt: 3, error: .rateLimited(retryAfter: 0)) == 0)
+    #expect(LinearBackoffRetryPolicy(delay: 5).delay(forAttempt: 4, error: .rateLimited(retryAfter: 0)) == 0)
+    #expect(ImmediateRetryPolicy().delay(forAttempt: 0, error: .rateLimited(retryAfter: 0.5)) == 0.5)
+    #expect(NoRetryPolicy().delay(forAttempt: 0, error: .rateLimited(retryAfter: 5)) == 0)
+  }
+
+  @Test("Non rate-limit errors do not affect computed delay")
+  func otherErrorsUseComputedDelay() {
+    #expect(ExponentialBackoffRetryPolicy(baseDelay: 0.5, jitter: false).delay(forAttempt: 3, error: .timeout) == 4)
+    #expect(LinearBackoffRetryPolicy(delay: 1.5).delay(forAttempt: 2, error: .error(statusCode: 503, data: nil)) == 4.5)
+  }
+
+  @Test("Jitter stays within half of the capped delay on both sides")
+  func jitterBounds() throws {
+    let policy = ExponentialBackoffRetryPolicy(baseDelay: 1, maxDelay: 10, jitter: true)
+
+    for attempt in 0...6 {
+      let capped = min(pow(2.0, Double(attempt)), 10)
+      let samples = (0..<300).map { _ in policy.delay(forAttempt: attempt, error: nil) }
+      #expect(samples.allSatisfy { $0 >= capped * 0.5 && $0 <= capped * 1.5 })
+      #expect(try #require(samples.min()) < capped * 0.56)
+      #expect(try #require(samples.max()) > capped * 1.44)
+    }
+    #expect(ExponentialBackoffRetryPolicy(baseDelay: 0, jitter: true).delay(forAttempt: 2, error: nil) == 0)
+  }
+
+  @Test("shouldRetry combines attempt limit and conditions for every policy")
+  func shouldRetryMatrix() {
+    let policies: [any RetryPolicy] = [
+      ExponentialBackoffRetryPolicy(maxRetries: 2, conditions: [.timeout]),
+      LinearBackoffRetryPolicy(maxRetries: 2, conditions: [.timeout]),
+      ImmediateRetryPolicy(maxRetries: 2, conditions: [.timeout])
+    ]
+    for policy in policies {
+      #expect(policy.shouldRetry(for: .timeout, attempt: 0))
+      #expect(policy.shouldRetry(for: .timeout, attempt: 1))
+      #expect(!policy.shouldRetry(for: .timeout, attempt: 2))
+      #expect(!policy.shouldRetry(for: .connectionLost, attempt: 0))
+    }
+    #expect(!ImmediateRetryPolicy(maxRetries: 0).shouldRetry(for: .timeout, attempt: 0))
+    #expect(!LinearBackoffRetryPolicy(maxRetries: -1).shouldRetry(for: .timeout, attempt: 0))
+  }
+
+  @Test("matchesCondition covers every NetworkError case")
+  func matchesConditionAllCases() {
+    let all = RetryCondition.all
+    let neverRetryable: [NetworkError] = [
+      .cancelled, .parsingFailed(), .emptyResponse, .urlGeneration, .dataToStringFailure(data: Data()),
+      .middleware(NetworkError.timeout), .generic(NetworkError.timeout), .sslError(nil),
+      .middlewareMaxRetry, .unableToSaveFile(nil), .parsedError(error: "x"), .invalidSessions,
+      .invalidDownloadUrl, .invalidDownloadFileData, .invalidFormData,
+      .error(statusCode: 200, data: nil), .error(statusCode: 499, data: nil), .error(statusCode: 600, data: nil)
+    ]
+    for error in neverRetryable {
+      #expect(!error.matchesCondition(all))
+    }
+    #expect(NetworkError.error(statusCode: 500, data: nil).matchesCondition(.serverError))
+    #expect(!NetworkError.error(statusCode: 500, data: nil).matchesCondition(all.subtracting(.serverError)))
+    #expect(NetworkError.dnsLookupFailed.matchesCondition(.dnsFailure))
+    #expect(!NetworkError.dnsLookupFailed.matchesCondition(.default))
+    #expect(!NetworkError.rateLimited(retryAfter: 1).matchesCondition(.default))
+  }
+}
