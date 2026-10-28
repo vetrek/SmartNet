@@ -140,4 +140,24 @@ struct EndpointRequestTests {
       #expect(request.httpMethod == method.rawValue.uppercased())
     }
   }
+
+  @Test("Path leading slash and query composition produce exact URL")
+  func pathLeadingSlashAndQueryComposition() throws {
+    let config = NetworkConfiguration(baseURL: URL(string: "https://example.com/api")!, queryParameters: ["lang": "en"])
+    let cases: [(String, QueryParameters?, String)] = [
+      ("/users", nil, "https://example.com/api/users?lang=en"),
+      ("users", nil, "https://example.com/api/users?lang=en"),
+      ("/", nil, "https://example.com/api/?lang=en"),
+      ("", nil, "https://example.com/api/?lang=en"),
+      ("//double", nil, "https://example.com/api//double?lang=en"),
+      ("/ñandú/x", nil, "https://example.com/api/%C3%B1and%C3%BA/x?lang=en"),
+      ("/👍/x", nil, "https://example.com/api/%F0%9F%91%8D/x?lang=en"),
+      ("/a?b=1", QueryParameters(parameters: ["q": 2]), "https://example.com/api/a?b=1&q=2&lang=en")
+    ]
+
+    for (path, query, expected) in cases {
+      let request = try Endpoint<Data>(path: path, queryParameters: query).urlRequest(with: config)
+      #expect(request.url?.absoluteString == expected, "\(path)")
+    }
+  }
 }

@@ -25,16 +25,9 @@
 import Foundation
 
 public struct HTTPBody {
-  enum BodyType {
-    case keyValue
-    case string
-  }
-  
   public let data: Data?
   
   var dictionary: [String: Any]?
-  
-  let bodyType: BodyType
   
   let bodyEncoding: BodyEncoding
   
@@ -45,7 +38,6 @@ public struct HTTPBody {
     self.bodyEncoding = bodyEncoding
     self.data = data
     self.dictionary = dictionary
-    self.bodyType = .keyValue
   }
   
   public init?(encodable: Encodable, bodyEncoding: BodyEncoding = .json()) {
@@ -56,7 +48,6 @@ public struct HTTPBody {
     self.bodyEncoding = bodyEncoding
     self.data = data
     self.dictionary = dictionary
-    self.bodyType = .keyValue
   }
   
   public init?(string: String) {
@@ -65,12 +56,10 @@ public struct HTTPBody {
     else { return nil }
     self.bodyEncoding = .plainText
     self.data = data
-    self.bodyType = .string
   }
   
   mutating func addingKeyValues(keyValues: [String: Any]) -> Self {
     guard
-      bodyType == .keyValue,
       let dictionary,
       let newBody = HTTPBody(dictionary: dictionary.merging(keyValues, uniquingKeysWith: { $1 }), bodyEncoding: bodyEncoding)
     else { return self }

@@ -387,3 +387,195 @@ struct TypedThrowsTests {
     #expect(request.httpMethod == "GET")
   }
 }
+
+@Suite("Request Body Characterization Tests")
+struct RequestBodyCharacterizationTests {
+
+  private struct User: Encodable {
+    let userName: String
+  }
+
+  private struct LegacyRequest: Requestable {
+    typealias Response = Data
+    var path = "items"
+    var isFullPath = false
+    var method: HTTPMethod = .post
+    var headers: [String: String] = [:]
+    var useEndpointHeaderOnly = false
+    var queryParameters: QueryParameters?
+    var body: HTTPBody?
+    var form: MultipartFormData?
+    var allowMiddlewares = true
+  }
+
+  private var snakeEncoder: JSONEncoder {
+    let encoder = JSONEncoder()
+    encoder.keyEncodingStrategy = .convertToSnakeCase
+    return encoder
+  }
+
+  private var form: MultipartFormData {
+    MultipartFormData { TextField("name", value: "John") }
+  }
+
+  private func config(headers: [String: String] = [:], body: [String: Any] = [:]) -> NetworkConfiguration {
+    NetworkConfiguration(baseURL: URL(string: "https://example.com")!, headers: headers, bodyParameters: body)
+  }
+
+  private func request(
+    _ payload: HTTPPayload?,
+    method: HTTPMethod = .post,
+    headers: [String: String] = [:],
+    headerOnly: Bool = false,
+    config: NetworkConfiguration? = nil
+  ) throws -> URLRequest {
+    try Endpoint<Data>(path: "items", method: method, headers: headers, useEndpointHeaderOnly: headerOnly, payload: payload)
+      .urlRequest(with: config ?? self.config())
+  }
+
+  private func text(_ request: URLRequest) -> String? {
+    request.httpBody.flatMap { String(data: $0, encoding: .utf8) }
+  }
+
+  private func json(_ request: URLRequest) -> NSDictionary? {
+    request.httpBody.flatMap { try? JSONSerialization.jsonObject(with: $0) as? NSDictionary }
+  }
+
+  private func contentType(_ request: URLRequest) -> String? {
+    request.value(forHTTPHeaderField: "Content-Type")
+  }
+
+  @Test("Payload body bytes and content type")
+  func payloadBytesAndContentType() throws {
+    let form = self.form
+    let emptyForm = MultipartFormData()
+    let cases: [(String, HTTPPayload, String?, Data?)] = [
+      ("json", .json(["a": 1]), "application/json", Data(#"{"a":1}"#.utf8)),
+      ("json encoder", .json(["a": 1], encoding: .json(encoder: snakeEncoder)), "application/json", Data(#"{"a":1}"#.utf8)),
+      ("json form", .json(["a": "x y&z"], encoding: .formUrlEncodedAscii), "application/x-www-form-urlencoded", Data("a=x%20y%26z".utf8)),
+      ("json plainText", .json(["a": 1], encoding: .plainText), nil, nil),
+      ("encodable", .encodable(User(userName: "J"), encoder: snakeEncoder), "application/json", Data(#"{"userName":"J"}"#.utf8)),
+      ("encodable non-object", .encodable([1, 2]), nil, nil),
+      ("form", .formUrlEncoded(["b": true, "a": [1, 2]]), "application/x-www-form-urlencoded", Data("a%5B%5D=1&a%5B%5D=2&b=1".utf8)),
+      ("text", .text("héllo"), "text/plain", Data("héllo".utf8)),
+      ("raw", .raw(Data([0, 1, 2]), contentType: "application/x-raw"), "application/x-raw", Data([0, 1, 2])),
+      ("multipart", .multipart(form), "multipart/form-data; boundary=\(form.boundary)", form.data),
+      ("empty multipart", .multipart(emptyForm), "multipart/form-data; boundary=\(emptyForm.boundary)", nil)
+    ]
+
+    for (name, payload, expectedContentType, expectedBody) in cases {
+      let request = try request(payload)
+      #expect(contentType(request) == expectedContentType, "\(name)")
+      #expect(request.httpBody == expectedBody, "\(name)")
+    }
+  }
+
+  @Test("Config body parameters merge into key-value bodies only")
+  func configBodyParametersMerge() throws {
+    let config = config(body: ["a": "cfg", "g": "cfg"])
+    let merged: NSDictionary = ["a": "cfg", "g": "cfg"]
+    let form = self.form
+
+    #expect(json(try request(.json(["a": 1]), config: config)) == merged)
+    #expect(json(try request(.encodable(User(userName: "J"), encoder: snakeEncoder), config: config)) == ["a": "cfg", "g": "cfg", "userName": "J"])
+    #expect(text(try request(.formUrlEncoded(["a": "1"]), config: config)) == "a=cfg&g=cfg")
+    #expect(text(try request(.json(["a": "1"], encoding: .formUrlEncodedAscii), config: config)) == "a=cfg&g=cfg")
+    #expect(text(try request(.text("t"), config: config)) == "t")
+    #expect(try request(.raw(Data([7]), contentType: "x/y"), config: config).httpBody == Data([7]))
+    #expect(try request(.multipart(form), config: config).httpBody == form.data)
+    #expect(try request(.json(["a": 1], encoding: .plainText), config: config).httpBody == nil)
+
+    let legacyJSON = try LegacyRequest(body: HTTPBody(dictionary: ["a": 1])).urlRequest(with: config)
+    #expect(json(legacyJSON) == merged)
+    #expect(contentType(legacyJSON) == "application/json")
+
+    let legacyText = try LegacyRequest(body: HTTPBody(string: "t")).urlRequest(with: config)
+    #expect(text(legacyText) == "t")
+    #expect(contentType(legacyText) == "text/plain")
+
+    let legacyForm = try LegacyRequest(body: HTTPBody(encodable: User(userName: "J"), bodyEncoding: .formUrlEncodedAscii))
+      .urlRequest(with: config)
+    #expect(text(legacyForm) == "a=cfg&g=cfg&userName=J")
+    #expect(contentType(legacyForm) == "application/x-www-form-urlencoded")
+
+    let fallback = try LegacyRequest().urlRequest(with: config)
+    #expect(json(fallback) == merged)
+    #expect(contentType(fallback) == "application/json")
+  }
+
+  @Test("Content-Type precedence between endpoint, config and payload")
+  func contentTypePrecedence() throws {
+    let endpointHeader = ["Content-Type": "x/endpoint"]
+    let configWithHeader = config(headers: ["Content-Type": "x/config"])
+    let mergeable: [HTTPPayload] = [.json(["a": 1]), .encodable(User(userName: "J")), .formUrlEncoded(["a": 1]), .text("t")]
+    let overriding: [(HTTPPayload, String)] = [
+      (.raw(Data([1]), contentType: "x/raw"), "x/raw"),
+      (.multipart(form), "multipart/form-data")
+    ]
+
+    for payload in mergeable {
+      #expect(contentType(try request(payload, headers: endpointHeader, config: configWithHeader)) == "x/endpoint")
+      #expect(contentType(try request(payload, config: configWithHeader)) == "x/config")
+      #expect(contentType(try request(payload, headerOnly: true, config: configWithHeader)) != "x/config")
+    }
+    for (payload, expected) in overriding {
+      #expect(contentType(try request(payload, headers: endpointHeader, config: configWithHeader))?.hasPrefix(expected) == true)
+    }
+
+    #expect(contentType(try request(.json(["a": 1]), headerOnly: true, config: configWithHeader)) == "application/json")
+    let legacyWithHeader = LegacyRequest(headers: endpointHeader, body: HTTPBody(dictionary: ["a": 1]))
+    #expect(contentType(try legacyWithHeader.urlRequest(with: configWithHeader)) == "x/endpoint")
+    #expect(contentType(try LegacyRequest(body: HTTPBody(string: "t")).urlRequest(with: configWithHeader)) == "x/config")
+    let legacyForm = LegacyRequest(headers: endpointHeader, form: form)
+    #expect(contentType(try legacyForm.urlRequest(with: configWithHeader))?.hasPrefix("multipart/form-data") == true)
+    #expect(contentType(try LegacyRequest().urlRequest(with: configWithHeader)) == "x/config")
+
+    let all = try request(.json(["a": 1]), headers: ["X-E": "e"], config: config(headers: ["X-C": "c", "X-E": "c"]))
+    #expect(all.allHTTPHeaderFields == ["X-E": "e", "X-C": "c", "Content-Type": "application/json"])
+  }
+
+  @Test("Body source precedence: payload, body, form, config")
+  func bodySourcePrecedence() throws {
+    let config = config()
+    let form = self.form
+
+    var both = Endpoint<Data>(path: "items", method: .post, body: HTTPBody(dictionary: ["legacy": 1]))
+    both.payload = .text("p")
+    #expect(text(try both.urlRequest(with: config)) == "p")
+
+    both.payload = .json(["a": 1], encoding: .plainText)
+    let failed = try both.urlRequest(with: config)
+    #expect(failed.httpBody == nil)
+    #expect(contentType(failed) == nil)
+
+    both.payload = .encodable([1, 2])
+    #expect(try both.urlRequest(with: config).httpBody == nil)
+
+    let bodyAndForm = try LegacyRequest(body: HTTPBody(string: "b"), form: form).urlRequest(with: config)
+    #expect(text(bodyAndForm) == "b")
+    #expect(contentType(bodyAndForm) == "text/plain")
+
+    let formOnly = try LegacyRequest(form: form).urlRequest(with: config)
+    #expect(formOnly.httpBody == form.data)
+    #expect(contentType(formOnly) == "multipart/form-data; boundary=\(form.boundary)")
+
+    let failedLegacy = HTTPBody(dictionary: ["a": 1], bodyEncoding: .plainText)
+    #expect(failedLegacy == nil)
+
+    let empty = try LegacyRequest().urlRequest(with: config)
+    #expect(text(empty) == "{}")
+    #expect(contentType(empty) == "application/json")
+  }
+
+  @Test("GET never carries a body or payload Content-Type")
+  func getIgnoresBody() throws {
+    let config = config(headers: ["X-C": "c"], body: ["g": 1])
+    let get = try request(.json(["a": 1]), method: .get, config: config)
+    #expect(get.httpBody == nil)
+    #expect(get.allHTTPHeaderFields == ["X-C": "c"])
+
+    let legacyGet = try LegacyRequest(method: .get, body: HTTPBody(dictionary: ["a": 1])).urlRequest(with: config)
+    #expect(legacyGet.httpBody == nil)
+    #expect(contentType(legacyGet) == nil)
+  }
+}

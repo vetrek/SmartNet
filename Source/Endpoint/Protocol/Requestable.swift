@@ -92,11 +92,7 @@ public enum HTTPPayload {
       return HTTPBody(dictionary: dictionary, bodyEncoding: .formUrlEncodedAscii)
     case .text(let string):
       return HTTPBody(string: string)
-    case .raw:
-      // Raw data doesn't have a direct HTTPBody conversion
-      return nil
-    case .multipart:
-      // Multipart is handled separately
+    case .raw, .multipart:
       return nil
     }
   }
@@ -171,9 +167,7 @@ extension Requestable {
       config.baseURL.absoluteString + "/" :
       config.baseURL.absoluteString
 
-    let finalPath = path.first != "/" ?
-      path :
-      path[1..<path.count]
+    let finalPath = path.first != "/" ? path : String(path.dropFirst())
 
     let endpoint = isFullPath ?
       path :
@@ -230,72 +224,21 @@ extension Requestable {
       return urlRequest
     }
 
-    // Handle payload (new API) - takes precedence over body/form
-    if let payload = payload {
-      switch payload {
-      case .json(let dictionary, let encoding):
-        if var httpBody = HTTPBody(dictionary: dictionary, bodyEncoding: encoding) {
-          switch httpBody.bodyEncoding {
-          case .json:
-            allHeaders.merge(["Content-Type": "application/json"]) { (current, _) in current }
-          case .formUrlEncodedAscii:
-            allHeaders.merge(["Content-Type": "application/x-www-form-urlencoded"]) { (current, _) in current }
-          case .plainText:
-            allHeaders.merge(["Content-Type": "text/plain"]) { (current, _) in current }
-          }
-          urlRequest.httpBody = httpBody.addingKeyValues(keyValues: config.bodyParameters).data
-        }
-
-      case .encodable(let value, let encoder):
-        if var httpBody = HTTPBody(encodable: value, bodyEncoding: .json(encoder: encoder)) {
-          allHeaders.merge(["Content-Type": "application/json"]) { (current, _) in current }
-          urlRequest.httpBody = httpBody.addingKeyValues(keyValues: config.bodyParameters).data
-        }
-
-      case .formUrlEncoded(let dictionary):
-        if var httpBody = HTTPBody(dictionary: dictionary, bodyEncoding: .formUrlEncodedAscii) {
-          allHeaders.merge(["Content-Type": "application/x-www-form-urlencoded"]) { (current, _) in current }
-          urlRequest.httpBody = httpBody.addingKeyValues(keyValues: config.bodyParameters).data
-        }
-
-      case .multipart(let form):
-        allHeaders["Content-Type"] = "multipart/form-data; boundary=\(form.boundary)"
-        urlRequest.httpBody = form.data
-
-      case .raw(let data, let contentType):
-        allHeaders["Content-Type"] = contentType
-        urlRequest.httpBody = data
-
-      case .text(let string):
-        allHeaders.merge(["Content-Type": "text/plain"]) { (current, _) in current }
-        urlRequest.httpBody = string.data(using: .utf8)
+    if var httpBody = payload.map(\.asHTTPBody) ?? body {
+      let contentType = switch httpBody.bodyEncoding {
+      case .json: "application/json"
+      case .formUrlEncodedAscii: "application/x-www-form-urlencoded"
+      case .plainText: "text/plain"
       }
-    }
-    // Handle legacy body property
-    else if var body = body {
-      switch body.bodyEncoding {
-      case .json:
-        allHeaders.merge(["Content-Type": "application/json"]) { (current, _) in current }
-      case .formUrlEncodedAscii:
-        allHeaders.merge(["Content-Type": "application/x-www-form-urlencoded"]) { (current, _) in current }
-      case .plainText:
-        allHeaders.merge(["Content-Type": "text/plain"]) { (current, _) in current }
-      }
-
-      switch body.bodyType {
-      case .keyValue:
-        urlRequest.httpBody = body.addingKeyValues(keyValues: config.bodyParameters).data
-      case .string:
-        urlRequest.httpBody = body.data
-      }
-    }
-    // Handle legacy form property
-    else if let form = form {
+      allHeaders.merge(["Content-Type": contentType]) { (current, _) in current }
+      urlRequest.httpBody = httpBody.addingKeyValues(keyValues: config.bodyParameters).data
+    } else if let form = payload.map(\.asMultipartForm) ?? form {
       allHeaders["Content-Type"] = "multipart/form-data; boundary=\(form.boundary)"
       urlRequest.httpBody = form.data
-    }
-    // Fall back to config body parameters
-    else if let body = HTTPBody(dictionary: config.bodyParameters)?.data {
+    } else if let raw = payload?.asRawData {
+      allHeaders["Content-Type"] = raw.contentType
+      urlRequest.httpBody = raw.data
+    } else if payload == nil, let body = HTTPBody(dictionary: config.bodyParameters)?.data {
       allHeaders.merge(["Content-Type": "application/json"]) { (current, _) in current }
       urlRequest.httpBody = body
     }
