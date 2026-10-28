@@ -228,6 +228,7 @@ private extension UploadTask {
       }
     }
     state = .error
+    onUploadCompleted(task.taskIdentifier)
   }
   
   /// Processes and distributes a successful response to all registered response closures and updates the task state.
@@ -375,12 +376,35 @@ extension ApiClient {
       endpoint: endpoint,
       config: config,
       onUploadCompleted: { [weak self] taskIdentifier in
-        guard let self,
-              let task = uploadsTasks.first(where: { $0.identifier == taskIdentifier })
-        else { return }
-        uploadsTasks.remove(task)
+        guard let self else { return }
+        uploadQueue.sync {
+          guard let task = self.uploadsTasks.first(where: { $0.identifier == taskIdentifier }) else { return }
+          self.uploadsTasks.remove(task)
+        }
+        startNextPendingUpload()
       }
     )
+  }
+
+  func enqueueUpload(_ upload: AnyProgressiveTransferTask) {
+    uploadQueue.sync {
+      if uploadsTasks.count < maxConcurrentUploads {
+        upload.start()
+        uploadsTasks.insert(upload)
+      } else {
+        pendingUploads.append(upload)
+      }
+    }
+  }
+
+  func startNextPendingUpload() {
+    uploadQueue.sync {
+      while uploadsTasks.count < maxConcurrentUploads && !pendingUploads.isEmpty {
+        let pendingUpload = pendingUploads.removeFirst()
+        pendingUpload.start()
+        uploadsTasks.insert(pendingUpload)
+      }
+    }
   }
   
   /// Initiates an upload task for a decodable response type using the specified endpoint.
@@ -394,14 +418,7 @@ extension ApiClient {
     with endpoint: MultipartFormEndpoint<D>
   ) throws -> UploadTask<D> where D: Decodable {
     let uploadTask = try createUploadTask(with: endpoint)
-    
-    if uploadsTasks.count < maxConcurrentUploads {
-      uploadTask.start()
-      uploadsTasks.insert(AnyProgressiveTransferTask(uploadTask))
-    } else {
-      pendingUploads.append(AnyProgressiveTransferTask(uploadTask))
-    }
-    
+    enqueueUpload(AnyProgressiveTransferTask(uploadTask, start: uploadTask.start))
     return uploadTask
   }
   
@@ -416,14 +433,7 @@ extension ApiClient {
     with endpoint: MultipartFormEndpoint<String>
   ) throws -> UploadTask<String> {
     let uploadTask = try createUploadTask(with: endpoint)
-    
-    if uploadsTasks.count < maxConcurrentUploads {
-      uploadTask.start()
-      uploadsTasks.insert(AnyProgressiveTransferTask(uploadTask))
-    } else {
-      pendingUploads.append(AnyProgressiveTransferTask(uploadTask))
-    }
-    
+    enqueueUpload(AnyProgressiveTransferTask(uploadTask, start: uploadTask.start))
     return uploadTask
   }
   
@@ -438,14 +448,7 @@ extension ApiClient {
     with endpoint: MultipartFormEndpoint<Void>
   ) throws -> UploadTask<Void> {
     let uploadTask = try createUploadTask(with: endpoint)
-    
-    if uploadsTasks.count < maxConcurrentUploads {
-      uploadTask.start()
-      uploadsTasks.insert(AnyProgressiveTransferTask(uploadTask))
-    } else {
-      pendingUploads.append(AnyProgressiveTransferTask(uploadTask))
-    }
-    
+    enqueueUpload(AnyProgressiveTransferTask(uploadTask, start: uploadTask.start))
     return uploadTask
   }
   
@@ -460,14 +463,7 @@ extension ApiClient {
     with endpoint: MultipartFormEndpoint<Data>
   ) throws -> UploadTask<Data> {
     let uploadTask = try createUploadTask(with: endpoint)
-    
-    if uploadsTasks.count < maxConcurrentUploads {
-      uploadTask.start()
-      uploadsTasks.insert(AnyProgressiveTransferTask(uploadTask))
-    } else {
-      pendingUploads.append(AnyProgressiveTransferTask(uploadTask))
-    }
-    
+    enqueueUpload(AnyProgressiveTransferTask(uploadTask, start: uploadTask.start))
     return uploadTask
   }
 }

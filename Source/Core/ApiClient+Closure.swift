@@ -355,30 +355,36 @@ extension ApiClient {
           do {
             let groups = self.middlewareGroups(for: url)
 
-            if try await self.shouldRetryAfterPostResponse(
+            var retryRequested = try await self.shouldRetryAfterPostResponse(
               groups.global,
               data: data,
               response: response,
               error: error
-            ) {
-              // Middleware requested retry - check if policy allows
-              if retryCount < retryPolicy.maxRetries {
-                scheduleRetryWithDelay()
-                return
-              }
+            )
+
+            if !retryRequested {
+              retryRequested = try await self.shouldRetryAfterPostResponse(
+                groups.path,
+                data: data,
+                response: response,
+                error: error
+              )
             }
 
-            if try await self.shouldRetryAfterPostResponse(
-              groups.path,
-              data: data,
-              response: response,
-              error: error
-            ) {
-              // Middleware requested retry - check if policy allows
-              if retryCount < retryPolicy.maxRetries {
-                scheduleRetryWithDelay()
+            if retryRequested {
+              guard retryCount < retryPolicy.maxRetries else {
+                responseBlock(
+                  Response(
+                    result: .failure(.middlewareMaxRetry),
+                    session: self.session,
+                    request: currentRequest,
+                    response: response
+                  )
+                )
                 return
               }
+              scheduleRetryWithDelay()
+              return
             }
           } catch {
             responseBlock(

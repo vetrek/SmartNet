@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import Combine
 @testable import SmartNet
 
 @Suite("ApiClient Middleware Tests", .serialized)
@@ -171,9 +172,193 @@ struct ApiClientMiddlewareTests {
     #expect(groups.global.count == 1)
     #expect(groups.global.first?.id == middleware2.id)
   }
+
+  @Test("Middleware retry fails with middlewareMaxRetry after max retries")
+  func middlewareRetryFailsWithMaxRetryError() async throws {
+    let path = "/middleware-max-retry"
+    let (client, requestCount, endpoint) = makeAlwaysRetryClient(path: path, middlewarePath: "/")
+    defer { client.destroy(); MockURLProtocol.removeHandler(for: path) }
+
+    await #expect(throws: NetworkError.middlewareMaxRetry) {
+      try await client.request(with: endpoint)
+    }
+    #expect(requestCount.value == 3)
+  }
+
+  @Test("Path middleware retry fails with middlewareMaxRetry after max retries")
+  func pathMiddlewareRetryFailsWithMaxRetryError() async throws {
+    let path = "/middleware-max-retry-path"
+    let (client, requestCount, endpoint) = makeAlwaysRetryClient(path: path, middlewarePath: "middleware-max-retry-path")
+    defer { client.destroy(); MockURLProtocol.removeHandler(for: path) }
+
+    await #expect(throws: NetworkError.middlewareMaxRetry) {
+      try await client.request(with: endpoint)
+    }
+    #expect(requestCount.value == 3)
+  }
+
+  @Test("Middleware retry limit fails closure requests with middlewareMaxRetry")
+  func closureMiddlewareRetryFailsWithMaxRetryError() async {
+    let path = "/middleware-max-retry-closure"
+    let (client, requestCount, endpoint) = makeAlwaysRetryClient(path: path, middlewarePath: "/")
+    defer { client.destroy(); MockURLProtocol.removeHandler(for: path) }
+
+    let response: Response<Data> = await withCheckedContinuation { continuation in
+      client.request(with: endpoint) { response in
+        continuation.resume(returning: response)
+      }
+    }
+
+    #expect(response.result.error as? NetworkError == .middlewareMaxRetry)
+    #expect(requestCount.value == 3)
+  }
+
+  @Test("Middleware retry limit fails Combine requests with middlewareMaxRetry")
+  func combineMiddlewareRetryFailsWithMaxRetryError() async {
+    let path = "/middleware-max-retry-combine"
+    let (client, requestCount, endpoint) = makeAlwaysRetryClient(path: path, middlewarePath: "/")
+    defer { client.destroy(); MockURLProtocol.removeHandler(for: path) }
+
+    let publisher: AnyPublisher<Data, Error> = client.request(with: endpoint)
+    let holder = CancellableHolder()
+
+    let error: Error? = await withCheckedContinuation { continuation in
+      let cancellable = publisher
+        .sink(
+          receiveCompletion: { completion in
+            if case .failure(let error) = completion {
+              continuation.resume(returning: error)
+            } else {
+              continuation.resume(returning: nil)
+            }
+          },
+          receiveValue: { _ in }
+        )
+      Task { await holder.store(cancellable) }
+    }
+
+    #expect(error as? NetworkError == .middlewareMaxRetry)
+    #expect(requestCount.value == 3)
+  }
+
+  @Test("Path-matched closure middleware header is sent on every retry")
+  func pathMatchedPreRequestHeaderIsSentOnRetries() async throws {
+    let (client, _) = createMockClient()
+    let path = "/middleware-header-retry"
+    defer { client.destroy(); MockURLProtocol.removeHandler(for: path) }
+
+    let requestCount = RequestCounter()
+    let authorizedCount = RequestCounter()
+    MockURLProtocol.setHandler(for: path) { request in
+      requestCount.increment()
+      if request.value(forHTTPHeaderField: "Authorization") == "Bearer token" {
+        authorizedCount.increment()
+      }
+      let statusCode = requestCount.value < 3 ? 503 : 200
+      let response = HTTPURLResponse(url: request.url!, statusCode: statusCode, httpVersion: nil, headerFields: nil)!
+      return (response, Data("ok".utf8))
+    }
+
+    client.addMiddleware(
+      ApiClient.Middleware(
+        pathMatcher: ExactPathMatcher(pattern: path),
+        preRequestCallback: { request in
+          request.setValue("Bearer token", forHTTPHeaderField: "Authorization")
+        },
+        postResponseCallback: { _, _, _ in .next }
+      )
+    )
+
+    let endpoint = Endpoint<Data>(path: path, method: .get, retryPolicy: ImmediateRetryPolicy(maxRetries: 2))
+    _ = try await client.request(with: endpoint)
+
+    #expect(requestCount.value == 3)
+    #expect(authorizedCount.value == 3)
+  }
+
+  private func makeAlwaysRetryClient(
+    path: String,
+    middlewarePath: String
+  ) -> (ApiClient, RequestCounter, Endpoint<Data>) {
+    let (client, _) = createMockClient()
+    let requestCount = RequestCounter()
+    MockURLProtocol.setHandler(for: path) { request in
+      requestCount.increment()
+      let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+      return (response, Data("ok".utf8))
+    }
+    client.addMiddleware(
+      TestMiddleware(pathComponent: middlewarePath, postResponseHandler: { _, _, _ in .retryRequest })
+    )
+    let endpoint = Endpoint<Data>(path: path, method: .get, retryPolicy: ImmediateRetryPolicy(maxRetries: 2))
+    return (client, requestCount, endpoint)
+  }
+
+  @Test("Closure middleware pre-request header reaches outgoing request")
+  func closureMiddlewarePreRequestHeaderIsSent() async throws {
+    let (client, _) = createMockClient()
+    defer { client.destroy() }
+
+    let path = "/middleware-pre-request-header"
+    let receivedHeader = HeaderRecorder()
+    MockURLProtocol.setHandler(for: path) { request in
+      receivedHeader.record(request.value(forHTTPHeaderField: "Authorization"))
+      let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+      return (response, Data("ok".utf8))
+    }
+    defer { MockURLProtocol.removeHandler(for: path) }
+
+    client.addMiddleware(
+      ApiClient.Middleware(
+        pathComponent: "/",
+        preRequestCallback: { request in
+          request.setValue("Bearer token", forHTTPHeaderField: "Authorization")
+        },
+        postResponseCallback: { _, _, _ in .next }
+      )
+    )
+
+    _ = try await client.request(with: Endpoint<Data>(path: path, method: .get))
+
+    #expect(receivedHeader.value == "Bearer token")
+  }
 }
 
 // MARK: - Test Helpers
+
+private final class RequestCounter: @unchecked Sendable {
+  private let lock = NSLock()
+  private var count = 0
+
+  var value: Int {
+    lock.lock()
+    defer { lock.unlock() }
+    return count
+  }
+
+  func increment() {
+    lock.lock()
+    defer { lock.unlock() }
+    count += 1
+  }
+}
+
+private final class HeaderRecorder: @unchecked Sendable {
+  private let lock = NSLock()
+  private var header: String?
+
+  var value: String? {
+    lock.lock()
+    defer { lock.unlock() }
+    return header
+  }
+
+  func record(_ value: String?) {
+    lock.lock()
+    defer { lock.unlock() }
+    header = value
+  }
+}
 
 private struct TestMiddleware: MiddlewareProtocol, Sendable {
   let id = UUID()

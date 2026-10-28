@@ -32,7 +32,7 @@ extension ApiClient {
     public var pathComponent: String { _pathMatcher.pattern }
 
     /// Closure to be executed before the request is sent.
-    let preRequestCallback: @Sendable (URLRequest) throws -> Void
+    let preRequestCallback: @Sendable (inout URLRequest) throws -> Void
 
     /// Closure to be executed after the response is received.
     let postResponseCallback: @Sendable (Data?, URLResponse?, Error?) async throws -> MiddlewarePostRequestResult
@@ -45,7 +45,7 @@ extension ApiClient {
     ///   - postResponseCallback: Closure executed after the response is received.
     public init(
       pathMatcher: PathMatcher,
-      preRequestCallback: @Sendable @escaping (URLRequest) throws -> Void,
+      preRequestCallback: @Sendable @escaping (inout URLRequest) throws -> Void,
       postResponseCallback: @Sendable @escaping (Data?, URLResponse?, Error?) async throws -> MiddlewarePostRequestResult
     ) {
       self._pathMatcher = pathMatcher
@@ -63,7 +63,7 @@ extension ApiClient {
     ///   - postResponseCallback: Closure executed after the response is received.
     public init(
       pathComponent: String,
-      preRequestCallback: @Sendable @escaping (URLRequest) throws -> Void,
+      preRequestCallback: @Sendable @escaping (inout URLRequest) throws -> Void,
       postResponseCallback: @Sendable @escaping (Data?, URLResponse?, Error?) async throws -> MiddlewarePostRequestResult
     ) {
       self._pathMatcher = ContainsPathMatcher(pattern: pathComponent)
@@ -72,7 +72,7 @@ extension ApiClient {
     }
 
     public func preRequest(_ request: inout URLRequest) throws {
-      try preRequestCallback(request)
+      try preRequestCallback(&request)
     }
 
     public func postResponse(data: Data?, response: URLResponse?, error: Error?) async throws -> MiddlewarePostRequestResult {

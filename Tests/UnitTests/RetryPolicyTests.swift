@@ -586,3 +586,33 @@ struct RetryPolicyFactoryMethodTests {
     #expect(config3.retryPolicy is NoRetryPolicy)
   }
 }
+
+// MARK: - Custom RetryPolicy Tests
+
+private struct CustomRetryPolicy: RetryPolicy {
+  let maxRetries = 1
+
+  func shouldRetry(for error: NetworkError, attempt: Int) -> Bool {
+    attempt < maxRetries
+  }
+}
+
+@Suite("Custom RetryPolicy Tests")
+struct CustomRetryPolicyTests {
+
+  @Test("Default delay returns zero without a server delay")
+  func defaultDelayIsZero() {
+    let policy = CustomRetryPolicy()
+
+    #expect(policy.delay(forAttempt: 0, error: nil) == 0)
+    #expect(policy.delay(forAttempt: 2, error: .timeout) == 0)
+    #expect(policy.delay(forAttempt: 0, error: .rateLimited(retryAfter: nil)) == 0)
+  }
+
+  @Test("Default delay respects Retry-After")
+  func defaultDelayRespectsRetryAfter() {
+    let policy = CustomRetryPolicy()
+
+    #expect(policy.delay(forAttempt: 0, error: .rateLimited(retryAfter: 7)) == 7)
+  }
+}

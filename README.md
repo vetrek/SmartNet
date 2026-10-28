@@ -206,9 +206,7 @@ client.addMiddleware(
     ApiClient.Middleware(
         pathMatcher: PathMatcher.contains("/"),
         preRequestCallback: { request in
-            var req = request
-            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            return req
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         },
         postResponseCallback: { data, response, error in
             return .next

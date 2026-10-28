@@ -53,7 +53,10 @@ public protocol RetryPolicy: Sendable {
 
 public extension RetryPolicy {
   func delay(forAttempt attempt: Int, error: NetworkError?) -> TimeInterval {
-    delay(forAttempt: attempt, error: nil)
+    if let error = error, case .rateLimited(let retryAfter) = error, let serverDelay = retryAfter {
+      return serverDelay
+    }
+    return 0
   }
 }
 

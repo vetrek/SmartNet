@@ -257,6 +257,79 @@ struct FileOperationTests {
     #expect(request.value(forHTTPHeaderField: "Content-Type")?.contains("multipart/form-data") == true)
   }
 
+  @Test("Finished uploads free slots for pending uploads")
+  func finishedUploadsFreeSlots() async throws {
+    let (client, _) = createMockClient()
+    let count = client.maxConcurrentUploads * 2 + 3
+    defer {
+      client.destroy()
+      (0..<count).forEach { MockURLProtocol.removeHandler(for: "/upslots/\($0)") }
+    }
+
+    for index in 0..<count {
+      MockURLProtocol.setHandler(for: "/upslots/\(index)") { request in
+        switch index % 3 {
+        case 0:
+          throw URLError(.networkConnectionLost)
+        case 1:
+          return (HTTPURLResponse(url: request.url!, statusCode: 500, httpVersion: nil, headerFields: nil)!, Data())
+        default:
+          return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, Data("ok".utf8))
+        }
+      }
+    }
+
+    let uploads = try (0..<count).map { index in
+      try client.upload(
+        with: MultipartFormEndpoint<String>(
+          path: "upslots/\(index)",
+          form: MultipartFormData { $0.addTextField(named: "index", value: "\(index)") }
+        )
+      )
+    }
+
+    let finished: Set<UploadTask<String>.UploadState> = [.completed, .error]
+    for _ in 0..<250 where !uploads.allSatisfy({ finished.contains($0.state) }) {
+      try await Task.sleep(nanoseconds: 20_000_000)
+    }
+
+    #expect(uploads.map(\.state) == (0..<count).map { $0 % 3 == 2 ? .completed : .error })
+    #expect(client.uploadsTasks.isEmpty)
+    #expect(client.pendingUploads.isEmpty)
+  }
+
+  @Test("Cancelled uploads free slots for pending uploads")
+  func cancelledUploadsFreeSlots() async throws {
+    let (client, _) = createMockClient()
+    defer {
+      client.destroy()
+      MockURLProtocol.removeHandler(for: "/upcancel/slow")
+      MockURLProtocol.removeHandler(for: "/upcancel/ok")
+    }
+
+    MockURLProtocol.setHandler(for: "/upcancel/slow") { request in
+      Thread.sleep(forTimeInterval: 0.5)
+      return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, Data("slow".utf8))
+    }
+    MockURLProtocol.setHandler(for: "/upcancel/ok") { request in
+      (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, Data("ok".utf8))
+    }
+
+    let form = MultipartFormData { $0.addTextField(named: "field", value: "value") }
+    let started = try (0..<client.maxConcurrentUploads).map { _ in
+      try client.upload(with: MultipartFormEndpoint<String>(path: "upcancel/slow", form: form))
+    }
+    let pending = try client.upload(with: MultipartFormEndpoint<String>(path: "upcancel/ok", form: form))
+
+    started.forEach { $0.cancel() }
+
+    for _ in 0..<50 where pending.state == .waitingStart {
+      try await Task.sleep(nanoseconds: 20_000_000)
+    }
+
+    #expect(pending.state != .waitingStart)
+  }
+
   // MARK: - Concurrent Download Limit Tests
 
   @Test("Download tasks respect concurrent limit")
