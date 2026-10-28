@@ -488,6 +488,83 @@ struct PathMatcherTests {
     #expect(matcher.matches(path: "/a/b/middle/c/d"))
   }
 
+  @Test("Glob matcher characterization table", arguments: [
+    ("/api/**", "/api", true),
+    ("/api/**", "/api/v1/users/123", true),
+    ("/api/**", "/apix", false),
+    ("/api/**", "", false),
+    ("**", "", true),
+    ("**", "/", true),
+    ("**", "/a/b/c", true),
+    ("", "", true),
+    ("", "/", true),
+    ("", "/a", false),
+    ("/", "", true),
+    ("//", "/a", false),
+    ("**/users", "/users", true),
+    ("**/users", "/a/b/users", true),
+    ("**/users", "/users/x", false),
+    ("/api/**/details", "/api/details", true),
+    ("/api/**/details", "/api/v1/x/details", true),
+    ("/api/**/details", "/api/v1/details/x", false),
+    ("/api/**/details/", "api/v1/details", true),
+    ("/**/a/**", "/a", true),
+    ("/**/a/**", "/x/a/y/z", true),
+    ("/**/a/**", "/x/b", false),
+    ("**/a/**/b", "/a/a/b/b", true),
+    ("**/a/**/b", "/b/a", false),
+    ("**/a/**/b", "/a/b/a", false),
+    ("/**/**", "/x", true),
+    ("/**/**/x", "/x", true),
+    ("/**/**/x", "/", false),
+    ("/api/*/v1/**", "/api/v1", false),
+    ("/api/*/v1/**", "/api/t/v1", true),
+    ("*", "", false),
+    ("*", "/a", true),
+    ("*", "/a/b", false),
+    ("/a//b", "/a//b", true),
+    ("/a//b", "/a/b", false),
+    ("/a/*/b", "/a//b", true),
+    ("/a/**/b", "/a///b", true),
+    ("**/*", "", false),
+    ("**/*", "/a/b", true),
+    ("*/**", "/a", true),
+    ("a/**/b/**/c", "a/b/c", true),
+    ("a/**/b/**/c", "a/x/b/y/c", true),
+    ("a/**/b/**/c", "a/c/b", false),
+    ("/a/**", "/A/b", false),
+    ("/a/**/b", "/a/b/b/b", true),
+    ("/a/**/b/c", "/a/b/x/b/c", true)
+  ])
+  func globMatcherTable(pattern: String, path: String, expected: Bool) {
+    #expect(GlobPathMatcher(pattern: pattern).matches(path: path) == expected)
+  }
+
+  @Test("Wildcard matcher characterization table", arguments: [
+    ("/users/*", "/users/1", true),
+    ("/users/*", "/users", false),
+    ("/users/*", "/users/1/2", false),
+    ("", "", true),
+    ("", "/", true),
+    ("/", "", true),
+    ("", "/a", false),
+    ("*", "", false),
+    ("*", "/a", true),
+    ("/*/x/*", "/a/x/b", true),
+    ("/*/x/*", "/a/y/b", false),
+    ("/a/*", "/a/b/", true),
+    ("a/*", "/a/b", true),
+    ("/a//b", "/a//b", true),
+    ("/a/*/b", "/a//b", true),
+    ("**", "/a", false),
+    ("**", "/**", true),
+    ("/a/b", "/a/c", false),
+    ("/A", "/a", false)
+  ])
+  func wildcardMatcherTable(pattern: String, path: String, expected: Bool) {
+    #expect(WildcardPathMatcher(pattern: pattern).matches(path: path) == expected)
+  }
+
   // MARK: - RegexPathMatcher Tests
 
   @Test("Regex matcher matches pattern with numeric ID")

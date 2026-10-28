@@ -181,45 +181,8 @@ public struct WildcardPathMatcher: PathMatcher {
   public func matches(path: String) -> Bool {
     let patternSegments = segments(from: pattern)
     let pathSegments = segments(from: path)
-
-    // Segment count must match (single-segment wildcard only)
-    guard patternSegments.count == pathSegments.count else {
-      return false
-    }
-
-    // Empty pattern only matches empty path
-    if patternSegments.isEmpty {
-      return pathSegments.isEmpty
-    }
-
-    // Check each segment
-    for (patternSegment, pathSegment) in zip(patternSegments, pathSegments) {
-      if patternSegment == "*" {
-        // Wildcard matches any single segment
-        continue
-      } else if patternSegment != pathSegment {
-        // Exact match required for non-wildcard segments
-        return false
-      }
-    }
-
-    return true
-  }
-
-  /// Splits a path into segments, stripping empty segments from edges.
-  private func segments(from path: String) -> [String] {
-    let parts = path.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
-
-    // Strip empty segments from edges (handles leading/trailing slashes)
-    var result = parts
-    while result.first == "" {
-      result.removeFirst()
-    }
-    while result.last == "" {
-      result.removeLast()
-    }
-
-    return result
+    return patternSegments.count == pathSegments.count
+      && zip(patternSegments, pathSegments).allSatisfy { $0 == "*" || $0 == $1 }
   }
 }
 
@@ -269,10 +232,7 @@ public struct GlobPathMatcher: PathMatcher {
   }
 
   public func matches(path: String) -> Bool {
-    let patternSegments = segments(from: pattern)
-    let pathSegments = segments(from: path)
-
-    return matchSegments(patternSegments, pathSegments)
+    matchSegments(segments(from: pattern)[...], segments(from: path)[...])
   }
 
   /// Recursively matches pattern segments against path segments.
@@ -281,84 +241,21 @@ public struct GlobPathMatcher: PathMatcher {
   ///   - pattern: Remaining pattern segments to match
   ///   - path: Remaining path segments to match against
   /// - Returns: `true` if the pattern matches the path
-  private func matchSegments(_ pattern: [String], _ path: [String]) -> Bool {
-    var pIdx = 0  // Pattern index
-    var pathIdx = 0  // Path index
-
-    // Stack for backtracking when ** needs to consume more segments
-    // Each entry is (patternIndex, pathIndex) to resume from
-    var backtrackStack: [(Int, Int)] = []
-
-    while pIdx < pattern.count || pathIdx < path.count {
-      if pIdx < pattern.count {
-        let segment = pattern[pIdx]
-
-        if segment == "**" {
-          // ** can match zero or more segments
-          // Save backtrack point: try matching rest of pattern against rest of path
-          // If that fails, we'll come back and let ** consume one more segment
-          if pIdx + 1 < pattern.count {
-            // More pattern after ** - save backtrack point
-            backtrackStack.append((pIdx, pathIdx + 1))
-          } else {
-            // ** is at end of pattern - matches everything remaining
-            return true
-          }
-          pIdx += 1
-          continue
-        }
-
-        if pathIdx < path.count {
-          if segment == "*" {
-            // * matches exactly one segment
-            pIdx += 1
-            pathIdx += 1
-            continue
-          } else if segment == path[pathIdx] {
-            // Literal match
-            pIdx += 1
-            pathIdx += 1
-            continue
-          }
-        }
-      }
-
-      // No match at current position - try backtracking
-      if let (savedPIdx, savedPathIdx) = backtrackStack.popLast() {
-        if savedPathIdx <= path.count {
-          pIdx = savedPIdx
-          pathIdx = savedPathIdx
-          // Re-push backtrack point for potentially consuming more
-          if savedPathIdx < path.count {
-            backtrackStack.append((savedPIdx, savedPathIdx + 1))
-          }
-          pIdx += 1  // Move past ** in pattern
-          continue
-        }
-      }
-
-      // No backtrack available - no match
-      return false
+  private func matchSegments(_ pattern: ArraySlice<String>, _ path: ArraySlice<String>) -> Bool {
+    guard let head = pattern.first else { return path.isEmpty }
+    if head == "**" {
+      return (path.startIndex...path.endIndex).contains { matchSegments(pattern.dropFirst(), path[$0...]) }
     }
-
-    return true
+    guard let segment = path.first, head == "*" || head == segment else { return false }
+    return matchSegments(pattern.dropFirst(), path.dropFirst())
   }
+}
 
-  /// Splits a path into segments, stripping empty segments from edges.
-  private func segments(from path: String) -> [String] {
-    let parts = path.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
-
-    // Strip empty segments from edges (handles leading/trailing slashes)
-    var result = parts
-    while result.first == "" {
-      result.removeFirst()
-    }
-    while result.last == "" {
-      result.removeLast()
-    }
-
-    return result
-  }
+private func segments(from path: String) -> [String] {
+  var result = path.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
+  while result.first == "" { result.removeFirst() }
+  while result.last == "" { result.removeLast() }
+  return result
 }
 
 /// A path matcher that uses regular expressions for flexible pattern matching.
