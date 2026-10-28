@@ -210,6 +210,7 @@ struct ApiClientMiddlewareTests {
     }
 
     #expect(response.result.error as? NetworkError == .middlewareMaxRetry)
+    #expect(response.statusCode == 200)
     #expect(requestCount.value == 3)
   }
 
@@ -322,6 +323,88 @@ struct ApiClientMiddlewareTests {
 
     #expect(receivedHeader.value == "Bearer token")
   }
+
+  @Test("Global middlewares run before path middlewares and a global retry skips path ones")
+  func globalRetrySkipsPathMiddlewares() async throws {
+    let (client, _) = createMockClient()
+    let path = "/middleware-order"
+    defer { client.destroy(); MockURLProtocol.removeHandler(for: path) }
+
+    let requestCount = RequestCounter()
+    MockURLProtocol.setHandler(for: path) { request in
+      requestCount.increment()
+      return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, Data("ok".utf8))
+    }
+
+    let events = EventRecorder()
+    client.addMiddleware(TestMiddleware(
+      pathComponent: "middleware-order",
+      preRequestHandler: { _ in events.record("pre-path") },
+      postResponseHandler: { _, _, _ in events.record("post-path"); return .next }
+    ))
+    client.addMiddleware(TestMiddleware(
+      pathComponent: "/",
+      preRequestHandler: { _ in events.record("pre-global") },
+      postResponseHandler: { _, _, _ in
+        events.record("post-global")
+        return requestCount.value == 1 ? .retryRequest : .next
+      }
+    ))
+
+    let endpoint = Endpoint<Data>(path: path, method: .get, retryPolicy: ImmediateRetryPolicy(maxRetries: 2))
+    _ = try await client.request(with: endpoint)
+
+    #expect(requestCount.value == 2)
+    #expect(events.values == [
+      "pre-global", "pre-path", "post-global",
+      "pre-global", "pre-path", "post-global", "post-path"
+    ])
+  }
+
+  @Test("Throwing post-response middleware fails with middleware error and response metadata")
+  func throwingPostResponseMiddlewareFails() async {
+    let (client, _) = createMockClient()
+    let path = "/middleware-throws"
+    defer { client.destroy(); MockURLProtocol.removeHandler(for: path) }
+
+    MockURLProtocol.setHandler(for: path) { request in
+      (HTTPURLResponse(url: request.url!, statusCode: 201, httpVersion: nil, headerFields: nil)!, Data("ok".utf8))
+    }
+    client.addMiddleware(TestMiddleware(pathComponent: "/", postResponseHandler: { _, _, _ in throw URLError(.userAuthenticationRequired) }))
+
+    let response: Response<Data> = await withCheckedContinuation { continuation in
+      client.request(with: Endpoint<Data>(path: path, method: .get)) { continuation.resume(returning: $0) }
+    }
+
+    #expect(response.error as? NetworkError == .middleware(URLError(.userAuthenticationRequired)))
+    #expect(response.statusCode == 201)
+    #expect(response.request?.url?.path == path)
+  }
+
+  @Test("Progress HUD shows once and dismisses after every attempt, after the completion")
+  func progressHUDAcrossRetries() async throws {
+    let (client, _) = createMockClient()
+    let path = "/middleware-hud-retry"
+    defer { client.destroy(); MockURLProtocol.removeHandler(for: path) }
+
+    let requestCount = RequestCounter()
+    MockURLProtocol.setHandler(for: path) { request in
+      requestCount.increment()
+      let statusCode = requestCount.value < 3 ? 503 : 200
+      return (HTTPURLResponse(url: request.url!, statusCode: statusCode, httpVersion: nil, headerFields: nil)!, Data("ok".utf8))
+    }
+
+    let hud = HUDRecorder()
+    let endpoint = Endpoint<Data>(path: path, method: .get, retryPolicy: ImmediateRetryPolicy(maxRetries: 2))
+    let eventsAtCompletion: [String] = await withCheckedContinuation { continuation in
+      client.request(with: endpoint, progressHUD: hud) { _ in continuation.resume(returning: hud.events.values) }
+    }
+    await MainActor.run {}
+
+    #expect(requestCount.value == 3)
+    #expect(eventsAtCompletion == ["show", "dismiss", "dismiss"])
+    #expect(hud.events.values == ["show", "dismiss", "dismiss", "dismiss"])
+  }
 }
 
 // MARK: - Test Helpers
@@ -390,4 +473,27 @@ private struct TestMiddleware: MiddlewareProtocol, Sendable {
     }
     return .next
   }
+}
+
+private final class EventRecorder: @unchecked Sendable {
+  private let lock = NSLock()
+  private var events = [String]()
+
+  var values: [String] {
+    lock.lock()
+    defer { lock.unlock() }
+    return events
+  }
+
+  func record(_ event: String) {
+    lock.lock()
+    defer { lock.unlock() }
+    events.append(event)
+  }
+}
+
+private struct HUDRecorder: SNProgressHUD {
+  let events = EventRecorder()
+  func show() { events.record("show") }
+  func dismiss() { events.record("dismiss") }
 }

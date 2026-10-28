@@ -243,4 +243,54 @@ struct ClosureRequestTests {
       }
     }
   }
+
+  @Test("Void request passes HTTP errors through with response metadata")
+  func voidHTTPErrorPassesThrough() async {
+    let (client, _) = createMockClient()
+    defer { client.destroy(); MockURLProtocol.removeHandler(for: "/closure/voiderror") }
+
+    MockURLProtocol.setHandler(for: "/closure/voiderror") { request in
+      (HTTPURLResponse(url: request.url!, statusCode: 500, httpVersion: nil, headerFields: nil)!, Data("boom".utf8))
+    }
+
+    let endpoint = Endpoint<Void>(path: "closure/voiderror", method: .delete)
+    let response: Response<Void> = await withCheckedContinuation { continuation in
+      client.request(with: endpoint) { continuation.resume(returning: $0) }
+    }
+
+    #expect(response.error as? NetworkError == .error(statusCode: 500, data: Data("boom".utf8)))
+    #expect(response.statusCode == 500)
+    #expect(response.request?.url?.path == "/closure/voiderror")
+  }
+
+  @Test("Completion runs on the requested queue for success and failure")
+  func completionRunsOnRequestedQueue() async {
+    let (client, _) = createMockClient()
+    defer {
+      client.destroy()
+      MockURLProtocol.removeHandler(for: "/closure/queue-ok")
+      MockURLProtocol.removeHandler(for: "/closure/queue-fail")
+    }
+
+    MockURLProtocol.setHandler(for: "/closure/queue-ok") { request in
+      (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, Data("ok".utf8))
+    }
+    MockURLProtocol.setHandler(for: "/closure/queue-fail") { request in
+      (HTTPURLResponse(url: request.url!, statusCode: 418, httpVersion: nil, headerFields: nil)!, Data())
+    }
+
+    let key = DispatchSpecificKey<String>()
+    let queue = DispatchQueue(label: "closure.queue.test")
+    queue.setSpecific(key: key, value: "custom")
+
+    for path in ["closure/queue-ok", "closure/queue-fail"] {
+      let (marker, statusCode): (String?, Int) = await withCheckedContinuation { continuation in
+        client.request(with: Endpoint<Data>(path: path, method: .get), queue: queue) { response in
+          continuation.resume(returning: (DispatchQueue.getSpecific(key: key), response.statusCode))
+        }
+      }
+      #expect(marker == "custom")
+      #expect(statusCode == (path.hasSuffix("ok") ? 200 : 418))
+    }
+  }
 }

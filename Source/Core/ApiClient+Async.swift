@@ -42,9 +42,8 @@ public extension ApiClient {
   ) async throws -> E.Response where D : Decodable, D == E.Response, E : Requestable {
     let data = try await dataRequest(endpoint: endpoint, progressHUD: progressHUD)
     do {
-      let responseObject = try decoder.decode(D.self, from: data)
-      return responseObject
-    } catch let error {
+      return try decoder.decode(D.self, from: data)
+    } catch {
       let networkError = NetworkError.parsingFailed(from: error)
       SmartNetLogger.shared.debug("Parsing error: \(networkError.description)")
       throw networkError
@@ -102,7 +101,7 @@ public extension ApiClient {
     endpoint: E,
     progressHUD: SNProgressHUD? = nil
   ) async throws -> Data where E : Requestable {
-    return try await withCheckedThrowingContinuation { continuation in
+    try await withCheckedThrowingContinuation { continuation in
       dataRequest(with: endpoint, progressHUD: progressHUD) { response in
         switch response.result {
         case .success(let data):

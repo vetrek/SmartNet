@@ -20,16 +20,14 @@ extension ApiClient {
     ///
     /// This targeted application makes it possible to layer middleware based on URL structure, enabling
     /// fine-grained control over request modification and response handling based on specific endpoints or services.
-    private let _pathMatcher: PathMatcher
-
-    public var pathMatcher: PathMatcher { _pathMatcher }
+    public private(set) var pathMatcher: PathMatcher
 
     /// Path components are the segments in the URL after the domain, separated by "/". For example, in the URL "https://example.com/v1/user", the path components are "v1" and "user".
     /// If you specify the path component as "/", the middleware will be applied to every API call, regardless of its specific path.
     ///
     /// - Note: Deprecated. Use `pathMatcher.pattern` instead.
     @available(*, deprecated, message: "Use pathMatcher.pattern instead")
-    public var pathComponent: String { _pathMatcher.pattern }
+    public var pathComponent: String { pathMatcher.pattern }
 
     /// Closure to be executed before the request is sent.
     let preRequestCallback: @Sendable (inout URLRequest) throws -> Void
@@ -48,7 +46,7 @@ extension ApiClient {
       preRequestCallback: @Sendable @escaping (inout URLRequest) throws -> Void,
       postResponseCallback: @Sendable @escaping (Data?, URLResponse?, Error?) async throws -> MiddlewarePostRequestResult
     ) {
-      self._pathMatcher = pathMatcher
+      self.pathMatcher = pathMatcher
       self.preRequestCallback = preRequestCallback
       self.postResponseCallback = postResponseCallback
     }
@@ -66,7 +64,7 @@ extension ApiClient {
       preRequestCallback: @Sendable @escaping (inout URLRequest) throws -> Void,
       postResponseCallback: @Sendable @escaping (Data?, URLResponse?, Error?) async throws -> MiddlewarePostRequestResult
     ) {
-      self._pathMatcher = ContainsPathMatcher(pattern: pathComponent)
+      self.pathMatcher = ContainsPathMatcher(pattern: pathComponent)
       self.preRequestCallback = preRequestCallback
       self.postResponseCallback = postResponseCallback
     }

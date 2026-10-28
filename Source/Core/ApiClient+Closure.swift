@@ -121,18 +121,10 @@ public extension ApiClient {
   ) -> NetworkCancellable? where E: Requestable, E.Response == Void {
     dataRequest(with: endpoint, queue: queue, progressHUD: progressHUD) { response in
       switch response.result {
-      case .success:
+      case .success, .failure(.emptyResponse):
         completion(response.convertedTo(result: .success(())))
       case .failure(let error):
-        guard case .emptyResponse = error else {
-          if let error = response.result.error as? NetworkError {
-            completion(response.convertedTo(result: .failure(error)))
-          } else {
-            completion(response.convertedTo(result: .failure(.networkFailure)))
-          }
-          return
-        }
-        completion(response.convertedTo(result: .success(())))
+        completion(response.convertedTo(result: .failure(error)))
       }
     }
   }
@@ -191,12 +183,7 @@ extension ApiClient {
     guard let url = request.url, !middlewares.isEmpty else { return }
 
     let groups = middlewareGroups(for: url)
-
-    for middleware in groups.global {
-      try middleware.preRequest(&request)
-    }
-
-    for middleware in groups.path {
+    for middleware in groups.global + groups.path {
       try middleware.preRequest(&request)
     }
   }
@@ -225,21 +212,9 @@ extension ApiClient {
     response: URLResponse?,
     error: Error?
   ) async throws -> Bool {
-    for middleware in middlewares {
-      let result = try await middleware.postResponse(
-        data: data,
-        response: response,
-        error: error
-      )
-
-      switch result {
-      case .next:
-        continue
-      case .retryRequest:
-        return true
-      }
+    for middleware in middlewares where try await middleware.postResponse(data: data, response: response, error: error) == .retryRequest {
+      return true
     }
-
     return false
   }
 
@@ -288,6 +263,10 @@ extension ApiClient {
 
         guard let self else { return }
 
+        @Sendable func finish(_ result: Result<Data>) {
+          responseBlock(Response(result: result, session: self.session, request: currentRequest, response: response))
+        }
+
         // Print cURL
         if (endpoint.debugRequest ?? self.config.debug), let session = self.session {
           let elapsed = Date().timeIntervalSince(startTime)
@@ -323,14 +302,7 @@ extension ApiClient {
                 completion: completion
               )
             } catch {
-              responseBlock(
-                Response(
-                  result: .failure(error),
-                  session: self.session,
-                  request: currentRequest,
-                  response: response
-                )
-              )
+              finish(.failure(error))
             }
           }
 
@@ -354,47 +326,16 @@ extension ApiClient {
            !middlewares.isEmpty {
           do {
             let groups = self.middlewareGroups(for: url)
-
-            var retryRequested = try await self.shouldRetryAfterPostResponse(
-              groups.global,
-              data: data,
-              response: response,
-              error: error
-            )
-
-            if !retryRequested {
-              retryRequested = try await self.shouldRetryAfterPostResponse(
-                groups.path,
-                data: data,
-                response: response,
-                error: error
-              )
-            }
-
-            if retryRequested {
+            if try await self.shouldRetryAfterPostResponse(groups.global + groups.path, data: data, response: response, error: error) {
               guard retryCount < retryPolicy.maxRetries else {
-                responseBlock(
-                  Response(
-                    result: .failure(.middlewareMaxRetry),
-                    session: self.session,
-                    request: currentRequest,
-                    response: response
-                  )
-                )
+                finish(.failure(.middlewareMaxRetry))
                 return
               }
               scheduleRetryWithDelay()
               return
             }
           } catch {
-            responseBlock(
-              Response(
-                result: .failure(.middleware(error)),
-                session: session,
-                request: currentRequest,
-                response: response
-              )
-            )
+            finish(.failure(.middleware(error)))
             return
           }
         }
@@ -413,14 +354,7 @@ extension ApiClient {
             return
           }
 
-          responseBlock(
-            Response(
-              result: .failure(networkError),
-              session: self.session,
-              request: currentRequest,
-              response: response
-            )
-          )
+          finish(.failure(networkError))
           return
         }
 
@@ -437,38 +371,17 @@ extension ApiClient {
             return
           }
 
-          responseBlock(
-            Response(
-              result: .failure(validationError),
-              session: self.session,
-              request: currentRequest,
-              response: response
-            )
-          )
+          finish(.failure(validationError))
           return
         }
 
         guard let data else {
-          responseBlock(
-            Response(
-              result: .failure(.emptyResponse),
-              session: self.session,
-              request: currentRequest,
-              response: response
-            )
-          )
+          finish(.failure(.emptyResponse))
           return
         }
 
         // Success Response
-        responseBlock(
-          Response(
-            result: .success(data),
-            session: self.session,
-            request: currentRequest,
-            response: response
-          )
-        )
+        finish(.success(data))
       }
     }
     task?.resume()

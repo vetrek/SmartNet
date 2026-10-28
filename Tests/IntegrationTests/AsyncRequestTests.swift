@@ -138,4 +138,26 @@ struct AsyncRequestTests {
       Issue.record("Unexpected error type: \(error)")
     }
   }
+
+  @Test("Void succeeds on 2xx and throws HTTP errors")
+  func voidRequest() async throws {
+    let (client, _) = createMockClient()
+    defer {
+      client.destroy()
+      MockURLProtocol.removeHandler(for: "/async/void-ok")
+      MockURLProtocol.removeHandler(for: "/async/void-fail")
+    }
+
+    MockURLProtocol.setHandler(for: "/async/void-ok") { request in
+      (HTTPURLResponse(url: request.url!, statusCode: 204, httpVersion: nil, headerFields: nil)!, Data())
+    }
+    MockURLProtocol.setHandler(for: "/async/void-fail") { request in
+      (HTTPURLResponse(url: request.url!, statusCode: 409, httpVersion: nil, headerFields: nil)!, Data("dup".utf8))
+    }
+
+    try await client.request(with: Endpoint<Void>(path: "async/void-ok", method: .delete))
+    await #expect(throws: NetworkError.error(statusCode: 409, data: Data("dup".utf8))) {
+      try await client.request(with: Endpoint<Void>(path: "async/void-fail", method: .delete))
+    }
+  }
 }
