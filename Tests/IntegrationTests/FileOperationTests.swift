@@ -499,6 +499,36 @@ struct FileOperationTests {
     #expect(sent.values.isEmpty)
     #expect(client.uploadsTasks.isEmpty)
     #expect(client.pendingUploads.isEmpty)
+    #expect((running + queued).allSatisfy { $0.state == .cancelled })
+  }
+
+  @Test("Cancelling a running upload ends cancelled and frees its slot")
+  func cancelRunningUpload() async throws {
+    let (client, _) = createMockClient()
+    let events = EventRecorder()
+    let attempts = EventRecorder()
+    defer {
+      client.destroy()
+      MockURLProtocol.removeHandler(for: "/uprunningcancel/file")
+    }
+    MockURLProtocol.setHandler(for: "/uprunningcancel/file") { request in
+      attempts.record("sent")
+      Thread.sleep(forTimeInterval: 0.3)
+      return Self.ok(request, "done")
+    }
+
+    let form = MultipartFormData { $0.addTextField(named: "field", value: "value") }
+    let upload = try client.upload(with: MultipartFormEndpoint<String>(path: "uprunningcancel/file", form: form))
+    record(upload, into: events)
+    try await waitFor { !attempts.values.isEmpty }
+
+    upload.cancel()
+    try await waitFor { !events.values.isEmpty && client.uploadsTasks.isEmpty }
+    try await Task.sleep(nanoseconds: 500_000_000)
+
+    #expect(upload.state == .cancelled)
+    #expect(events.values == ["cancelled"])
+    #expect(client.uploadsTasks.isEmpty)
   }
 
   // MARK: - Upload Response Decoding Tests

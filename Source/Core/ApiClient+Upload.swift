@@ -158,7 +158,8 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
   public func cancel() {
     progressObserver?.invalidate()
     if state == .waitingStart || state == .paused {
-      handleErrorResponse(error: .generic(URLError(.cancelled)), state: .cancelled)
+      state = .cancelled
+      handleErrorResponse(error: .generic(URLError(.cancelled)))
       return
     }
     task?.resume()
@@ -250,13 +251,15 @@ private extension UploadTask {
   }
   
   /// Processes and distributes an error response to all registered response closures and updates the task state.
-  func handleErrorResponse(error: NetworkError, state: UploadState = .error) {
+  func handleErrorResponse(error: NetworkError) {
     responseClosures.forEach { responseClosure in
       responseClosure.queue.async {
         responseClosure.closure(Response(result: .failure(error)))
       }
     }
-    self.state = state
+    if state != .cancelled {
+      state = .error
+    }
     onUploadCompleted(ObjectIdentifier(self))
   }
   
