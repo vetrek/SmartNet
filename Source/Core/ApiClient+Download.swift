@@ -71,6 +71,8 @@ public final class DownloadTask: NetworkCancellable, Hashable {
   private var resumedData: Data?
   private var downloadDestination: DownloadFileDestination?
   let shouldDebug: Bool?
+  var onRelease: ((DownloadTask) -> Void)?
+  var onResume: ((DownloadTask) -> Void)?
   
   // MARK: - Public Properties
   public var state: DownloadState = .waitingStart
@@ -116,16 +118,17 @@ public final class DownloadTask: NetworkCancellable, Hashable {
   
   @discardableResult
   func startDownload() -> Self {
+    if let resumedData {
+      self.resumedData = nil
+      task = session.downloadTask(withResumeData: resumedData)
+      observeDownloadProgress()
+    } else if task.state != .suspended {
+      task = session.downloadTask(with: remoteURLRequest)
+      observeDownloadProgress()
+    }
     task.resume()
     state = .downloading
     return self
-  }
-  
-  private func resumeDownloadWithData(_ data: Data) {
-    task = session.downloadTask(withResumeData: data)
-    observeDownloadProgress()
-    task.resume()
-    state = .downloading
   }
   
   private func observeDownloadProgress() {
@@ -200,6 +203,14 @@ public final class DownloadTask: NetworkCancellable, Hashable {
   
   public func cancel() {
     progressObserver?.invalidate()
+    if state == .waitingStart || state == .paused {
+      state = .cancelled
+      onRelease?(self)
+      if let response {
+        response.queue.async { response.closure(Response(result: .failure(.cancelled))) }
+      }
+      return
+    }
     task.resume()
     task.cancel()
     state = .cancelled
@@ -208,22 +219,19 @@ public final class DownloadTask: NetworkCancellable, Hashable {
   public func pause() {
     guard state == .downloading else { return }
     progressObserver?.invalidate()
+    resumedData = nil
     task.resume()
     task.cancel(byProducingResumeData: { data in
       self.resumedData = data
     })
     state = .paused
+    onRelease?(self)
   }
   
   public func resume() {
     guard state == .paused else { return }
-    if let resumedData = resumedData {
-      resumeDownloadWithData(resumedData)
-    }
-    else {
-      task.cancel()
-      startDownload()
-    }
+    state = .waitingStart
+    onResume?(self)
   }
   
   @discardableResult
@@ -245,11 +253,11 @@ public final class DownloadTask: NetworkCancellable, Hashable {
   }
   
   public func hash(into hasher: inout Hasher) {
-    hasher.combine(task.taskIdentifier)
+    hasher.combine(ObjectIdentifier(self))
   }
   
   public static func == (lhs: DownloadTask, rhs: DownloadTask) -> Bool {
-    lhs.task.taskIdentifier == rhs.task.taskIdentifier
+    lhs === rhs
   }
   
   private func moveFile(at currentURL: URL, to destinationURL: URL, shouldReplace: Bool) -> Bool {
@@ -291,14 +299,7 @@ public extension ApiClient {
       )
     else { return nil }
 
-    downloadQueue.sync {
-      if downloadsTasks.count < maxConcurrentDownloads {
-        downloadsTasks.insert(downloadTask)
-        downloadTask.startDownload()
-      } else {
-        pendingDownloads.append(downloadTask)
-      }
-    }
+    enqueue(downloadTask)
 
     return downloadTask
   }
@@ -328,9 +329,8 @@ public extension ApiClient {
             continuation.resume(throwing: error)
           }
         }
-        self.downloadsTasks.insert(downloadTask)
-        downloadTask.startDownload()
-        
+        self.enqueue(downloadTask)
+
       } catch {
         continuation.resume(throwing: error)
       }
@@ -343,14 +343,7 @@ public extension ApiClient {
     guard let session = session else { return nil }
     let downloadTask = DownloadTask(session: session, url: url)
 
-    downloadQueue.sync {
-      if downloadsTasks.count < maxConcurrentDownloads {
-        downloadsTasks.insert(downloadTask)
-        downloadTask.startDownload()
-      } else {
-        pendingDownloads.append(downloadTask)
-      }
-    }
+    enqueue(downloadTask)
 
     return downloadTask
   }
@@ -428,9 +421,35 @@ extension ApiClient: URLSessionDownloadDelegate {
   }
 }
 
-private extension ApiClient {
+extension ApiClient {
+  func enqueue(_ download: DownloadTask, atFront: Bool = false) {
+    download.onRelease = { [weak self] download in
+      guard let self else { return }
+      downloadQueue.sync {
+        _ = self.downloadsTasks.remove(download)
+        self.pendingDownloads.removeAll { $0 === download }
+      }
+      startNextPendingDownload()
+    }
+    download.onResume = { [weak self] download in
+      guard let self, self.session != nil else {
+        download.cancel()
+        return
+      }
+      enqueue(download, atFront: true)
+    }
+    downloadQueue.sync {
+      if downloadsTasks.count < maxConcurrentDownloads {
+        downloadsTasks.insert(download)
+        download.startDownload()
+      } else {
+        pendingDownloads.insert(download, at: atFront ? 0 : pendingDownloads.endIndex)
+      }
+    }
+  }
+
   // Manages the downloading tasks based on the current active and pending tasks.
-  func startNextPendingDownload() {
+  private func startNextPendingDownload() {
     downloadQueue.sync {
       while downloadsTasks.count < maxConcurrentDownloads && !pendingDownloads.isEmpty {
         if let pendingDownload = pendingDownloads.first {

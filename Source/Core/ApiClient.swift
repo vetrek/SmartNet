@@ -109,8 +109,12 @@ public final class ApiClient: NSObject, ApiClientProtocol, DownloadClientProtoco
 
   /// Prevent Retain cycle problem while using the URLSession delegate = self
   public func destroy() {
-    downloadsTasks.forEach { $0.task.cancel() }
-    downloadsTasks.removeAll()
+    let downloads = downloadQueue.sync {
+      defer { pendingDownloads.removeAll() }
+      return (running: Array(downloadsTasks), pending: pendingDownloads)
+    }
+    downloads.pending.forEach { $0.cancel() }
+    downloads.running.forEach { $0.task.cancel() }
     let uploads = uploadQueue.sync {
       defer {
         pendingUploads.removeAll()

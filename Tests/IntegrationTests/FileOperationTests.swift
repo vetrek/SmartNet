@@ -595,6 +595,234 @@ struct FileOperationTests {
     #expect(client.pendingDownloads.count == 1)
   }
 
+  private func record(_ task: DownloadTask, into events: EventRecorder) {
+    task.response(queue: .global()) { response in
+      switch response.result {
+      case .success:
+        events.record("ok")
+      case .failure(.cancelled):
+        events.record("cancelled")
+      case .failure(let error):
+        events.record("\(error)")
+      }
+    }
+  }
+
+  private func slowDownloads(_ client: ApiClient, path: String, count: Int) -> [DownloadTask] {
+    (0..<count).compactMap { _ in client.download(with: DownloadEndpoint(path: path)) }
+  }
+
+  @Test("Async download waits for a free download slot")
+  func asyncDownloadRespectsLimit() async throws {
+    let (client, _) = createMockClient(maxConnectionsPerHost: 2)
+    let attempts = EventRecorder()
+    defer {
+      client.destroy()
+      ["/dlasync/running", "/dlasync/awaited"].forEach(MockURLProtocol.removeHandler)
+    }
+    setSlowHandler("dlasync/running", attempts: attempts)
+    setSlowHandler("dlasync/awaited", attempts: attempts)
+
+    let running = slowDownloads(client, path: "dlasync/running", count: client.maxConcurrentDownloads)
+    try await waitFor { attempts.values.count == running.count }
+    let results = EventRecorder()
+    Task {
+      let result = try? await client.download(with: DownloadEndpoint(path: "dlasync/awaited"))
+      results.record(result.map { String(decoding: $0.fileData, as: UTF8.self) } ?? "failed")
+    }
+    try await waitFor { client.pendingDownloads.count == 1 }
+    try await Task.sleep(nanoseconds: 200_000_000)
+
+    #expect(client.pendingDownloads.count == 1)
+    #expect(client.downloadsTasks.count == client.maxConcurrentDownloads)
+    #expect(!attempts.values.contains("dlasync/awaited"))
+
+    try await waitFor { !results.values.isEmpty }
+    #expect(results.values == ["dlasync/awaited"])
+    #expect(attempts.values.last == "dlasync/awaited")
+  }
+
+  @Test("Paused download frees its slot and resume queues it at the front")
+  func pauseResumeDownload() async throws {
+    let (client, _) = createMockClient(maxConnectionsPerHost: 2)
+    let attempts = EventRecorder()
+    let events = EventRecorder()
+    let paths = ["dlpause/paused", "dlpause/running", "dlpause/filler", "dlpause/later"]
+    defer {
+      client.destroy()
+      paths.forEach { MockURLProtocol.removeHandler(for: "/\($0)") }
+    }
+    paths.forEach { setSlowHandler($0, attempts: attempts) }
+
+    let paused = try #require(slowDownloads(client, path: "dlpause/paused", count: 1).first)
+    record(paused, into: events)
+    let running = slowDownloads(client, path: "dlpause/running", count: client.maxConcurrentDownloads - 1)
+    let filler = slowDownloads(client, path: "dlpause/filler", count: 1)
+    try await waitFor { attempts.values.contains("dlpause/paused") }
+    #expect(filler.map(\.state) == [.waitingStart])
+
+    paused.pause()
+    #expect(paused.state == .paused)
+    #expect(filler.map(\.state) == [.downloading])
+    #expect(client.downloadsTasks.count == client.maxConcurrentDownloads)
+    #expect(!client.downloadsTasks.contains(paused))
+
+    let later = slowDownloads(client, path: "dlpause/later", count: 1)
+    paused.resume()
+    #expect(paused.state == .waitingStart)
+    #expect(client.pendingDownloads.map(ObjectIdentifier.init) == [ObjectIdentifier(paused)] + later.map(ObjectIdentifier.init))
+
+    try await waitFor { client.downloadsTasks.isEmpty && client.pendingDownloads.isEmpty && !events.values.isEmpty }
+    try await Task.sleep(nanoseconds: 100_000_000)
+    let order = attempts.values
+    #expect(order.filter { $0 == "dlpause/paused" }.count == 2)
+    #expect(try #require(order.lastIndex(of: "dlpause/paused")) < (try #require(order.firstIndex(of: "dlpause/later"))))
+    #expect(events.values == ["ok"])
+    #expect(paused.state == .completed)
+    #expect(client.downloadsTasks.isEmpty)
+    #expect(client.pendingDownloads.isEmpty)
+  }
+
+  @Test("Cancelling a queued download reports cancellation and never sends it")
+  func cancelQueuedDownload() async throws {
+    let (client, _) = createMockClient(maxConnectionsPerHost: 1)
+    let attempts = EventRecorder()
+    let events = EventRecorder()
+    defer {
+      client.destroy()
+      ["/dlqueued/running", "/dlqueued/queued"].forEach(MockURLProtocol.removeHandler)
+    }
+    setSlowHandler("dlqueued/running", attempts: attempts)
+    setSlowHandler("dlqueued/queued", attempts: attempts)
+
+    let running = slowDownloads(client, path: "dlqueued/running", count: 1)
+    let queued = try #require(slowDownloads(client, path: "dlqueued/queued", count: 1).first)
+    record(queued, into: events)
+
+    queued.cancel()
+
+    #expect(queued.state == .cancelled)
+    #expect(client.pendingDownloads.isEmpty)
+    try await waitFor { running.allSatisfy { $0.state != .downloading } && client.downloadsTasks.isEmpty }
+    try await Task.sleep(nanoseconds: 200_000_000)
+    #expect(events.values == ["cancelled"])
+    #expect(attempts.values == ["dlqueued/running"])
+    #expect(client.downloadsTasks.isEmpty)
+  }
+
+  @Test("Cancelling a paused download reports cancellation")
+  func cancelPausedDownload() async throws {
+    let (client, _) = createMockClient()
+    let attempts = EventRecorder()
+    let events = EventRecorder()
+    defer {
+      client.destroy()
+      MockURLProtocol.removeHandler(for: "/dlpausecancel/file")
+    }
+    setSlowHandler("dlpausecancel/file", attempts: attempts)
+
+    let download = try #require(slowDownloads(client, path: "dlpausecancel/file", count: 1).first)
+    record(download, into: events)
+    try await waitFor { !attempts.values.isEmpty }
+
+    download.pause()
+    download.cancel()
+    try await waitFor { !events.values.isEmpty }
+    try await Task.sleep(nanoseconds: 200_000_000)
+
+    #expect(download.state == .cancelled)
+    #expect(events.values == ["cancelled"])
+    #expect(client.downloadsTasks.isEmpty)
+  }
+
+  @Test("A paused download the caller drops is released")
+  func droppedPausedDownloadIsReleased() async throws {
+    let (client, _) = createMockClient()
+    let attempts = EventRecorder()
+    defer {
+      client.destroy()
+      MockURLProtocol.removeHandler(for: "/dldropped/file")
+    }
+    setSlowHandler("dldropped/file", attempts: attempts)
+
+    weak var weakDownload: DownloadTask?
+    do {
+      let download = try #require(slowDownloads(client, path: "dldropped/file", count: 1).first)
+      weakDownload = download
+      try await waitFor { !attempts.values.isEmpty }
+      download.pause()
+    }
+    try await waitFor { weakDownload == nil }
+
+    #expect(weakDownload == nil)
+    #expect(client.downloadsTasks.isEmpty)
+  }
+
+  @Test("Destroy cancels running, queued and awaited downloads")
+  func destroyCancelsDownloads() async throws {
+    let (client, _) = createMockClient(maxConnectionsPerHost: 2)
+    let attempts = EventRecorder()
+    let events = EventRecorder()
+    defer {
+      ["/dldestroy/running", "/dldestroy/queued", "/dldestroy/awaited"].forEach(MockURLProtocol.removeHandler)
+    }
+    setSlowHandler("dldestroy/running", attempts: attempts)
+    setSlowHandler("dldestroy/queued", attempts: attempts)
+    setSlowHandler("dldestroy/awaited", attempts: attempts)
+
+    let running = slowDownloads(client, path: "dldestroy/running", count: client.maxConcurrentDownloads)
+    let queued = slowDownloads(client, path: "dldestroy/queued", count: 2)
+    (running + queued).forEach { record($0, into: events) }
+    try await waitFor { attempts.values.count == running.count }
+    let awaited = EventRecorder()
+    Task {
+      do {
+        _ = try await client.download(with: DownloadEndpoint(path: "dldestroy/awaited"))
+        awaited.record("ok")
+      } catch NetworkError.cancelled {
+        awaited.record("cancelled")
+      } catch {
+        awaited.record("\(error)")
+      }
+    }
+    try await waitFor { client.pendingDownloads.count == 3 }
+
+    client.destroy()
+
+    #expect(client.pendingDownloads.isEmpty)
+    #expect(queued.allSatisfy { $0.state == .cancelled })
+    try await waitFor { events.values.count == running.count + queued.count }
+    try await waitFor { !awaited.values.isEmpty }
+    #expect(awaited.values == ["cancelled"])
+    try await Task.sleep(nanoseconds: 300_000_000)
+    #expect(events.values == Array(repeating: "cancelled", count: running.count + queued.count))
+    #expect(attempts.values == Array(repeating: "dldestroy/running", count: running.count))
+    #expect(client.downloadsTasks.isEmpty)
+  }
+
+  @Test("Resuming a download after destroy reports cancellation and never sends")
+  func resumeDownloadAfterDestroy() async throws {
+    let (client, _) = createMockClient()
+    let attempts = EventRecorder()
+    let events = EventRecorder()
+    defer { MockURLProtocol.removeHandler(for: "/dldestroyresume/file") }
+    setSlowHandler("dldestroyresume/file", attempts: attempts)
+
+    let download = try #require(slowDownloads(client, path: "dldestroyresume/file", count: 1).first)
+    record(download, into: events)
+    try await waitFor { !attempts.values.isEmpty }
+    download.pause()
+    client.destroy()
+
+    download.resume()
+
+    #expect(download.state == .cancelled)
+    try await waitFor { !events.values.isEmpty }
+    try await Task.sleep(nanoseconds: 300_000_000)
+    #expect(events.values == ["cancelled"])
+    #expect(attempts.values.count == 1)
+  }
+
   @Test("Pausing an upload starts the next queued upload")
   func pauseStartsQueuedUpload() async throws {
     guard #available(iOS 17.0, macOS 14.0, *) else { return }
