@@ -6,7 +6,7 @@
 [![Swift](https://img.shields.io/badge/Swift-5.9%2B-orange.svg)](https://swift.org)
 [![SPM](https://img.shields.io/badge/SPM-compatible-brightgreen.svg)](https://swift.org/package-manager/)
 
-Type-safe endpoints, async/await, Combine and closures, retry policies, middleware, and queued uploads/downloads. Zero dependencies.
+Type-safe endpoints with async/await, retry policies, middleware, and queued uploads/downloads. Zero dependencies.
 
 ## Installation
 
@@ -33,19 +33,7 @@ let client = ApiClient(config: NetworkConfiguration(
 let user: User = try await client.request(with: Endpoint(path: "users/1"))
 ```
 
-The same request with Combine or a closure:
-
-```swift
-client.request(with: Endpoint<User>(path: "users/1"))
-    .sink(receiveCompletion: { _ in }, receiveValue: { user in print(user.name) })
-    .store(in: &subscriptions)
-
-client.request(with: Endpoint<User>(path: "users/1")) { response in
-    if case .success(let user) = response.result {
-        print(user.name)
-    }
-}
-```
+Every `request` also has a Combine publisher overload and a completion-closure overload, for code that isn't async yet.
 
 ## Endpoints
 
@@ -118,6 +106,13 @@ Throw from `preRequestCallback` to cancel the request. Return `.retryRequest` fr
 | `.regex("^/users/\\d+$")` | `/users/123` (returns `nil` for an invalid pattern) |
 
 ## Uploads and Downloads
+
+```swift
+let file = try await client.download(with: DownloadEndpoint(path: "files/report.pdf"))
+print(file.localURL)
+```
+
+To track progress, pause or cancel, keep the returned task:
 
 ```swift
 let upload = try client.upload(
