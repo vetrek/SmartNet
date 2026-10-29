@@ -2,252 +2,126 @@
 
 **Type-safe Swift HTTP networking**
 
-[![Platform](https://img.shields.io/badge/platform-iOS%2013%2B%20%7C%20macOS%2010.15%2B-blue.svg)](https://developer.apple.com/swift/)
-[![Swift](https://img.shields.io/badge/Swift-5.5%2B-orange.svg)](https://swift.org)
+[![Platform](https://img.shields.io/badge/platform-iOS%2014%2B%20%7C%20macOS%2011%2B-blue.svg)](https://developer.apple.com/swift/)
+[![Swift](https://img.shields.io/badge/Swift-5.9%2B-orange.svg)](https://swift.org)
 [![SPM](https://img.shields.io/badge/SPM-compatible-brightgreen.svg)](https://swift.org/package-manager/)
 
-SmartNet provides flexible, type-safe HTTP networking that adapts to any Swift project's programming paradigm. Zero dependencies, thread-safe by design.
-
-## Features
-
-- **Three programming paradigms**: async/await, Combine, closures
-- **Type-safe generic endpoints**: `Endpoint<T>` with automatic decoding
-- **Flexible path matching**: exact, wildcard, glob, regex patterns
-- **Configurable retry policies**: exponential backoff, linear, immediate
-- **Middleware system**: request/response interception with pattern matching
-- **File operations**: upload/download with progress tracking
-- **Zero external dependencies**
-- **Thread-safe by design**
+Type-safe endpoints, async/await, Combine and closures, retry policies, middleware, and queued uploads/downloads. Zero dependencies.
 
 ## Installation
 
-Add SmartNet to your `Package.swift`:
-
 ```swift
 dependencies: [
-    .package(url: "https://github.com/vetrek/SmartNet.git", from: "2.0.1")
+    .package(url: "https://github.com/vetrek/SmartNet.git", from: "2.4.0")
 ]
 ```
 
 ## Quick Start
 
 ```swift
-let client = ApiClient(config: NetworkConfiguration(
-    baseURL: URL(string: "https://api.example.com")!
-))
-
 struct User: Codable {
     let id: Int
     let name: String
 }
 
-let user: User = try await client.request(
-    with: Endpoint(path: "users/1")
-)
-```
-
-## Configuration
-
-**Basic:**
-
-```swift
 let client = ApiClient(config: NetworkConfiguration(
-    baseURL: URL(string: "https://api.example.com")!
-))
-```
-
-**With headers and timeout:**
-
-```swift
-let config = NetworkConfiguration(
     baseURL: URL(string: "https://api.example.com")!,
-    headers: ["Content-Type": "application/json"],
-    queryParameters: ["apiKey": "your-key"],
+    headers: ["Accept": "application/json"],
     requestTimeout: 30
-)
-let client = ApiClient(config: config)
+))
+
+let user: User = try await client.request(with: Endpoint(path: "users/1"))
 ```
 
-## Making Requests
-
-### Async/Await
+The same request with Combine or a closure:
 
 ```swift
-do {
-    let user: User = try await client.request(with: Endpoint(path: "users/1"))
-    print(user.name)
-} catch {
-    print(error)
-}
-```
-
-### Combine
-
-```swift
-var subscriptions = Set<AnyCancellable>()
-
 client.request(with: Endpoint<User>(path: "users/1"))
-    .sink(receiveCompletion: { completion in
-        if case .failure(let error) = completion {
-            print("Error: \(error)")
-        }
-    }, receiveValue: { user in
-        print(user.name)
-    })
+    .sink(receiveCompletion: { _ in }, receiveValue: { user in print(user.name) })
     .store(in: &subscriptions)
-```
 
-### Closures
-
-```swift
 client.request(with: Endpoint<User>(path: "users/1")) { response in
-    switch response.result {
-    case .success(let user):
+    if case .success(let user) = response.result {
         print(user.name)
-    case .failure(let error):
-        print(error.localizedDescription)
     }
 }
 ```
 
 ## Endpoints
 
-**GET with query parameters:**
-
 ```swift
-let endpoint = Endpoint<User>(
+let search = Endpoint<[User]>(
     path: "users",
-    queryParameters: QueryParameters(parameters: [
-        "name": "John",
-        "limit": 10
-    ])
+    queryParameters: QueryParameters(parameters: ["name": "John", "limit": 10])
 )
-```
 
-**POST with body:**
-
-```swift
-struct CreateUserRequest: Codable {
+struct CreateUser: Encodable {
     let name: String
-    let email: String
 }
 
-let endpoint = Endpoint<User>(
+let create = Endpoint<User>(
     path: "users",
     method: .post,
-    body: HTTPBody(encodable: CreateUserRequest(
-        name: "John",
-        email: "john@example.com"
-    ))
+    body: HTTPBody(encodable: CreateUser(name: "John"))
 )
 ```
 
 ## Retry Policies
 
-By default, SmartNet does not retry failed requests. Enable retries by configuring a retry policy using the static factory methods.
-
-**Enable retries globally:**
+Requests are not retried unless you set a policy, globally or per endpoint:
 
 ```swift
 let config = NetworkConfiguration(
     baseURL: URL(string: "https://api.example.com")!,
-    retryPolicy: .exponential()  // 3 retries with exponential backoff
+    retryPolicy: .exponential(maxRetries: 5, conditions: [.timeout, .serverError])
 )
+
+let endpoint = Endpoint<User>(path: "users/1").retry(.immediate())
 ```
 
-**Built-in policies:**
+| Policy | Delays | Default retries |
+|--------|--------|-----------------|
+| `.exponential()` | 1s, 2s, 4s… with jitter | 3 |
+| `.linear()` | 1s, 2s, 3s… | 3 |
+| `.immediate()` | none | 1 |
+| `.none` | no retries (default) | 0 |
 
-| Factory Method | Delay Pattern | Default Retries |
-|----------------|---------------|-----------------|
-| `.exponential()` | 1s, 2s, 4s, 8s... (with jitter) | 3 |
-| `.linear()` | 1s, 2s, 3s, 4s... | 3 |
-| `.immediate()` | No delay | 1 |
-| `.none` | No retries (default) | 0 |
-
-**Customize retry behavior:**
-
-```swift
-// Custom exponential backoff
-let config = NetworkConfiguration(
-    baseURL: url,
-    retryPolicy: .exponential(
-        maxRetries: 5,
-        baseDelay: 2.0,
-        jitter: false,
-        conditions: [.timeout, .serverError]
-    )
-)
-```
-
-**Per-endpoint retry configuration:**
-
-```swift
-let endpoint = Endpoint<User>(path: "users/1")
-    .retryPolicy(.exponential(maxRetries: 5))
-```
-
-**RetryCondition options:**
-
-- `.timeout` - request timed out
-- `.connectionLost` - network connection lost
-- `.networkFailure` - general network failure
-- `.serverError` - HTTP 5xx responses
-- `.rateLimited` - HTTP 429 (respects `Retry-After` header)
-- `.dnsFailure` - DNS lookup failed
+Conditions: `.timeout`, `.connectionLost`, `.networkFailure`, `.serverError` (5xx), `.rateLimited` (429, honours `Retry-After`), `.dnsFailure`. The default set is the first four.
 
 ## Middleware
 
-Intercept requests and responses with path-matched middleware. Uses the `PathMatcher` system for flexible routing.
-
-**Global middleware (all requests):**
+Modify requests and inspect responses for matching paths:
 
 ```swift
 client.addMiddleware(
     ApiClient.Middleware(
-        pathMatcher: PathMatcher.contains("/"),
+        pathMatcher: .contains("/"),
         preRequestCallback: { request in
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         },
         postResponseCallback: { data, response, error in
-            return .next
+            .next
         }
     )
 )
 ```
 
-**Path-specific middleware:**
+Throw from `preRequestCallback` to cancel the request. Return `.retryRequest` from `postResponseCallback` to send it again; the retry policy's limit still applies.
+
+| Matcher | Matches |
+|---------|---------|
+| `.contains("/")` | every path |
+| `.contains("users")` | any path with a `users` segment, e.g. `/api/users/123` |
+| `.exact("/users")` | `/users` only |
+| `.wildcard("/users/*")` | `/users/123`, not `/users/123/posts` |
+| `.glob("/api/**")` | `/api`, `/api/v1/users` |
+| `.regex("^/users/\\d+$")` | `/users/123` (returns `nil` for an invalid pattern) |
+
+## Uploads and Downloads
 
 ```swift
-client.addMiddleware(
-    ApiClient.Middleware(
-        pathMatcher: PathMatcher.contains("users"),
-        preRequestCallback: { request in
-            print("User request: \(request.url?.path ?? "")")
-            return request
-        },
-        postResponseCallback: { _, _, _ in .next }
-    )
-)
-```
-
-**PathMatcher patterns:**
-
-| Factory Method            | Description             | Example                                 |
-| ------------------------- | ----------------------- | --------------------------------------- |
-| `.contains("/")`          | Global (all paths)      | Matches everything                      |
-| `.contains("users")`      | Contains segment        | `/api/users/123`                        |
-| `.exact("/users")`        | Exact match             | `/users` only                           |
-| `.wildcard("/users/*")`   | Single segment wildcard | `/users/123` but not `/users/123/posts` |
-| `.glob("/api/**")`        | Multi-segment wildcard  | `/api`, `/api/v1/users`                 |
-| `.regex("^/users/\\d+$")` | Regular expression      | `/users/123`                            |
-
-## File Operations
-
-**Upload with multipart form:**
-
-```swift
-let uploadTask = try client.upload(
-    with: MultipartFormEndpoint(
+let upload = try client.upload(
+    with: MultipartFormEndpoint<String>(
         path: "upload",
         form: MultipartFormData {
             TextField("name", value: "avatar")
@@ -255,45 +129,42 @@ let uploadTask = try client.upload(
         }
     )
 )
-.progress { progress in
-    print("Upload: \(progress.fractionCompleted * 100)%")
-}
-.response { response in
-    print("Done: \(response.result)")
-}
-```
+.progress { progress in print(progress.fractionCompleted) }
+.response { response in print(response.result) }
 
-**Download with progress:**
-
-```swift
-let downloadTask = client.download(url: URL(string: "https://example.com/file.zip")!)?
-    .downloadProgress { progress, _ in
-        print("Download: \(progress.fractionCompleted * 100)%")
-    }
+let download = client.download(url: URL(string: "https://example.com/file.zip")!)?
+    .downloadProgress { progress, _ in print(progress.fractionCompleted) }
     .response { response in
-        print("Saved to: \(response.result)")
+        if case .success(let file) = response.result {
+            print(file.localURL)
+        }
     }
 ```
+
+How transfers run:
+
+- **Queued.** Downloads run up to the session's `httpMaximumConnectionsPerHost` at once (6 by default). Uploads run one fewer, so API requests to the same host always have a free connection. Extra transfers wait in `.waitingStart`, and their request timeout only starts when they do.
+- **Pause and resume.** `pause()` frees the transfer's slot. `resume()` continues from resume data when the server supports it, otherwise restarts, and goes to the front of the queue. Upload pause/resume requires iOS 17 / macOS 14.
+- **Cancel.** `cancel()` ends in `.cancelled` and delivers a cancellation error to `response`. `client.destroy()` cancels every running and queued transfer.
+- **State.** `state` is already final (`.completed`, `.error` or `.cancelled`) when `response` runs.
 
 ## Error Handling
 
-All errors are returned as `NetworkError`:
+Every failure is a `NetworkError`:
 
 ```swift
 do {
     let user: User = try await client.request(with: endpoint)
 } catch let error as NetworkError {
     switch error {
-    case .error(let statusCode, let data):
+    case .error(let statusCode, _):
         print("HTTP \(statusCode)")
-    case .timeout:
-        print("Request timed out")
-    case .connectionLost:
-        print("Connection lost")
-    case .parsingFailed(let error):
+    case .timeout, .connectionLost:
+        print("Network problem")
+    case .parsingFailed:
         print("Decoding failed: \(error)")
     default:
-        print("Error: \(error)")
+        print(error)
     }
 }
 ```
