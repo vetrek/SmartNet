@@ -13,9 +13,12 @@ struct TestUser: Codable, Equatable, Sendable {
 
 // MARK: - Mock Client Factory
 
-func createMockClient() -> (ApiClient, NetworkConfiguration) {
+func createMockClient(maxConnectionsPerHost: Int? = nil) -> (ApiClient, NetworkConfiguration) {
   let sessionConfig = URLSessionConfiguration.ephemeral
   sessionConfig.protocolClasses = [MockURLProtocol.self]
+  if let maxConnectionsPerHost {
+    sessionConfig.httpMaximumConnectionsPerHost = maxConnectionsPerHost
+  }
 
   let config = NetworkConfiguration(baseURL: URL(string: "https://api.example.com")!)
   // Pass nil for delegateQueue to use a serial operation queue instead of main queue

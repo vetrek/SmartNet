@@ -537,6 +537,64 @@ struct FileOperationTests {
     }
   }
 
+  @Test(
+    "Transfer limits follow the session's connections per host",
+    arguments: [(6, 5, 6), (3, 2, 3), (2, 1, 2), (1, 1, 1)]
+  )
+  func transferLimitsFollowSession(perHost: Int, uploads: Int, downloads: Int) {
+    let (client, _) = createMockClient(maxConnectionsPerHost: perHost)
+    defer { client.destroy() }
+    #expect(client.maxConcurrentUploads == uploads)
+    #expect(client.maxConcurrentDownloads == downloads)
+  }
+
+  @Test("Default client limits follow the default session configuration")
+  func defaultClientLimits() {
+    let client = ApiClient(config: NetworkConfiguration(baseURL: URL(string: "https://api.example.com")!))
+    defer { client.destroy() }
+    let perHost = URLSessionConfiguration.default.httpMaximumConnectionsPerHost
+    #expect(client.maxConcurrentUploads == max(1, perHost - 1))
+    #expect(client.maxConcurrentDownloads == perHost)
+  }
+
+  @Test("Uploads leave one connection per host free for other requests")
+  func uploadsLeaveOneConnectionFree() async throws {
+    let (client, _) = createMockClient(maxConnectionsPerHost: 3)
+    let attempts = EventRecorder()
+    defer {
+      client.destroy()
+      MockURLProtocol.removeHandler(for: "/uplimit/file")
+    }
+    setSlowHandler("uplimit/file", attempts: attempts)
+
+    let uploads = try slowUploads(client, path: "uplimit/file", count: 3)
+    try await waitFor { attempts.values.count >= 2 }
+    try await Task.sleep(nanoseconds: 200_000_000)
+
+    #expect(attempts.values.count == 2)
+    #expect(uploads.map(\.state) == [.uploading, .uploading, .waitingStart])
+    #expect(client.pendingUploads.count == 1)
+  }
+
+  @Test("Downloads use every connection per host")
+  func downloadsUseAllConnections() async throws {
+    let (client, _) = createMockClient(maxConnectionsPerHost: 3)
+    let attempts = EventRecorder()
+    defer {
+      client.destroy()
+      MockURLProtocol.removeHandler(for: "/dllimit/file")
+    }
+    setSlowHandler("dllimit/file", attempts: attempts)
+
+    let downloads = (0..<4).compactMap { _ in client.download(with: DownloadEndpoint(path: "dllimit/file")) }
+    try await waitFor { attempts.values.count >= 3 }
+    try await Task.sleep(nanoseconds: 200_000_000)
+
+    #expect(downloads.count == 4)
+    #expect(attempts.values.count == 3)
+    #expect(client.pendingDownloads.count == 1)
+  }
+
   @Test("Pausing an upload starts the next queued upload")
   func pauseStartsQueuedUpload() async throws {
     guard #available(iOS 17.0, macOS 14.0, *) else { return }

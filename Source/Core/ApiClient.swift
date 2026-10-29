@@ -56,9 +56,10 @@ public final class ApiClient: NSObject, ApiClientProtocol, DownloadClientProtoco
   @ThreadSafe
   var pendingUploads = [any AnyUploadTask]()
   
-  let maxConcurrentDownloads = 6
+  let maxConcurrentDownloads: Int
 
-  let maxConcurrentUploads = 6
+  /// One below `maxConcurrentDownloads`: upload and data tasks share a host's connection pool.
+  let maxConcurrentUploads: Int
 
   let downloadQueue = DispatchQueue(label: "com.smartnet.downloadQueue")
   let uploadQueue = DispatchQueue(label: "com.smartnet.uploadQueue")
@@ -67,10 +68,11 @@ public final class ApiClient: NSObject, ApiClientProtocol, DownloadClientProtoco
   var middlewares: [any MiddlewareProtocol] = []
 
   public init(config: NetworkConfigurable) {
+    let sessionConfig = URLSessionConfiguration.default
     self.config = config
+    (maxConcurrentDownloads, maxConcurrentUploads) = Self.transferLimits(for: sessionConfig)
     super.init()
 
-    let sessionConfig = URLSessionConfiguration.default
     sessionConfig.shouldUseExtendedBackgroundIdleMode = true
     sessionConfig.timeoutIntervalForRequest = config.requestTimeout
 
@@ -88,6 +90,7 @@ public final class ApiClient: NSObject, ApiClientProtocol, DownloadClientProtoco
   ///   - delegateQueue: Queue for delegate callbacks. Defaults to `.main`. Pass `nil` for a serial queue (useful in tests without a main run loop).
   public init(config: NetworkConfigurable, sessionConfiguration: URLSessionConfiguration, delegateQueue: OperationQueue? = .main) {
     self.config = config
+    (maxConcurrentDownloads, maxConcurrentUploads) = Self.transferLimits(for: sessionConfiguration)
     super.init()
 
     sessionConfiguration.timeoutIntervalForRequest = config.requestTimeout
@@ -99,6 +102,11 @@ public final class ApiClient: NSObject, ApiClientProtocol, DownloadClientProtoco
     )
   }
   
+  private static func transferLimits(for configuration: URLSessionConfiguration) -> (downloads: Int, uploads: Int) {
+    let perHost = max(1, configuration.httpMaximumConnectionsPerHost)
+    return (perHost, max(1, perHost - 1))
+  }
+
   /// Prevent Retain cycle problem while using the URLSession delegate = self
   public func destroy() {
     downloadsTasks.forEach { $0.task.cancel() }
