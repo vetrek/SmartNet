@@ -146,57 +146,46 @@ public final class DownloadTask: NetworkCancellable, Hashable {
     urlResponse: URLResponse?,
     error: Error?
   ) {
-    guard let response = response else {
-      state = .error
-      return
-    }
+    finish(result(tmpURL: tmpURL, urlResponse: urlResponse, error: error))
+  }
 
-    // Handle network error
-    if let error = error {
-      let networkError: NetworkError = (error as? NetworkError) ?? .generic(error)
-      response.queue.async { response.closure(Response(result: .failure(networkError))) }
-      state = .error
-      return
+  private func result(tmpURL: URL?, urlResponse: URLResponse?, error: Error?) -> Result<DownloadResult> {
+    if let error {
+      return .failure((error as? NetworkError) ?? .generic(error))
     }
-
     guard let httpResponse = urlResponse as? HTTPURLResponse else {
-      response.queue.async { response.closure(Response(result: .failure(.emptyResponse))) }
-      state = .error
-      return
+      return .failure(.emptyResponse)
     }
-    
-    guard (200..<300).contains(httpResponse.statusCode)
-    else {
-      response.queue.async { response.closure(Response(result: .failure(.error(statusCode: httpResponse.statusCode, data: nil)))) }
-      return
+    guard (200..<300).contains(httpResponse.statusCode) else {
+      return .failure(.error(statusCode: httpResponse.statusCode, data: nil))
     }
-    
-    guard let tmpURL = tmpURL else {
-      response.queue.async { response.closure(Response(result: .failure(.invalidDownloadUrl))) }
-      state = .error
-      return
+    guard let tmpURL else {
+      return .failure(.invalidDownloadUrl)
     }
     guard let data = try? Data(contentsOf: tmpURL) else {
-      response.queue.async { response.closure(Response(result: .failure(.invalidDownloadFileData))) }
-      state = .error
-      return
+      return .failure(.invalidDownloadFileData)
     }
-    
-    // Try to move the file to the new URL
     var url = tmpURL
-    if let downloadDestination = downloadDestination {
+    if let downloadDestination {
       guard moveFile(at: url, to: downloadDestination.url, shouldReplace: downloadDestination.removePreviousFile) else {
-        response.queue.async { response.closure(Response(result: .failure(.unableToSaveFile(url)))) }
-        return
+        return .failure(.unableToSaveFile(url))
       }
       url = downloadDestination.url
     }
-    
-    let result = DownloadResult(fileData: data, localURL: url)
-    response.queue.async {
-      response.closure(Response(result: .success(result)))
-      self.state = .completed
+    return .success(DownloadResult(fileData: data, localURL: url))
+  }
+
+  private func finish(_ result: Result<DownloadResult>) {
+    switch result {
+    case .success:
+      state = .completed
+    case .failure:
+      if state != .cancelled {
+        state = .error
+      }
     }
+    guard let response else { return }
+    response.queue.async { response.closure(Response(result: result)) }
   }
   
   // MARK: - Public Methods
@@ -206,9 +195,7 @@ public final class DownloadTask: NetworkCancellable, Hashable {
     if state == .waitingStart || state == .paused {
       state = .cancelled
       onRelease?(self)
-      if let response {
-        response.queue.async { response.closure(Response(result: .failure(.cancelled))) }
-      }
+      finish(.failure(.cancelled))
       return
     }
     task.resume()

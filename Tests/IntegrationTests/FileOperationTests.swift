@@ -823,6 +823,95 @@ struct FileOperationTests {
     #expect(attempts.values.count == 1)
   }
 
+  private func startDownload(_ client: ApiClient, path: String, destination: DownloadTask.DownloadFileDestination?) -> DownloadTask? {
+    client.download(with: DownloadEndpoint(path: path), destination: destination)
+  }
+
+  private func finishedDownload(
+    _ path: String,
+    destination: DownloadTask.DownloadFileDestination? = nil,
+    withResponse: Bool = true,
+    respond: @escaping MockURLProtocol.Handler
+  ) async throws -> (task: DownloadTask, stateInCallback: String?) {
+    let (client, _) = createMockClient()
+    defer {
+      client.destroy()
+      MockURLProtocol.removeHandler(for: "/\(path)")
+    }
+    MockURLProtocol.setHandler(for: "/\(path)", handler: respond)
+    let seen = EventRecorder()
+    let task = try #require(startDownload(client, path: path, destination: destination))
+    if withResponse {
+      task.response(queue: .global()) { [weak task] _ in seen.record("\(task?.state as Any)") }
+      try await waitFor { !seen.values.isEmpty }
+    } else {
+      try await waitFor { client.downloadsTasks.isEmpty }
+      try await Task.sleep(nanoseconds: 100_000_000)
+    }
+    return (task, seen.values.first)
+  }
+
+  @Test("Successful download without a response closure completes and saves the file")
+  func downloadWithoutResponseCompletes() async throws {
+    let destination = FileManager.default.temporaryDirectory.appendingPathComponent("dl-noresponse-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: destination) }
+    let (task, _) = try await finishedDownload(
+      "dlstate/noresponse",
+      destination: .init(url: destination, removePreviousFile: true),
+      withResponse: false,
+      respond: reply(200, Data("saved".utf8))
+    )
+    #expect(task.state == .completed)
+    #expect(try Data(contentsOf: destination) == Data("saved".utf8))
+  }
+
+  @Test("Download state is final inside the response callback", arguments: [200, 404, 500])
+  func downloadStateFinalInCallback(status: Int) async throws {
+    let (task, stateInCallback) = try await finishedDownload(
+      "dlstate/status\(status)", respond: reply(status, Data("body".utf8))
+    )
+    let expected: DownloadTask.DownloadState = status == 200 ? .completed : .error
+    #expect(task.state == expected)
+    #expect(stateInCallback == "\(Optional(expected) as Any)")
+  }
+
+  @Test("Download that cannot be saved ends in error")
+  func unsavableDownloadEndsInError() async throws {
+    let blocker = FileManager.default.temporaryDirectory.appendingPathComponent("dl-blocker-\(UUID().uuidString)")
+    try Data("file".utf8).write(to: blocker)
+    defer { try? FileManager.default.removeItem(at: blocker) }
+    let (task, stateInCallback) = try await finishedDownload(
+      "dlstate/unsavable",
+      destination: .init(url: blocker.appendingPathComponent("nested/file"), removePreviousFile: true),
+      respond: reply(200, Data("body".utf8))
+    )
+    #expect(task.state == .error)
+    #expect(stateInCallback == "\(Optional(DownloadTask.DownloadState.error) as Any)")
+  }
+
+  @Test("Cancelling a running download ends cancelled")
+  func cancelRunningDownload() async throws {
+    let (client, _) = createMockClient()
+    let attempts = EventRecorder()
+    let events = EventRecorder()
+    defer {
+      client.destroy()
+      MockURLProtocol.removeHandler(for: "/dlstate/cancel")
+    }
+    setSlowHandler("dlstate/cancel", attempts: attempts)
+    let download = try #require(slowDownloads(client, path: "dlstate/cancel", count: 1).first)
+    record(download, into: events)
+    try await waitFor { !attempts.values.isEmpty }
+
+    download.cancel()
+    try await waitFor { !events.values.isEmpty && client.downloadsTasks.isEmpty }
+    try await Task.sleep(nanoseconds: 200_000_000)
+
+    #expect(download.state == .cancelled)
+    #expect(events.values == ["cancelled"])
+    #expect(client.downloadsTasks.isEmpty)
+  }
+
   @Test("Pausing an upload starts the next queued upload")
   func pauseStartsQueuedUpload() async throws {
     guard #available(iOS 17.0, macOS 14.0, *) else { return }
