@@ -349,7 +349,7 @@ struct FileOperationTests {
   }
 
   private func waitFor(_ condition: () -> Bool) async throws {
-    for _ in 0..<150 where !condition() {
+    for _ in 0..<300 where !condition() {
       try await Task.sleep(nanoseconds: 20_000_000)
     }
   }
@@ -390,7 +390,7 @@ struct FileOperationTests {
     #expect(queued.state == .cancelled)
   }
 
-  @Test("Paused upload keeps its slot silently and resume uploads it again")
+  @Test("Paused upload frees its slot silently and resume uploads it again")
   func pauseResumeUpload() async throws {
     guard #available(iOS 17.0, macOS 14.0, *) else { return }
     let (client, _) = createMockClient()
@@ -414,7 +414,7 @@ struct FileOperationTests {
     try await Task.sleep(nanoseconds: 500_000_000)
     #expect(upload.state == .paused)
     #expect(events.values.isEmpty)
-    #expect(client.uploadsTasks.count == 1)
+    #expect(client.uploadsTasks.isEmpty)
 
     upload.resume()
     try await waitFor { upload.state == .completed && !events.values.isEmpty }
@@ -521,6 +521,164 @@ struct FileOperationTests {
     #expect(upload.state == .cancelled)
     #expect(events.values == ["cancelled"])
     #expect(client.uploadsTasks.isEmpty)
+  }
+
+  private func slowUploads(_ client: ApiClient, path: String, count: Int) throws -> [UploadTask<String>] {
+    let form = MultipartFormData { $0.addTextField(named: "field", value: "value") }
+    return try (0..<count).map { _ in
+      try client.upload(with: MultipartFormEndpoint<String>(path: path, form: form))
+    }
+  }
+
+  private func setSlowHandler(_ path: String, attempts: EventRecorder? = nil) {
+    MockURLProtocol.setHandler(for: "/\(path)", delay: 1) { request in
+      attempts?.record(path)
+      return Self.ok(request, path)
+    }
+  }
+
+  @Test("Pausing an upload starts the next queued upload")
+  func pauseStartsQueuedUpload() async throws {
+    guard #available(iOS 17.0, macOS 14.0, *) else { return }
+    let (client, _) = createMockClient()
+    let attempts = EventRecorder()
+    defer {
+      client.destroy()
+      ["/uppausefree/running", "/uppausefree/queued"].forEach(MockURLProtocol.removeHandler)
+    }
+    setSlowHandler("uppausefree/running", attempts: attempts)
+    setSlowHandler("uppausefree/queued", attempts: attempts)
+
+    let running = try slowUploads(client, path: "uppausefree/running", count: client.maxConcurrentUploads)
+    let queued = try slowUploads(client, path: "uppausefree/queued", count: 1)[0]
+    try await waitFor { attempts.values.count == running.count }
+    #expect(queued.state == .waitingStart)
+
+    running[0].pause()
+
+    #expect(queued.state == .uploading)
+    #expect(client.pendingUploads.isEmpty)
+    #expect(client.uploadsTasks.count == client.maxConcurrentUploads)
+    try await waitFor { attempts.values.contains("uppausefree/queued") }
+    #expect(attempts.values.contains("uppausefree/queued"))
+    running[0].cancel()
+  }
+
+  @Test("Resuming with no free slot queues the upload at the front")
+  func resumeWhenFullQueuesAtFront() async throws {
+    guard #available(iOS 17.0, macOS 14.0, *) else { return }
+    let (client, _) = createMockClient()
+    let attempts = EventRecorder()
+    let events = EventRecorder()
+    let paths = ["upfront/running", "upfront/paused", "upfront/filler", "upfront/later"]
+    defer {
+      client.destroy()
+      paths.forEach { MockURLProtocol.removeHandler(for: "/\($0)") }
+    }
+    paths.forEach { setSlowHandler($0, attempts: attempts) }
+
+    let paused = try slowUploads(client, path: "upfront/paused", count: 1)[0]
+    let running = try slowUploads(client, path: "upfront/running", count: client.maxConcurrentUploads - 1)
+    let filler = try slowUploads(client, path: "upfront/filler", count: 1)[0]
+    record(paused, into: events)
+    try await waitFor { attempts.values.contains("upfront/paused") }
+
+    paused.pause()
+    try await waitFor { filler.state == .uploading }
+    let later = try slowUploads(client, path: "upfront/later", count: 1)[0]
+    paused.resume()
+
+    #expect(paused.state == .waitingStart)
+    #expect(client.pendingUploads.map(ObjectIdentifier.init) == [ObjectIdentifier(paused), ObjectIdentifier(later)])
+
+    try await waitFor { ([paused, filler, later] + running).allSatisfy { $0.state == .completed } }
+    let order = attempts.values
+    #expect(order.filter { $0 == "upfront/paused" }.count == 2)
+    #expect(try #require(order.lastIndex(of: "upfront/paused")) < (try #require(order.firstIndex(of: "upfront/later"))))
+    #expect(events.values == ["upfront/paused"])
+    #expect(client.uploadsTasks.isEmpty)
+    #expect(client.pendingUploads.isEmpty)
+  }
+
+  @Test("Cancelling a resumed upload that is still queued removes it")
+  func cancelResumedQueuedUpload() async throws {
+    guard #available(iOS 17.0, macOS 14.0, *) else { return }
+    let (client, _) = createMockClient()
+    let attempts = EventRecorder()
+    let events = EventRecorder()
+    defer {
+      client.destroy()
+      ["/upresumecancel/running", "/upresumecancel/paused"].forEach(MockURLProtocol.removeHandler)
+    }
+    setSlowHandler("upresumecancel/running", attempts: attempts)
+    setSlowHandler("upresumecancel/paused", attempts: attempts)
+
+    let paused = try slowUploads(client, path: "upresumecancel/paused", count: 1)[0]
+    _ = try slowUploads(client, path: "upresumecancel/running", count: client.maxConcurrentUploads)
+    record(paused, into: events)
+    try await waitFor { attempts.values.contains("upresumecancel/paused") }
+
+    paused.pause()
+    try await waitFor { client.pendingUploads.isEmpty }
+    paused.resume()
+    #expect(paused.state == .waitingStart)
+
+    paused.cancel()
+
+    #expect(paused.state == .cancelled)
+    #expect(client.pendingUploads.isEmpty)
+    try await waitFor { client.uploadsTasks.isEmpty }
+    try await Task.sleep(nanoseconds: 100_000_000)
+    #expect(events.values == ["cancelled"])
+    #expect(attempts.values.filter { $0 == "upresumecancel/paused" }.count == 1)
+  }
+
+  @Test("A paused upload the caller drops is released")
+  func droppedPausedUploadIsReleased() async throws {
+    guard #available(iOS 17.0, macOS 14.0, *) else { return }
+    let (client, _) = createMockClient()
+    let attempts = EventRecorder()
+    defer {
+      client.destroy()
+      MockURLProtocol.removeHandler(for: "/updropped/file")
+    }
+    setSlowHandler("updropped/file", attempts: attempts)
+
+    weak var weakUpload: UploadTask<String>?
+    do {
+      let upload = try slowUploads(client, path: "updropped/file", count: 1)[0]
+      weakUpload = upload
+      try await waitFor { !attempts.values.isEmpty }
+      upload.pause()
+    }
+    try await waitFor { weakUpload == nil }
+
+    #expect(weakUpload == nil)
+    #expect(client.uploadsTasks.isEmpty)
+  }
+
+  @Test("Resuming after destroy reports cancellation and never sends")
+  func resumeAfterDestroy() async throws {
+    guard #available(iOS 17.0, macOS 14.0, *) else { return }
+    let (client, _) = createMockClient()
+    let attempts = EventRecorder()
+    let events = EventRecorder()
+    defer { MockURLProtocol.removeHandler(for: "/updestroyresume/file") }
+    setSlowHandler("updestroyresume/file", attempts: attempts)
+
+    let upload = try slowUploads(client, path: "updestroyresume/file", count: 1)[0]
+    record(upload, into: events)
+    try await waitFor { !attempts.values.isEmpty }
+    upload.pause()
+    client.destroy()
+
+    upload.resume()
+
+    #expect(upload.state == .cancelled)
+    try await waitFor { !events.values.isEmpty }
+    try await Task.sleep(nanoseconds: 500_000_000)
+    #expect(events.values == ["cancelled"])
+    #expect(attempts.values.count == 1)
   }
 
   // MARK: - Upload Response Decoding Tests

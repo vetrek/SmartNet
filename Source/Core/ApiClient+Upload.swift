@@ -77,6 +77,8 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
   /// A closure that is called when the upload is completed.
   private var onUploadCompleted: (_ upload: ObjectIdentifier) -> Void
 
+  private let onResume: (_ upload: any AnyUploadTask) -> Void
+
   private let decode: (Data?) throws -> ResponseType
   
   // MARK: - Lifecycle
@@ -87,13 +89,15 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
     endpoint: any Requestable,
     config: NetworkConfigurable,
     decode: @escaping (Data?) throws -> ResponseType,
-    onUploadCompleted: @escaping (_ upload: ObjectIdentifier) -> Void
+    onUploadCompleted: @escaping (_ upload: ObjectIdentifier) -> Void,
+    onResume: @escaping (_ upload: any AnyUploadTask) -> Void
   ) throws {
     self.session = session
     self.endpoint = endpoint
     self.globalDebug = config.debug
     self.decode = decode
     self.onUploadCompleted = onUploadCompleted
+    self.onResume = onResume
     self.remoteURLRequest = try endpoint.urlRequest(with: config)
     self.remoteURLRequest.httpBody = nil
     guard let data = endpoint.form?.data else {
@@ -103,7 +107,12 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
   }
   
   func start() {
-    startTask { session.uploadTask(with: remoteURLRequest, from: uploadData, completionHandler: $0) }
+    if #available(iOS 17.0, macOS 14.0, *), let resumedData {
+      self.resumedData = nil
+      startTask { session.uploadTask(withResumeData: resumedData, completionHandler: $0) }
+    } else {
+      startTask { session.uploadTask(with: remoteURLRequest, from: uploadData, completionHandler: $0) }
+    }
   }
 
   // MARK: - Private Methods
@@ -130,15 +139,6 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
     state = .uploading
   }
 
-  /// Resumes an upload from the given data.
-  /// This function initiates an upload task with resume data and observes its progress.
-  /// Available only on iOS 17.0 and later.
-  /// - Parameter data: The data from which the upload should be resumed.
-  @available(iOS 17.0, macOS 14.0, *)
-  private func resumeUploadWithData(_ data: Data) {
-    startTask { session.uploadTask(withResumeData: data, completionHandler: $0) }
-  }
-  
   /// Sets up observation for the upload progress and handles the progress updates.
   private func observeUploadProgress() {
     progressObserver?.invalidate()
@@ -168,7 +168,7 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
   }
   
   /// Pauses the currently uploading task. If the task is not uploading, the function does nothing.
-  /// Changes the task's state to paused and stores the resume data for later continuation.
+  /// Changes the task's state to paused, frees its upload slot and stores the resume data for later continuation.
   /// Available only on iOS 17.0 and later.
   @available(iOS 17.0, macOS 14.0, *)
   public func pause() {
@@ -181,20 +181,17 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
       self.resumedData = data
     })
     state = .paused
+    onUploadCompleted(ObjectIdentifier(self))
   }
   
   /// Resumes an upload task that was previously paused, ensuring it continues from where it left off if resume data is available.
-  /// If no resume data is found, it restarts the upload task.
+  /// If no resume data is found, it restarts the upload task. When every upload slot is busy, it waits at the front of the queue.
   /// This function is only available on iOS 17.0 and later, and macOS 14.0 and later.
   @available(iOS 17.0, macOS 14.0, *)
   public func resume() {
     guard state == .paused else { return }
-    if let resumedData {
-      resumeUploadWithData(resumedData)
-    }
-    else {
-      start()
-    }
+    state = .waitingStart
+    onResume(self)
   }
   
   /// Adds a progress closure to be called during the upload.
@@ -308,6 +305,13 @@ extension ApiClient {
           self.pendingUploads.removeAll { ObjectIdentifier($0) == upload }
         }
         startNextPendingUpload()
+      },
+      onResume: { [weak self] upload in
+        guard let self, self.session != nil else {
+          upload.cancel()
+          return
+        }
+        enqueue(upload, atFront: true)
       }
     )
   }
@@ -317,15 +321,19 @@ extension ApiClient {
     decode: @escaping (Data?) throws -> T
   ) throws -> UploadTask<T> {
     let upload = try createUploadTask(with: endpoint, decode: decode)
+    enqueue(upload)
+    return upload
+  }
+
+  func enqueue(_ upload: any AnyUploadTask, atFront: Bool = false) {
     uploadQueue.sync {
       if uploadsTasks.count < maxConcurrentUploads {
         upload.start()
         uploadsTasks[ObjectIdentifier(upload)] = upload
       } else {
-        pendingUploads.append(upload)
+        pendingUploads.insert(upload, at: atFront ? 0 : pendingUploads.endIndex)
       }
     }
-    return upload
   }
 
   func startNextPendingUpload() {
