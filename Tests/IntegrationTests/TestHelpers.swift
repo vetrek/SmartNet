@@ -42,6 +42,8 @@ final class MockURLProtocol: URLProtocol, @unchecked Sendable {
 
   private static let lock = NSLock()
   private static var handlers: [String: Handler] = [:]
+  private static var delays: [String: TimeInterval] = [:]
+  private var outcome: Swift.Result<(HTTPURLResponse, Data), Error>?
 
   /// Register a handler for a specific path pattern
   /// - Parameters:
@@ -53,11 +55,20 @@ final class MockURLProtocol: URLProtocol, @unchecked Sendable {
     handlers[pattern] = handler
   }
 
+  /// Register a handler whose response is delivered after `delay` without blocking other requests.
+  static func setHandler(for path: String, delay: TimeInterval, handler: @escaping Handler) {
+    lock.lock()
+    defer { lock.unlock() }
+    handlers[path] = handler
+    delays[path] = delay
+  }
+
   /// Remove handler for a specific pattern
   static func removeHandler(for pattern: String) {
     lock.lock()
     defer { lock.unlock() }
     handlers.removeValue(forKey: pattern)
+    delays.removeValue(forKey: pattern)
   }
 
   /// Clear all handlers
@@ -65,6 +76,7 @@ final class MockURLProtocol: URLProtocol, @unchecked Sendable {
     lock.lock()
     defer { lock.unlock() }
     handlers.removeAll()
+    delays.removeAll()
   }
 
   private static func findHandler(for request: URLRequest) -> Handler? {
@@ -114,18 +126,32 @@ final class MockURLProtocol: URLProtocol, @unchecked Sendable {
       return
     }
 
-    do {
-      let (response, data) = try handler(request)
+    outcome = Swift.Result { try handler(request) }
+    MockURLProtocol.lock.lock()
+    let delay = request.url.flatMap { MockURLProtocol.delays[$0.path] }
+    MockURLProtocol.lock.unlock()
+    if let delay {
+      perform(#selector(deliver), with: nil, afterDelay: delay)
+    } else {
+      deliver()
+    }
+  }
+
+  @objc private func deliver() {
+    switch outcome {
+    case .success(let (response, data)):
       client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
       client?.urlProtocol(self, didLoad: data)
       client?.urlProtocolDidFinishLoading(self)
-    } catch {
+    case .failure(let error):
       client?.urlProtocol(self, didFailWithError: error)
+    case nil:
+      break
     }
   }
 
   override func stopLoading() {
-    // Handle cancellation
+    NSObject.cancelPreviousPerformRequests(withTarget: self)
   }
 }
 

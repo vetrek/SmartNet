@@ -307,8 +307,7 @@ struct FileOperationTests {
       MockURLProtocol.removeHandler(for: "/upcancel/ok")
     }
 
-    MockURLProtocol.setHandler(for: "/upcancel/slow") { request in
-      Thread.sleep(forTimeInterval: 0.5)
+    MockURLProtocol.setHandler(for: "/upcancel/slow", delay: 0.5) { request in
       return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, Data("slow".utf8))
     }
     MockURLProtocol.setHandler(for: "/upcancel/ok") { request in
@@ -364,8 +363,7 @@ struct FileOperationTests {
       MockURLProtocol.removeHandler(for: "/upqueued/slow")
       MockURLProtocol.removeHandler(for: "/upqueued/queued")
     }
-    MockURLProtocol.setHandler(for: "/upqueued/slow") { request in
-      Thread.sleep(forTimeInterval: 0.3)
+    MockURLProtocol.setHandler(for: "/upqueued/slow", delay: 0.3) { request in
       return Self.ok(request, "slow")
     }
     MockURLProtocol.setHandler(for: "/upqueued/queued") { request in
@@ -402,11 +400,8 @@ struct FileOperationTests {
       client.destroy()
       MockURLProtocol.removeHandler(for: "/uppause/file")
     }
-    MockURLProtocol.setHandler(for: "/uppause/file") { request in
+    MockURLProtocol.setHandler(for: "/uppause/file", delay: 0.3) { request in
       attempts.record("sent")
-      if attempts.values.count == 1 {
-        Thread.sleep(forTimeInterval: 0.3)
-      }
       return Self.ok(request, "done")
     }
 
@@ -440,9 +435,8 @@ struct FileOperationTests {
       client.destroy()
       MockURLProtocol.removeHandler(for: "/uppausecancel/file")
     }
-    MockURLProtocol.setHandler(for: "/uppausecancel/file") { request in
+    MockURLProtocol.setHandler(for: "/uppausecancel/file", delay: 0.3) { request in
       attempts.record("sent")
-      Thread.sleep(forTimeInterval: 0.3)
       return Self.ok(request, "done")
     }
 
@@ -470,8 +464,7 @@ struct FileOperationTests {
       MockURLProtocol.removeHandler(for: "/updestroy/running")
       MockURLProtocol.removeHandler(for: "/updestroy/queued")
     }
-    MockURLProtocol.setHandler(for: "/updestroy/running") { request in
-      Thread.sleep(forTimeInterval: 0.3)
+    MockURLProtocol.setHandler(for: "/updestroy/running", delay: 0.3) { request in
       return Self.ok(request, "running")
     }
     MockURLProtocol.setHandler(for: "/updestroy/queued") { request in
@@ -511,9 +504,8 @@ struct FileOperationTests {
       client.destroy()
       MockURLProtocol.removeHandler(for: "/uprunningcancel/file")
     }
-    MockURLProtocol.setHandler(for: "/uprunningcancel/file") { request in
+    MockURLProtocol.setHandler(for: "/uprunningcancel/file", delay: 0.3) { request in
       attempts.record("sent")
-      Thread.sleep(forTimeInterval: 0.3)
       return Self.ok(request, "done")
     }
 
