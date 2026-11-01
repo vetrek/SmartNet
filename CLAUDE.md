@@ -74,7 +74,7 @@ Middlewares target specific path components and execute in registration order:
 
 ### Thread Safety
 
-`@ThreadSafe` property wrapper (`Source/Utils/ThreadSafe.swift`) uses pthread_mutex for concurrent access. Applied to config and task collections in ApiClient.
+`@ThreadSafe` property wrapper (`Source/Utils/ThreadSafe.swift`) uses `OSAllocatedUnfairLock`; in-place mutations (`append`, subscripts, `merge`) hold the lock for the whole read-modify-write. Applied to config and task collections in ApiClient.
 
 ### Key Protocols
 

@@ -103,7 +103,39 @@ struct ThreadSafetyTests {
     #expect(container.person.age == 25)
   }
 
+  @Test("ThreadSafe in-place mutation is atomic")
+  func concurrentReadModifyWrite() {
+    final class Container {
+      @ThreadSafe var items: [Int] = []
+      @ThreadSafe var counts: [String: Int] = [:]
+    }
+
+    let container = Container()
+    let iterations = 1000
+
+    DispatchQueue.concurrentPerform(iterations: iterations) { i in
+      container.items.append(i)
+      container.counts["key", default: 0] += 1
+    }
+
+    #expect(container.items.count == iterations)
+    #expect(container.counts["key"] == iterations)
+  }
+
   // MARK: - ApiClient Thread Safety Tests
+
+  @Test("Headers can be updated concurrently")
+  func concurrentHeaderUpdates() {
+    let config = NetworkConfiguration(baseURL: URL(string: "https://api.test.com")!)
+    let client = ApiClient(config: config, sessionConfiguration: .ephemeral, delegateQueue: nil)
+    defer { client.destroy() }
+
+    DispatchQueue.concurrentPerform(iterations: 1000) { i in
+      client.updateHeaders(["Header-\(i)": "\(i)"])
+    }
+
+    #expect(client.config.headers.count == 1000)
+  }
 
   @Test("Headers can be set and updated sequentially")
   func sequentialHeaderUpdates() {
@@ -197,52 +229,5 @@ struct ThreadSafetyTests {
     }
 
     // No crash = success
-  }
-
-  // MARK: - PThreadMutex Tests
-
-  @Test("PThreadMutex sync executes work atomically")
-  func mutexSync() {
-    let mutex = PThreadMutex()
-    var counter = 0
-
-    mutex.sync {
-      counter += 1
-    }
-
-    #expect(counter == 1)
-  }
-
-  @Test("PThreadMutex trySync returns nil when locked")
-  func mutexTrySync() {
-    let mutex = PThreadMutex()
-    var counter = 0
-
-    mutex.unbalancedLock()
-
-    let result = mutex.trySync {
-      counter += 1
-      return counter
-    }
-
-    mutex.unbalancedUnlock()
-
-    #expect(result == nil)
-    #expect(counter == 0)
-  }
-
-  @Test("Recursive mutex allows re-entry")
-  func recursiveMutex() {
-    let mutex = PThreadMutex(type: .recursive)
-    var counter = 0
-
-    mutex.sync {
-      counter += 1
-      mutex.sync {
-        counter += 1
-      }
-    }
-
-    #expect(counter == 2)
   }
 }
