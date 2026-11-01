@@ -1205,4 +1205,53 @@ struct FileOperationTests {
     // Clean up
     tasks.forEach { $0.cancel() }
   }
+
+  @Test("Cancelling the Task cancels an in-flight async download")
+  func asyncDownloadTaskCancellation() async throws {
+    let (client, _) = createMockClient()
+    let path = "/dlasync/cancel"
+    defer {
+      client.destroy()
+      MockURLProtocol.removeHandler(for: path)
+    }
+    MockURLProtocol.setHandler(for: path, delay: 5) { Self.ok($0, path) }
+
+    let start = Date()
+    let task = Task { try await client.download(with: DownloadEndpoint(path: path)) }
+    try await waitFor { client.downloadsTasks.count == 1 }
+    task.cancel()
+    let result = await task.result
+
+    #expect(throws: NetworkError.cancelled) { try result.get() }
+    #expect(Date().timeIntervalSince(start) < 2)
+    try await waitFor { MockURLProtocol.cancelledLoads(for: path) == 1 }
+    #expect(MockURLProtocol.cancelledLoads(for: path) == 1)
+    #expect(client.downloadsTasks.isEmpty)
+  }
+
+  @Test("An already-cancelled Task never starts the async download")
+  func asyncDownloadPreCancelled() async throws {
+    let (client, _) = createMockClient()
+    let path = "/dlasync/precancelled"
+    let attempts = EventRecorder()
+    defer {
+      client.destroy()
+      MockURLProtocol.removeHandler(for: path)
+    }
+    MockURLProtocol.setHandler(for: path) { request in
+      attempts.record(path)
+      return Self.ok(request, path)
+    }
+
+    let task = Task {
+      withUnsafeCurrentTask { $0?.cancel() }
+      return try await client.download(with: DownloadEndpoint(path: path))
+    }
+    let result = await task.result
+    try await Task.sleep(for: .milliseconds(200))
+
+    #expect(throws: NetworkError.cancelled) { try result.get() }
+    #expect(attempts.values.isEmpty)
+    #expect(client.downloadsTasks.isEmpty)
+  }
 }

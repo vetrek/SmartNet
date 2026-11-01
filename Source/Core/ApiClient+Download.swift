@@ -23,6 +23,7 @@
 //
 
 import Foundation
+import os
 
 public final class DownloadTask: NetworkCancellable, Hashable {
   
@@ -302,20 +303,24 @@ public extension ApiClient {
     with endpoint: DownloadEndpoint,
     destination: DownloadTask.DownloadFileDestination? = nil
   ) async throws -> DownloadTask.DownloadResult {
-    return try await withCheckedThrowingContinuation { [weak self] continuation in
-      do {
-        guard
-          let self,
-          let session = self.session else {
-          continuation.resume(throwing: NSError(domain: "SmartNet", code: 100, userInfo: [NSLocalizedDescriptionKey: "Invalid Session"]))
+    guard let session else {
+      throw NSError(domain: "SmartNet", code: 100, userInfo: [NSLocalizedDescriptionKey: "Invalid Session"])
+    }
+    let downloadTask = try DownloadTask(
+      session: session,
+      endpoint: endpoint,
+      config: config,
+      destination: destination
+    )
+    return try await withTaskCancellationHandler {
+      try await withCheckedThrowingContinuation { continuation in
+        guard !Task.isCancelled else {
+          continuation.resume(throwing: NetworkError.cancelled)
           return
         }
-        let downloadTask = try DownloadTask(
-          session: session,
-          endpoint: endpoint,
-          config: config,
-          destination: destination
-        ).response { response in
+        let resumed = OSAllocatedUnfairLock(initialState: false)
+        downloadTask.response { response in
+          guard resumed.withLock({ resumed in defer { resumed = true }; return !resumed }) else { return }
           switch response.result {
           case let .success(result):
             continuation.resume(returning: result)
@@ -323,11 +328,10 @@ public extension ApiClient {
             continuation.resume(throwing: error)
           }
         }
-        self.enqueue(downloadTask)
-
-      } catch {
-        continuation.resume(throwing: error)
+        enqueue(downloadTask)
       }
+    } onCancel: {
+      downloadTask.cancel()
     }
   }
   
