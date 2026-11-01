@@ -2,7 +2,7 @@
 
 **Type-safe Swift HTTP networking**
 
-[![Platform](https://img.shields.io/badge/platform-iOS%2014%2B%20%7C%20macOS%2011%2B-blue.svg)](https://developer.apple.com/swift/)
+[![Platform](https://img.shields.io/badge/platform-iOS%2017%2B%20%7C%20macOS%2014%2B-blue.svg)](https://developer.apple.com/swift/)
 [![Swift](https://img.shields.io/badge/Swift-5.9%2B-orange.svg)](https://swift.org)
 [![SPM](https://img.shields.io/badge/SPM-compatible-brightgreen.svg)](https://swift.org/package-manager/)
 
@@ -139,7 +139,7 @@ let download = client.download(url: URL(string: "https://example.com/file.zip")!
 How transfers run:
 
 - **Queued.** Downloads run up to the session's `httpMaximumConnectionsPerHost` at once (6 by default). Uploads run one fewer, so API requests to the same host always have a free connection. Extra transfers wait in `.waitingStart`, and their request timeout only starts when they do.
-- **Pause and resume.** `pause()` frees the transfer's slot. `resume()` continues from resume data when the server supports it, otherwise restarts, and goes to the front of the queue. Upload pause/resume requires iOS 17 / macOS 14.
+- **Pause and resume.** `pause()` frees the transfer's slot. `resume()` continues from resume data when the server supports it, otherwise restarts, and goes to the front of the queue.
 - **Cancel.** `cancel()` ends in `.cancelled` and delivers a cancellation error to `response`. `client.destroy()` cancels every running and queued transfer.
 - **State.** `state` is already final (`.completed`, `.error` or `.cancelled`) when `response` runs.
 

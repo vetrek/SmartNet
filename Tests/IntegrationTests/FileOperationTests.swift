@@ -392,7 +392,6 @@ struct FileOperationTests {
 
   @Test("Paused upload frees its slot silently and resume uploads it again")
   func pauseResumeUpload() async throws {
-    guard #available(iOS 17.0, macOS 14.0, *) else { return }
     let (client, _) = createMockClient()
     let events = EventRecorder()
     let attempts = EventRecorder()
@@ -427,7 +426,6 @@ struct FileOperationTests {
 
   @Test("Cancelling a paused upload reports cancellation and frees its slot")
   func cancelPausedUpload() async throws {
-    guard #available(iOS 17.0, macOS 14.0, *) else { return }
     let (client, _) = createMockClient()
     let events = EventRecorder()
     let attempts = EventRecorder()
@@ -914,7 +912,6 @@ struct FileOperationTests {
 
   @Test("Pausing an upload starts the next queued upload")
   func pauseStartsQueuedUpload() async throws {
-    guard #available(iOS 17.0, macOS 14.0, *) else { return }
     let (client, _) = createMockClient()
     let attempts = EventRecorder()
     defer {
@@ -941,7 +938,6 @@ struct FileOperationTests {
 
   @Test("Resuming with no free slot queues the upload at the front")
   func resumeWhenFullQueuesAtFront() async throws {
-    guard #available(iOS 17.0, macOS 14.0, *) else { return }
     let (client, _) = createMockClient()
     let attempts = EventRecorder()
     let events = EventRecorder()
@@ -977,7 +973,6 @@ struct FileOperationTests {
 
   @Test("Cancelling a resumed upload that is still queued removes it")
   func cancelResumedQueuedUpload() async throws {
-    guard #available(iOS 17.0, macOS 14.0, *) else { return }
     let (client, _) = createMockClient()
     let attempts = EventRecorder()
     let events = EventRecorder()
@@ -1010,7 +1005,6 @@ struct FileOperationTests {
 
   @Test("A paused upload the caller drops is released")
   func droppedPausedUploadIsReleased() async throws {
-    guard #available(iOS 17.0, macOS 14.0, *) else { return }
     let (client, _) = createMockClient()
     let attempts = EventRecorder()
     defer {
@@ -1034,7 +1028,6 @@ struct FileOperationTests {
 
   @Test("Resuming after destroy reports cancellation and never sends")
   func resumeAfterDestroy() async throws {
-    guard #available(iOS 17.0, macOS 14.0, *) else { return }
     let (client, _) = createMockClient()
     let attempts = EventRecorder()
     let events = EventRecorder()

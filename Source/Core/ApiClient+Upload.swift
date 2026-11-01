@@ -107,7 +107,7 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
   }
   
   func start() {
-    if #available(iOS 17.0, macOS 14.0, *), let resumedData {
+    if let resumedData {
       self.resumedData = nil
       startTask { session.uploadTask(withResumeData: resumedData, completionHandler: $0) }
     } else {
@@ -169,8 +169,6 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
   
   /// Pauses the currently uploading task. If the task is not uploading, the function does nothing.
   /// Changes the task's state to paused, frees its upload slot and stores the resume data for later continuation.
-  /// Available only on iOS 17.0 and later.
-  @available(iOS 17.0, macOS 14.0, *)
   public func pause() {
     guard state == .uploading else { return }
     progressObserver?.invalidate()
@@ -186,8 +184,6 @@ public final class UploadTask<ResponseType>: NetworkCancellable, Hashable, AnyUp
   
   /// Resumes an upload task that was previously paused, ensuring it continues from where it left off if resume data is available.
   /// If no resume data is found, it restarts the upload task. When every upload slot is busy, it waits at the front of the queue.
-  /// This function is only available on iOS 17.0 and later, and macOS 14.0 and later.
-  @available(iOS 17.0, macOS 14.0, *)
   public func resume() {
     guard state == .paused else { return }
     state = .waitingStart

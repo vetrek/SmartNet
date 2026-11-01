@@ -5,8 +5,8 @@ import PackageDescription
 let package = Package(
     name: "SmartNet",
     platforms: [
-        .iOS(.v14),
-        .macOS(.v11)
+        .iOS(.v17),
+        .macOS(.v14)
     ],
     products: [
         .library(

@@ -13,7 +13,7 @@ swiftlint                # Run linter (Source/ and Tests/)
 
 ## Architecture
 
-SmartNet is a Swift HTTP networking library for iOS 13+ and macOS 10.15+ with no external dependencies. It supports three programming paradigms: Async/Await, Combine, and closures.
+SmartNet is a Swift HTTP networking library for iOS 17+ and macOS 14+ with no external dependencies. It supports three programming paradigms: Async/Await, Combine, and closures.
 
 ### Core Components
 
