@@ -63,3 +63,14 @@ public enum Result<Value: Sendable>: Sendable {
     }
 
 }
+
+extension Result {
+  func get() throws(NetworkError) -> Value {
+    switch self {
+    case .success(let value):
+      return value
+    case .failure(let error):
+      throw error
+    }
+  }
+}

@@ -42,7 +42,7 @@ public extension ApiClient {
     queue: DispatchQueue = .main,
     progressHUD: SNProgressHUD? = nil
   ) -> AnyPublisher<D, Error> where D: Decodable, D == E.Response, E: Requestable {
-    dataRequest(with: endpoint)
+    dataRequest(with: endpoint, queue: queue, progressHUD: progressHUD)
       .decode(type: D.self, decoder: decoder)
       .eraseToAnyPublisher()
   }
@@ -59,7 +59,7 @@ public extension ApiClient {
     queue: DispatchQueue = .main,
     progressHUD: SNProgressHUD? = nil
   ) -> AnyPublisher<E.Response, Error> where E: Requestable, E.Response == Data {
-    dataRequest(with: endpoint)
+    dataRequest(with: endpoint, queue: queue, progressHUD: progressHUD)
   }
   
   /// Sends a request to the provided endpoint and expects a string response.
@@ -74,7 +74,7 @@ public extension ApiClient {
     queue: DispatchQueue = .main,
     progressHUD: SNProgressHUD? = nil
   ) -> AnyPublisher<E.Response, Error> where E: Requestable, E.Response == String {
-    dataRequest(with: endpoint)
+    dataRequest(with: endpoint, queue: queue, progressHUD: progressHUD)
       .tryMap { data in
         guard
           let string = String(data: data, encoding: .utf8)
@@ -98,7 +98,7 @@ public extension ApiClient {
     queue: DispatchQueue = .main,
     progressHUD: SNProgressHUD? = nil
   ) -> AnyPublisher<E.Response, Error> where E: Requestable, E.Response == Void {
-    dataRequest(with: endpoint)
+    dataRequest(with: endpoint, queue: queue, progressHUD: progressHUD)
       .map { _ in return Void() } // Convert received Data to Void
       .eraseToAnyPublisher()
   }
@@ -115,15 +115,15 @@ public extension ApiClient {
     queue: DispatchQueue = .main,
     progressHUD: SNProgressHUD? = nil
   ) -> AnyPublisher<Data, Error> where E : Requestable {
-    Future<Data, Error> { [weak self] promise in
-      self?.dataRequest(with: endpoint, progressHUD: progressHUD) { response in
-        switch response.result {
-        case .success(let data):
-          promise(.success(data))
-        case .failure(let error):
-          promise(.failure(error))
+    Deferred {
+      var task: Task<Void, Never>?
+      return Future<Data, Error> { promise in
+        task = Task {
+          let response = await self.response(for: endpoint, progressHUD: progressHUD)
+          promise(Swift.Result { try response.result.get() })
         }
       }
+      .handleEvents(receiveCancel: { task?.cancel() })
     }
     .receive(on: queue)
     .eraseToAnyPublisher()

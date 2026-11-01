@@ -381,7 +381,7 @@ struct ApiClientMiddlewareTests {
     #expect(response.request?.url?.path == path)
   }
 
-  @Test("Progress HUD shows once and dismisses after every attempt, after the completion")
+  @Test("Progress HUD shows once and dismisses once before the completion, across retries")
   func progressHUDAcrossRetries() async throws {
     let (client, _) = createMockClient()
     let path = "/middleware-hud-retry"
@@ -402,8 +402,8 @@ struct ApiClientMiddlewareTests {
     await MainActor.run {}
 
     #expect(requestCount.value == 3)
-    #expect(eventsAtCompletion == ["show", "dismiss", "dismiss"])
-    #expect(hud.events.values == ["show", "dismiss", "dismiss", "dismiss"])
+    #expect(eventsAtCompletion == ["show", "dismiss"])
+    #expect(hud.events.values == ["show", "dismiss"])
   }
 }
 

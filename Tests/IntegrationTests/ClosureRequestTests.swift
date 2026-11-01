@@ -293,4 +293,30 @@ struct ClosureRequestTests {
       #expect(statusCode == (path.hasSuffix("ok") ? 200 : 418))
     }
   }
+
+  @Test("Cancelling the returned handle during a retry delay stops retries and completes once")
+  func cancelDuringRetryDelayStopsRetries() async throws {
+    let (client, _) = createMockClient()
+    let path = "/closure/cancel-retry-delay"
+    defer { client.destroy(); MockURLProtocol.removeHandler(for: path) }
+
+    let requests = EventRecorder()
+    MockURLProtocol.setHandler(for: path) { request in
+      requests.record("request")
+      return (HTTPURLResponse(url: request.url!, statusCode: 503, httpVersion: nil, headerFields: nil)!, Data())
+    }
+
+    let completions = EventRecorder()
+    let endpoint = Endpoint<Data>(path: path, method: .get, retryPolicy: LinearBackoffRetryPolicy(maxRetries: 1, delay: 0.5))
+    let handle = client.request(with: endpoint) { response in
+      completions.record(response.error as? NetworkError == .cancelled ? "cancelled" : "\(String(describing: response.error))")
+    }
+    try await waitUntil { !requests.values.isEmpty }
+    try await Task.sleep(for: .milliseconds(200))
+    handle?.cancel()
+
+    try await Task.sleep(for: .seconds(1))
+    #expect(requests.values.count == 1)
+    #expect(completions.values == ["cancelled"])
+  }
 }

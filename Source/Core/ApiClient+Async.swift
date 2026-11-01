@@ -101,15 +101,6 @@ public extension ApiClient {
     endpoint: E,
     progressHUD: SNProgressHUD? = nil
   ) async throws -> Data where E : Requestable {
-    try await withCheckedThrowingContinuation { continuation in
-      dataRequest(with: endpoint, progressHUD: progressHUD) { response in
-        switch response.result {
-        case .success(let data):
-          continuation.resume(returning: data)
-        case .failure(let error):
-          continuation.resume(throwing: error)
-        }
-      }
-    }
+    try await response(for: endpoint, progressHUD: progressHUD).result.get()
   }
 }

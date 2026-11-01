@@ -152,29 +152,10 @@ extension ApiClient {
     progressHUD: SNProgressHUD? = nil,
     completion: @escaping (Response<Data>) -> Void
   ) -> NetworkCancellable? where E : Requestable {
-    let request: URLRequest
-    do {
-      request = try prepareRequest(for: endpoint)
-    } catch {
-      completion(
-        Response(
-          result: .failure(error),
-          session: session
-        )
-      )
-      return nil
+    Task {
+      let response = await self.response(for: endpoint, progressHUD: progressHUD)
+      queue.async { completion(response) }
     }
-
-    progressHUD?.show()
-
-    return runDataTask(
-      endpoint: endpoint,
-      request: request,
-      queue: queue,
-      progressHUD: progressHUD,
-      retryCount: 0,
-      completion: completion
-    )
   }
 
   func applyPreRequestMiddlewares(
@@ -218,173 +199,114 @@ extension ApiClient {
     return false
   }
 
-  func runDataTask<E>(
-    endpoint: E,
-    request: URLRequest,
-    queue: DispatchQueue = .main,
-    progressHUD: SNProgressHUD? = nil,
-    retryCount: Int = 0,
-    completion: @escaping (Response<Data>) -> Void
-  ) -> NetworkCancellable? where E : Requestable {
-    @Sendable func responseBlock(_ response: Response<Data>) {
-      queue.async {
-        completion(response)
-      }
+  func response<E>(for endpoint: E, progressHUD: SNProgressHUD? = nil) async -> Response<Data> where E: Requestable {
+    var request: URLRequest
+    do {
+      request = try prepareRequest(for: endpoint)
+    } catch {
+      return Response(result: .failure(error), session: session)
     }
 
-    // Get effective retry policy (endpoint override or config default)
+    if let progressHUD { DispatchQueue.main.async { progressHUD.show() } }
+    defer { if let progressHUD { DispatchQueue.main.async { progressHUD.dismiss() } } }
+
     let retryPolicy = endpoint.retryPolicy ?? config.retryPolicy
-
-    // Check if max retries exceeded
-    guard retryCount <= retryPolicy.maxRetries else {
-      responseBlock(
-        Response(
-          result: .failure(.middlewareMaxRetry),
-          session: session,
-          request: request,
-          response: nil
-        )
-      )
-      return nil
-    }
-
-    let startTime = Date()
-    let currentRequest = request
-
-    let task = session?.dataTask(
-      with: currentRequest
-    ) { (data, response, error) in
-      Task { [weak self] in
-        defer {
-          DispatchQueue.main.async {
-            progressHUD?.dismiss()
-          }
+    var attempt = 0
+    while true {
+      let exchange = await send(request, debug: endpoint.debugRequest ?? config.debug)
+      let response = exchange.response
+      switch await outcome(of: endpoint, request: request, exchange: exchange, attempt: attempt, retryPolicy: retryPolicy) {
+      case .finish(let result):
+        return Response(result: result, session: session, request: request, response: response)
+      case .retry(let error):
+        let delay = retryPolicy.delay(forAttempt: attempt, error: error)
+        if delay > 0 {
+          SmartNetLogger.shared.debug("[Retry] Attempt \(attempt + 1)/\(retryPolicy.maxRetries) after \(String(format: "%.2f", delay))s delay")
+        } else {
+          SmartNetLogger.shared.debug("[Retry] Attempt \(attempt + 1)/\(retryPolicy.maxRetries) immediately")
         }
-
-        guard let self else { return }
-
-        @Sendable func finish(_ result: Result<Data>) {
-          responseBlock(Response(result: result, session: self.session, request: currentRequest, response: response))
+        do {
+          try await Task.sleep(for: .seconds(max(delay, 0)))
+          request = try prepareRequest(for: endpoint)
+        } catch {
+          return Response(result: .failure(error as? NetworkError ?? .cancelled), session: session, request: request, response: response)
         }
-
-        // Print cURL
-        if (endpoint.debugRequest ?? self.config.debug), let session = self.session {
-          let elapsed = Date().timeIntervalSince(startTime)
-          let ms = Int((elapsed.truncatingRemainder(dividingBy: 1)) * 1000)
-          if elapsed < 1 {
-            SmartNetLogger.shared.debug("[API Time] Took: \(ms) ms")
-          } else {
-            let seconds = Int(elapsed)
-            SmartNetLogger.shared.debug("[API Time] Took: \(seconds)s \(ms)ms")
-          }
-
-          ApiClient.printCurl(
-            session: session,
-            request: currentRequest,
-            response: response,
-            data: data
-          )
-        }
-
-        /// Schedules a retry with delay based on the retry policy.
-        func scheduleRetryWithDelay(for error: NetworkError? = nil) {
-          let delay = retryPolicy.delay(forAttempt: retryCount, error: error)
-
-          @Sendable func performRetry() {
-            do {
-              let retriedRequest = try self.prepareRequest(for: endpoint)
-              _ = self.runDataTask(
-                endpoint: endpoint,
-                request: retriedRequest,
-                queue: queue,
-                progressHUD: progressHUD,
-                retryCount: retryCount + 1,
-                completion: completion
-              )
-            } catch {
-              finish(.failure(error))
-            }
-          }
-
-          if delay > 0 {
-            SmartNetLogger.shared.debug("[Retry] Attempt \(retryCount + 1)/\(retryPolicy.maxRetries) after \(String(format: "%.2f", delay))s delay")
-            DispatchQueue.global().asyncAfter(deadline: .now() + delay) { performRetry() }
-          } else {
-            SmartNetLogger.shared.debug("[Retry] Attempt \(retryCount + 1)/\(retryPolicy.maxRetries) immediately")
-            performRetry()
-          }
-        }
-
-        /// Checks if the error should trigger a retry based on the policy.
-        func shouldRetryForError(_ error: NetworkError) -> Bool {
-          retryCount < retryPolicy.maxRetries && retryPolicy.shouldRetry(for: error, attempt: retryCount)
-        }
-
-        // Run postResponse Middlewares
-        if endpoint.allowMiddlewares,
-           let url = currentRequest.url,
-           !middlewares.isEmpty {
-          do {
-            let groups = self.middlewareGroups(for: url)
-            if try await self.shouldRetryAfterPostResponse(groups.global + groups.path, data: data, response: response, error: error) {
-              guard retryCount < retryPolicy.maxRetries else {
-                finish(.failure(.middlewareMaxRetry))
-                return
-              }
-              scheduleRetryWithDelay()
-              return
-            }
-          } catch {
-            finish(.failure(.middleware(error)))
-            return
-          }
-        }
-
-        // Check error and apply retry policy
-        if let requestError = error {
-          let networkError = self.getRequestError(
-            data: data,
-            response: response,
-            requestError: requestError
-          )
-
-          // Check if we should retry based on the error
-          if shouldRetryForError(networkError) {
-            scheduleRetryWithDelay(for: networkError)
-            return
-          }
-
-          finish(.failure(networkError))
-          return
-        }
-
-        // Make sure have a response
-        guard let response else {
-          return
-        }
-
-        // Check HTTP response status code is within accepted range
-        if let validationError = self.validate(response: response, data: data) {
-          // Check if we should retry based on the validation error (e.g., 5xx, 429)
-          if shouldRetryForError(validationError) {
-            scheduleRetryWithDelay(for: validationError)
-            return
-          }
-
-          finish(.failure(validationError))
-          return
-        }
-
-        guard let data else {
-          finish(.failure(.emptyResponse))
-          return
-        }
-
-        // Success Response
-        finish(.success(data))
+        attempt += 1
       }
     }
-    task?.resume()
-    return task
   }
+
+  private func send(_ request: URLRequest, debug: Bool) async -> Exchange {
+    let session = self.session
+    let startTime = Date()
+    let result: Exchange
+    do {
+      guard let session else { throw URLError(.cancelled) }
+      let (data, response) = try await session.data(for: request)
+      result = (data, response, nil)
+    } catch {
+      result = (nil, nil, error)
+    }
+
+    if debug, let session {
+      let elapsed = Date().timeIntervalSince(startTime)
+      let ms = Int((elapsed.truncatingRemainder(dividingBy: 1)) * 1000)
+      if elapsed < 1 {
+        SmartNetLogger.shared.debug("[API Time] Took: \(ms) ms")
+      } else {
+        let seconds = Int(elapsed)
+        SmartNetLogger.shared.debug("[API Time] Took: \(seconds)s \(ms)ms")
+      }
+
+      ApiClient.printCurl(
+        session: session,
+        request: request,
+        response: result.response,
+        data: result.data
+      )
+    }
+    return result
+  }
+
+  private func outcome<E>(
+    of endpoint: E,
+    request: URLRequest,
+    exchange: Exchange,
+    attempt: Int,
+    retryPolicy: RetryPolicy
+  ) async -> AttemptOutcome where E: Requestable {
+    let (data, response, error) = exchange
+    let canRetry = attempt < retryPolicy.maxRetries
+
+    if endpoint.allowMiddlewares, let url = request.url, !middlewares.isEmpty {
+      do {
+        let groups = middlewareGroups(for: url)
+        if try await shouldRetryAfterPostResponse(groups.global + groups.path, data: data, response: response, error: error) {
+          return canRetry ? .retry(nil) : .finish(.failure(.middlewareMaxRetry))
+        }
+      } catch {
+        return .finish(.failure(.middleware(error)))
+      }
+    }
+
+    let failure: NetworkError
+    if let error {
+      failure = getRequestError(data: data, response: response, requestError: error)
+    } else if let response, let validationError = validate(response: response, data: data) {
+      failure = validationError
+    } else if let data {
+      return .finish(.success(data))
+    } else {
+      return .finish(.failure(.emptyResponse))
+    }
+
+    return canRetry && retryPolicy.shouldRetry(for: failure, attempt: attempt) ? .retry(failure) : .finish(.failure(failure))
+  }
+}
+
+private typealias Exchange = (data: Data?, response: URLResponse?, error: Error?)
+
+private enum AttemptOutcome {
+  case finish(Result<Data>)
+  case retry(NetworkError?)
 }

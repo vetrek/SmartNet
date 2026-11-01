@@ -175,4 +175,25 @@ struct CombineRequestTests {
 
     #expect(string == expectedString)
   }
+
+  @Test("Cancelling the subscription cancels the in-flight request")
+  func cancellingSubscriptionCancelsRequest() async throws {
+    let (client, _) = createMockClient()
+    let path = "/combine/cancel-in-flight"
+    defer { client.destroy(); MockURLProtocol.removeHandler(for: path) }
+
+    let requests = EventRecorder()
+    MockURLProtocol.setHandler(for: path, delay: 5) { request in
+      requests.record("request")
+      return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, Data())
+    }
+
+    let publisher: AnyPublisher<Data, Error> = client.request(with: Endpoint<Data>(path: path, method: .get))
+    let cancellable = publisher.sink(receiveCompletion: { _ in }, receiveValue: { _ in })
+    try await waitUntil { !requests.values.isEmpty }
+    cancellable.cancel()
+
+    try await waitUntil { MockURLProtocol.cancelledLoads(for: path) == 1 }
+    #expect(MockURLProtocol.cancelledLoads(for: path) == 1)
+  }
 }

@@ -160,4 +160,52 @@ struct AsyncRequestTests {
       try await client.request(with: Endpoint<Void>(path: "async/void-fail", method: .delete))
     }
   }
+
+  @Test("Cancelling the task cancels the in-flight request")
+  func cancellingTaskCancelsInFlightRequest() async throws {
+    let (client, _) = createMockClient()
+    let path = "/async/cancel-in-flight"
+    defer { client.destroy(); MockURLProtocol.removeHandler(for: path) }
+
+    let requests = EventRecorder()
+    MockURLProtocol.setHandler(for: path, delay: 5) { request in
+      requests.record("request")
+      return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, Data())
+    }
+
+    let task = Task { try await client.request(with: Endpoint<Data>(path: path, method: .get)) }
+    try await waitUntil { !requests.values.isEmpty }
+    let cancelledAt = ContinuousClock.now
+    task.cancel()
+
+    await #expect(throws: NetworkError.cancelled) { try await task.value }
+    #expect(ContinuousClock.now - cancelledAt < .seconds(1))
+    try await waitUntil { MockURLProtocol.cancelledLoads(for: path) == 1 }
+    #expect(MockURLProtocol.cancelledLoads(for: path) == 1)
+  }
+
+  @Test("Cancelling the task during a retry delay stops further attempts")
+  func cancellingTaskDuringRetryDelayStopsRetries() async throws {
+    let (client, _) = createMockClient()
+    let path = "/async/cancel-retry-delay"
+    defer { client.destroy(); MockURLProtocol.removeHandler(for: path) }
+
+    let requests = EventRecorder()
+    MockURLProtocol.setHandler(for: path) { request in
+      requests.record("request")
+      return (HTTPURLResponse(url: request.url!, statusCode: 503, httpVersion: nil, headerFields: nil)!, Data())
+    }
+
+    let endpoint = Endpoint<Data>(path: path, method: .get, retryPolicy: LinearBackoffRetryPolicy(maxRetries: 1, delay: 1))
+    let task = Task { try await client.request(with: endpoint) }
+    try await waitUntil { !requests.values.isEmpty }
+    try await Task.sleep(for: .milliseconds(200))
+    let cancelledAt = ContinuousClock.now
+    task.cancel()
+
+    await #expect(throws: NetworkError.cancelled) { try await task.value }
+    #expect(ContinuousClock.now - cancelledAt < .milliseconds(500))
+    try await Task.sleep(for: .seconds(1))
+    #expect(requests.values.count == 1)
+  }
 }

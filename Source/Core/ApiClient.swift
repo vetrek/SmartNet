@@ -31,6 +31,8 @@ public protocol NetworkCancellable {
 
 extension URLSessionTask: NetworkCancellable { }
 
+extension Task: NetworkCancellable { }
+
 public typealias CompletionHandler<T> = (Response<T>) -> Void
 
 public final class ApiClient: NSObject, ApiClientProtocol, DownloadClientProtocol, UploadClientProtocol {

@@ -46,6 +46,7 @@ final class MockURLProtocol: URLProtocol, @unchecked Sendable {
   private static let lock = NSLock()
   private static var handlers: [String: Handler] = [:]
   private static var delays: [String: TimeInterval] = [:]
+  private static var cancelledLoads: [String: Int] = [:]
   private var outcome: Swift.Result<(HTTPURLResponse, Data), Error>?
 
   /// Register a handler for a specific path pattern
@@ -64,6 +65,12 @@ final class MockURLProtocol: URLProtocol, @unchecked Sendable {
     defer { lock.unlock() }
     handlers[path] = handler
     delays[path] = delay
+  }
+
+  static func cancelledLoads(for path: String) -> Int {
+    lock.lock()
+    defer { lock.unlock() }
+    return cancelledLoads[path, default: 0]
   }
 
   /// Remove handler for a specific pattern
@@ -151,9 +158,15 @@ final class MockURLProtocol: URLProtocol, @unchecked Sendable {
     case nil:
       break
     }
+    outcome = nil
   }
 
   override func stopLoading() {
+    if outcome != nil, let path = request.url?.path {
+      MockURLProtocol.lock.lock()
+      MockURLProtocol.cancelledLoads[path, default: 0] += 1
+      MockURLProtocol.lock.unlock()
+    }
     NSObject.cancelPreviousPerformRequests(withTarget: self)
   }
 }
@@ -189,6 +202,12 @@ extension SmartNet.Result {
     case .success: return true
     case .failure: return false
     }
+  }
+}
+
+func waitUntil(_ condition: () -> Bool) async throws {
+  for _ in 0..<300 where !condition() {
+    try await Task.sleep(for: .milliseconds(10))
   }
 }
 
