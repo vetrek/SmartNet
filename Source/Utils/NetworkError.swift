@@ -71,7 +71,10 @@ public enum NetworkError: Error, CustomStringConvertible, Equatable {
 
   /// Server returned 429 Too Many Requests with optional Retry-After header
   case rateLimited(retryAfter: TimeInterval?)
-  
+
+  /// Response Content-Type did not match the expected media type
+  case unexpectedContentType(String?)
+
   public var description: String {
     switch self {
     case .error(let statusCode, let data):
@@ -167,6 +170,9 @@ public enum NetworkError: Error, CustomStringConvertible, Equatable {
         return "Rate limited - retry after \(Int(seconds)) seconds"
       }
       return "Rate limited (429 Too Many Requests)"
+
+    case .unexpectedContentType(let contentType):
+      return "Unexpected content type: \(contentType ?? "none")"
     }
   }
 }
@@ -375,6 +381,9 @@ extension NetworkError {
 
     case (.rateLimited(let lhsRetry), .rateLimited(let rhsRetry)):
       return lhsRetry == rhsRetry
+
+    case (.unexpectedContentType(let lhsType), .unexpectedContentType(let rhsType)):
+      return lhsType == rhsType
 
     default:
       return false

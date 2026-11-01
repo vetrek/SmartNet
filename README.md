@@ -143,6 +143,20 @@ How transfers run:
 - **Cancel.** `cancel()` ends in `.cancelled` and delivers a cancellation error to `response`. `client.destroy()` cancels every running and queued transfer.
 - **State.** `state` is already final (`.completed`, `.error` or `.cancelled`) when `response` runs.
 
+## Server-Sent Events
+
+```swift
+let stream = client.serverSentEvents(with: Endpoint<SSEEvent>(path: "events"), idleTimeout: 45)
+for try await event in stream {
+  print(event.event, event.data)
+}
+```
+
+- **Reconnects** on close, transport errors and idle timeouts, sending `Last-Event-ID`. Backoff comes from `endpoint.retryPolicy` (default: unlimited exponential, 30s cap); a server `retry:` is the minimum delay.
+- **Auth.** Headers and pre-request middlewares are re-applied on every connect. On a non-2xx response, post-response middlewares run first; returning `.retryRequest` (e.g. after a token refresh) reconnects immediately.
+- **Idle timeout.** No bytes (heartbeat comments included) for `idleTimeout` seconds triggers a reconnect.
+- **Ends** when the consuming task is cancelled or the server answers 204. Throws on non-retryable statuses, a non `text/event-stream` response, or exhausted retries.
+
 ## Error Handling
 
 Every failure is a `NetworkError`:
