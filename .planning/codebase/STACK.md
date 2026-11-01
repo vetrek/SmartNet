@@ -13,8 +13,8 @@
 ## Runtime
 
 **Environment:**
-- iOS 13.0+ (minimum deployment target) - `Package.swift`
-- macOS 10.15+ (Catalina) - `Package.swift`
+- iOS 17.0+ (minimum deployment target) - `Package.swift`
+- macOS 14.0+ (Sonoma) - `Package.swift`
 - No external runtime dependencies
 
 **Package Manager:**
@@ -29,7 +29,7 @@
 - Combine - `Source/Core/ApiClient+Combine.swift` (reactive paradigm)
 
 **Platform Support:**
-- Darwin (pthread) - `Source/Utils/ThreadSafe.swift` (thread safety)
+- os (OSAllocatedUnfairLock) - `Source/Utils/ThreadSafe.swift` (thread safety)
 - os.log - `Source/Utils/Logger.swift` (system logging)
 
 **Testing:**
@@ -70,7 +70,7 @@
 **Production:**
 - Distributed as Swift Package
 - Added via SPM: `https://github.com/user/SmartNet.git`
-- Runs on iOS 13+ and macOS 10.15+
+- Runs on iOS 17+ and macOS 14+
 
 ---
 

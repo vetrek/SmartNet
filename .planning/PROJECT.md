@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A Swift HTTP networking library for iOS 13+ and macOS 10.15+ with zero external dependencies. Supports async/await, Combine, and closure-based APIs with type-safe endpoints, pattern-based middleware routing, and configurable retry policies. Production-ready with comprehensive documentation.
+A Swift HTTP networking library for iOS 17+ and macOS 14+ with zero external dependencies. Supports async/await, Combine, and closure-based APIs with type-safe endpoints, pattern-based middleware routing, and configurable retry policies. Production-ready with comprehensive documentation.
 
 ## Core Value
 
@@ -77,7 +77,7 @@ SmartNet has completed phases 1-5 of its improvement roadmap:
 - **Zero dependencies**: Use only Foundation/Swift stdlib for pattern matching implementation
 - **Backward compatibility**: Existing middleware registrations with `pathComponent: "/"` and simple strings must continue working
 - **Thread safety**: Any new pattern matchers must be thread-safe
-- **Platform support**: Must work on iOS 13+ and macOS 10.15+
+- **Platform support**: Must work on iOS 17+ and macOS 14+
 
 ## Key Decisions
 

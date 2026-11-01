@@ -119,7 +119,7 @@
 **@ThreadSafe<Value>:**
 - Purpose: Thread-safe property access
 - Files: `Source/Utils/ThreadSafe.swift`
-- Pattern: Property wrapper with pthread_mutex
+- Pattern: Property wrapper with OSAllocatedUnfairLock (atomic in-place mutation via `_modify`)
 - Used for: config, middlewares, download/upload tasks
 
 ## Entry Points
@@ -169,7 +169,7 @@ init(config: NetworkConfigurable, sessionConfiguration: URLSessionConfiguration,
 
 **Thread Safety:**
 - `@ThreadSafe` property wrapper
-- pthread_mutex synchronization
+- OSAllocatedUnfairLock synchronization
 - Applied to: config, middlewares, task collections
 
 **Debug:**
