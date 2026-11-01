@@ -70,6 +70,7 @@ public final class DownloadTask: NetworkCancellable, Hashable {
   private var progressObserver: NSKeyValueObservation?
   private var resumedData: Data?
   private var downloadDestination: DownloadFileDestination?
+  private let globalDebug: Bool
   let shouldDebug: Bool?
   var onRelease: ((DownloadTask) -> Void)?
   var onResume: ((DownloadTask) -> Void)?
@@ -95,42 +96,48 @@ public final class DownloadTask: NetworkCancellable, Hashable {
     self.remoteURLRequest = try endpoint.urlRequest(with: config)
     self.downloadDestination = destination
     self.shouldDebug = endpoint.debugRequest
+    self.globalDebug = config.debug
     commonInit()
   }
   
   init(
     session: URLSession,
-    url: URL
+    url: URL,
+    config: NetworkConfigurable
   ) {
     self.session = session
     self.remoteURL = url
     self.remoteURLRequest = URLRequest(url: url)
     self.shouldDebug = nil
+    self.globalDebug = config.debug
     commonInit()
   }
   
   // MARK: - Private Methods
   
   func commonInit() {
-    task = session.downloadTask(with: remoteURLRequest)
-    observeDownloadProgress()
+    setTask(session.downloadTask(with: remoteURLRequest))
   }
   
   @discardableResult
   func startDownload() -> Self {
     if let resumedData {
       self.resumedData = nil
-      task = session.downloadTask(withResumeData: resumedData)
-      observeDownloadProgress()
+      setTask(session.downloadTask(withResumeData: resumedData))
     } else if task.state != .suspended {
-      task = session.downloadTask(with: remoteURLRequest)
-      observeDownloadProgress()
+      setTask(session.downloadTask(with: remoteURLRequest))
     }
     task.resume()
     state = .downloading
     return self
   }
   
+  private func setTask(_ task: URLSessionDownloadTask) {
+    task.delegate = SessionTaskDelegate(download: self)
+    self.task = task
+    observeDownloadProgress()
+  }
+
   private func observeDownloadProgress() {
     progressObserver?.invalidate()
     progressObserver = task.progress.observe(\.fractionCompleted) { [weak self] progress, _ in
@@ -141,26 +148,25 @@ public final class DownloadTask: NetworkCancellable, Hashable {
     }
   }
   
-  internal func downloadHandler(
-    tmpURL: URL?,
-    urlResponse: URLResponse?,
-    error: Error?
-  ) {
-    finish(result(tmpURL: tmpURL, urlResponse: urlResponse, error: error))
+  fileprivate func didFinish(_ downloadTask: URLSessionDownloadTask, location: URL) {
+    finish(result(tmpURL: location, urlResponse: downloadTask.response))
+    onRelease?(self)
+    if shouldDebug ?? globalDebug, let request = downloadTask.currentRequest {
+      ApiClient.printCurl(session: session, request: request)
+    }
   }
 
-  private func result(tmpURL: URL?, urlResponse: URLResponse?, error: Error?) -> Result<DownloadResult> {
-    if let error {
-      return .failure((error as? NetworkError) ?? .generic(error))
-    }
+  fileprivate func didFail(with error: Error) {
+    onRelease?(self)
+    finish(.failure(ApiClient.resolve(error: error)))
+  }
+
+  private func result(tmpURL: URL, urlResponse: URLResponse?) -> Result<DownloadResult> {
     guard let httpResponse = urlResponse as? HTTPURLResponse else {
       return .failure(.emptyResponse)
     }
     guard (200..<300).contains(httpResponse.statusCode) else {
       return .failure(.error(statusCode: httpResponse.statusCode, data: nil))
-    }
-    guard let tmpURL else {
-      return .failure(.invalidDownloadUrl)
     }
     guard let data = try? Data(contentsOf: tmpURL) else {
       return .failure(.invalidDownloadFileData)
@@ -206,6 +212,7 @@ public final class DownloadTask: NetworkCancellable, Hashable {
   public func pause() {
     guard state == .downloading else { return }
     progressObserver?.invalidate()
+    (task.delegate as? SessionTaskDelegate)?.download = nil
     resumedData = nil
     task.resume()
     task.cancel(byProducingResumeData: { data in
@@ -328,7 +335,7 @@ public extension ApiClient {
     url: URL
   ) -> DownloadTask? {
     guard let session = session else { return nil }
-    let downloadTask = DownloadTask(session: session, url: url)
+    let downloadTask = DownloadTask(session: session, url: url, config: config)
 
     enqueue(downloadTask)
 
@@ -336,75 +343,47 @@ public extension ApiClient {
   }
 }
 
-extension ApiClient: URLSessionDownloadDelegate {
-  public func urlSession(
+private final class SessionTaskDelegate: NSObject, URLSessionDownloadDelegate {
+  weak var download: DownloadTask?
+
+  init(download: DownloadTask) {
+    self.download = download
+  }
+
+  func urlSession(
     _ session: URLSession,
     downloadTask: URLSessionDownloadTask,
     didFinishDownloadingTo location: URL
   ) {
-    guard let download = downloadsTasks.first(where: {
-      $0.task.taskIdentifier == downloadTask.taskIdentifier
-    })
-    else { return }
-    download.downloadHandler(
-      tmpURL: location,
-      urlResponse: downloadTask.response,
-      error: nil
-    )
-    downloadsTasks.remove(download)
-    
-    // Start pending downloads if any
-    startNextPendingDownload()
-    
-    if (download.shouldDebug ?? config.debug),
-       let request = downloadTask.currentRequest {
-      ApiClient.printCurl(
-        session: session,
-        request: request
-      )
-    }
+    download?.didFinish(downloadTask, location: location)
   }
-  
-  public func urlSession(
+
+  func urlSession(
     _ session: URLSession,
     task: URLSessionTask,
     didCompleteWithError error: Error?
   ) {
-    guard
-      let error,
-      let download = downloadsTasks.first(where: { $0.task.taskIdentifier == task.taskIdentifier }),
-      download.state != .paused
-    else { return }
-    downloadsTasks.remove(download)
-    download.downloadHandler(tmpURL: nil, urlResponse: task.response, error: resolve(error: error))
-    startNextPendingDownload()
+    guard let error else { return }
+    download?.didFail(with: error)
   }
 
-  public func urlSession(
+  func urlSession(
     _ session: URLSession,
     downloadTask: URLSessionDownloadTask,
     didWriteData bytesWritten: Int64,
     totalBytesWritten: Int64,
     totalBytesExpectedToWrite: Int64
   ) {
-    guard let download = downloadsTasks.first(where: {
-      $0.task.taskIdentifier == downloadTask.taskIdentifier
-    })
-    else { return }
-    download.remoteFileSize = totalBytesExpectedToWrite
+    download?.remoteFileSize = totalBytesExpectedToWrite
   }
-  
-  public func urlSession(
+
+  func urlSession(
     _ session: URLSession,
     downloadTask: URLSessionDownloadTask,
     didResumeAtOffset fileOffset: Int64,
     expectedTotalBytes: Int64
   ) {
-    guard let download = downloadsTasks.first(where: {
-        $0.task.taskIdentifier == downloadTask.taskIdentifier
-      })
-    else { return }
-    download.remoteFileSize = expectedTotalBytes
+    download?.remoteFileSize = expectedTotalBytes
   }
 }
 

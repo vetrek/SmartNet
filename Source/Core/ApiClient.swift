@@ -232,6 +232,10 @@ extension ApiClient {
   /// - Parameter error: Error
   /// - Returns: NetworkError
   func resolve(error: Error) -> NetworkError {
+    Self.resolve(error: error)
+  }
+
+  static func resolve(error: Error) -> NetworkError {
     guard
       (error as? NetworkError) == nil
     else { return (error as! NetworkError) }
