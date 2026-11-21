@@ -88,7 +88,7 @@ Middlewares target specific path components and execute in registration order:
 `NetworkError` enum (`Source/Utils/NetworkError.swift`) covers all failure cases:
 - HTTP errors (`.error(statusCode:data:)`)
 - Parsing failures (`.parsingFailed`)
-- Middleware errors (`.middleware(Error)`, `.middlewareMaxRetry`)
+- Middleware errors (`.middleware(Error)`, `.middlewareMaxRetry(underlying:)`, which carries the failure the retry replaced)
 - Network conditions (`.timeout`, `.connectionLost`, `.networkFailure`, `.dnsLookupFailed`)
 - Security (`.sslError(Error?)`)
 - Rate limiting (`.rateLimited(retryAfter:)`)

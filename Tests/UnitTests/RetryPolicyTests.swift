@@ -385,7 +385,7 @@ struct NetworkErrorConditionMatchingTests {
     #expect(!NetworkError.parsingFailed().matchesCondition(conditions))
     #expect(!NetworkError.emptyResponse.matchesCondition(conditions))
     #expect(!NetworkError.urlGeneration.matchesCondition(conditions))
-    #expect(!NetworkError.middlewareMaxRetry.matchesCondition(conditions))
+    #expect(!NetworkError.middlewareMaxRetry(underlying: nil).matchesCondition(conditions))
     #expect(!NetworkError.sslError(nil).matchesCondition(conditions))
   }
 }
@@ -684,7 +684,7 @@ struct RetryPolicyCharacterizationTests {
     let neverRetryable: [NetworkError] = [
       .cancelled, .parsingFailed(), .emptyResponse, .urlGeneration, .dataToStringFailure(data: Data()),
       .middleware(NetworkError.timeout), .generic(NetworkError.timeout), .sslError(nil),
-      .middlewareMaxRetry, .unableToSaveFile(nil), .parsedError(error: "x"), .invalidSessions,
+      .middlewareMaxRetry(underlying: nil), .unableToSaveFile(nil), .parsedError(error: "x"), .invalidSessions,
       .invalidDownloadUrl, .invalidDownloadFileData, .invalidFormData,
       .error(statusCode: 200, data: nil), .error(statusCode: 499, data: nil), .error(statusCode: 600, data: nil)
     ]

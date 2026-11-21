@@ -112,7 +112,7 @@ extension ApiClient {
       if isOpen { report(.closed(reason)) }
 
       if middlewareRetry {
-        guard attempt < retryPolicy.maxRetries else { throw NetworkError.middlewareMaxRetry }
+        guard attempt < retryPolicy.maxRetries else { throw NetworkError.middlewareMaxRetry(underlying: failure) }
       } else if !retryPolicy.shouldRetry(for: failure ?? .connectionLost, attempt: attempt) {
         guard let failure else { return }
         throw failure

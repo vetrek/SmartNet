@@ -282,7 +282,12 @@ extension ApiClient {
       do {
         let groups = middlewareGroups(for: url)
         if try await shouldRetryAfterPostResponse(groups.global + groups.path, data: data, response: response, error: error) {
-          return canRetry ? .retry(nil) : .finish(.failure(.middlewareMaxRetry))
+          guard canRetry else {
+            let underlying = error.map { getRequestError(data: data, response: response, requestError: $0) }
+              ?? response.flatMap { validate(response: $0, data: data) }
+            return .finish(.failure(.middlewareMaxRetry(underlying: underlying)))
+          }
+          return .retry(nil)
         }
       } catch {
         return .finish(.failure(.middleware(error)))

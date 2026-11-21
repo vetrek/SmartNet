@@ -179,7 +179,7 @@ struct ApiClientMiddlewareTests {
     let (client, requestCount, endpoint) = makeAlwaysRetryClient(path: path, middlewarePath: "/")
     defer { client.destroy(); MockURLProtocol.removeHandler(for: path) }
 
-    await #expect(throws: NetworkError.middlewareMaxRetry) {
+    await #expect(throws: NetworkError.middlewareMaxRetry(underlying: nil)) {
       try await client.request(with: endpoint)
     }
     #expect(requestCount.value == 3)
@@ -191,7 +191,7 @@ struct ApiClientMiddlewareTests {
     let (client, requestCount, endpoint) = makeAlwaysRetryClient(path: path, middlewarePath: "middleware-max-retry-path")
     defer { client.destroy(); MockURLProtocol.removeHandler(for: path) }
 
-    await #expect(throws: NetworkError.middlewareMaxRetry) {
+    await #expect(throws: NetworkError.middlewareMaxRetry(underlying: nil)) {
       try await client.request(with: endpoint)
     }
     #expect(requestCount.value == 3)
@@ -209,7 +209,7 @@ struct ApiClientMiddlewareTests {
       }
     }
 
-    #expect(response.result.error as? NetworkError == .middlewareMaxRetry)
+    #expect(response.result.error as? NetworkError == .middlewareMaxRetry(underlying: nil))
     #expect(response.statusCode == 200)
     #expect(requestCount.value == 3)
   }
@@ -238,8 +238,29 @@ struct ApiClientMiddlewareTests {
       Task { await holder.store(cancellable) }
     }
 
-    #expect(error as? NetworkError == .middlewareMaxRetry)
+    #expect(error as? NetworkError == .middlewareMaxRetry(underlying: nil))
     #expect(requestCount.value == 3)
+  }
+
+  @Test("A middleware retry the policy denies carries the original 401 status and body")
+  func deniedMiddlewareRetryCarriesOriginalFailure() async {
+    let path = "/middleware-max-retry-underlying"
+    let body = Data(#"{"error":{"code":"TOKEN_EXPIRED","message":"Expired"}}"#.utf8)
+    let (client, _) = createMockClient()
+    let requestCount = RequestCounter()
+    MockURLProtocol.setHandler(for: path) { request in
+      requestCount.increment()
+      let response = HTTPURLResponse(url: request.url!, statusCode: 401, httpVersion: nil, headerFields: nil)!
+      return (response, body)
+    }
+    defer { client.destroy(); MockURLProtocol.removeHandler(for: path) }
+    client.addMiddleware(TestMiddleware(pathComponent: "/", postResponseHandler: { _, _, _ in .retryRequest }))
+    let endpoint = Endpoint<Data>(path: path, method: .get, retryPolicy: ImmediateRetryPolicy(maxRetries: 0))
+
+    await #expect(throws: NetworkError.middlewareMaxRetry(underlying: .error(statusCode: 401, data: body))) {
+      try await client.request(with: endpoint)
+    }
+    #expect(requestCount.value == 1)
   }
 
   @Test("Path-matched closure middleware header is sent on every retry")

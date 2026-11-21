@@ -47,7 +47,7 @@ public enum NetworkError: Error, CustomStringConvertible, Equatable {
   case invalidDownloadFileData
   case unableToSaveFile(_ currentURL: URL?)
   case cancelled
-  case middlewareMaxRetry
+  indirect case middlewareMaxRetry(underlying: NetworkError?)
   case networkFailure
   case urlGeneration
   case invalidFormData
@@ -346,7 +346,6 @@ extension NetworkError {
          (.invalidDownloadUrl, .invalidDownloadUrl),
          (.invalidDownloadFileData, .invalidDownloadFileData),
          (.cancelled, .cancelled),
-         (.middlewareMaxRetry, .middlewareMaxRetry),
          (.networkFailure, .networkFailure),
          (.urlGeneration, .urlGeneration),
          (.invalidFormData, .invalidFormData),
@@ -354,6 +353,9 @@ extension NetworkError {
          (.dnsLookupFailed, .dnsLookupFailed),
          (.connectionLost, .connectionLost):
       return true
+
+    case (.middlewareMaxRetry(let lhsUnderlying), .middlewareMaxRetry(let rhsUnderlying)):
+      return lhsUnderlying == rhsUnderlying
 
     case (.unableToSaveFile(let lhsURL), .unableToSaveFile(let rhsURL)):
       return lhsURL == rhsURL
