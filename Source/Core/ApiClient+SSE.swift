@@ -18,10 +18,35 @@ public extension ApiClient {
     with endpoint: E,
     idleTimeout: TimeInterval = 45
   ) -> AsyncThrowingStream<SSEEvent, Error> {
+    makeStream(for: endpoint, idleTimeout: idleTimeout) {
+      if case .event(let event) = $0 { event } else { nil }
+    }
+  }
+
+  /// Same stream as `serverSentEvents`, with connection lifecycle interleaved in the order it happened.
+  ///
+  /// Yields `.connection(.opened)`, `.connection(.closed(reason))` and `.connection(.reconnecting(in:reason:))` between events.
+  /// Each lifecycle event is also logged at `.info`.
+  func serverSentEventsWithLifecycle<E: Requestable>(
+    with endpoint: E,
+    idleTimeout: TimeInterval = 45
+  ) -> AsyncThrowingStream<SSEStreamItem, Error> {
+    makeStream(for: endpoint, idleTimeout: idleTimeout) { $0 }
+  }
+}
+
+extension ApiClient {
+  func makeStream<E: Requestable, Element: Sendable>(
+    for endpoint: E,
+    idleTimeout: TimeInterval,
+    element: @escaping @Sendable (SSEStreamItem) -> Element?
+  ) -> AsyncThrowingStream<Element, Error> {
     AsyncThrowingStream { continuation in
       let task = Task {
         do {
-          try await streamEvents(from: endpoint, idleTimeout: idleTimeout) { continuation.yield($0) }
+          try await streamEvents(from: endpoint, idleTimeout: idleTimeout) { item in
+            if let value = element(item) { continuation.yield(value) }
+          }
           continuation.finish()
         } catch {
           continuation.finish(throwing: Task.isCancelled ? nil : error)
@@ -30,15 +55,13 @@ public extension ApiClient {
       continuation.onTermination = { _ in task.cancel() }
     }
   }
-}
 
-extension ApiClient {
   static let defaultStreamRetryPolicy = ExponentialBackoffRetryPolicy(maxRetries: .max, maxDelay: 30, conditions: .all)
 
   func streamEvents<E: Requestable>(
     from endpoint: E,
     idleTimeout: TimeInterval,
-    onEvent: (SSEEvent) -> Void
+    emit: (SSEStreamItem) -> Void
   ) async throws {
     guard let configuration = session?.configuration else { throw NetworkError.invalidSessions }
     configuration.timeoutIntervalForRequest = idleTimeout
@@ -49,28 +72,44 @@ extension ApiClient {
     var parser = SSEParser()
     var attempt = 0
 
+    func report(_ event: SSEConnectionEvent) {
+      SmartNetLogger.shared.info("[SSE] \(event)")
+      emit(.connection(event))
+    }
+
     while true {
       var failure: NetworkError?
       var middlewareRetry = false
+      var reason = SSEDisconnectReason.streamEnded
+      var isOpen = false
       let request = try streamRequest(for: endpoint, lastEventID: parser.lastEventID, idleTimeout: idleTimeout)
       do {
         let (bytes, response) = try await streamSession.bytes(for: request)
         if let error = validate(response: response, data: nil) {
           middlewareRetry = try await middlewaresRequestRetry(for: endpoint, request: request, response: response)
           failure = error
+          reason = middlewareRetry ? .middlewareRetry : .failure(error)
         } else if response.httpStatusCode == 204 {
           return
         } else if response.mimeType != "text/event-stream" {
           throw NetworkError.unexpectedContentType(response.mimeType)
         } else {
+          isOpen = true
+          report(.opened(attempt: attempt))
           attempt = 0
           for try await byte in bytes {
-            if let event = parser.consume(byte) { onEvent(event) }
+            if let event = parser.consume(byte) { emit(.event(event)) }
           }
         }
       } catch let error as URLError where error.code != .cancelled {
-        failure = resolve(error: error)
+        let resolved = resolve(error: error)
+        failure = resolved
+        reason = resolved == .timeout ? .idleTimeout : .failure(resolved)
+      } catch {
+        if isOpen { report(.closed(.cancelled)) }
+        throw error
       }
+      if isOpen { report(.closed(reason)) }
 
       if middlewareRetry {
         guard attempt < retryPolicy.maxRetries else { throw NetworkError.middlewareMaxRetry }
@@ -83,7 +122,7 @@ extension ApiClient {
         ? 0
         : max(parser.reconnectionTime ?? 0, retryPolicy.delay(forAttempt: attempt, error: failure))
       attempt += 1
-      SmartNetLogger.shared.debug("[SSE] Reconnecting in \(String(format: "%.2f", delay))s (\(failure?.description ?? "stream closed"))")
+      report(.reconnecting(in: delay, reason: reason))
       try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
     }
   }

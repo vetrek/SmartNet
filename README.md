@@ -155,6 +155,7 @@ for try await event in stream {
 - **Reconnects** on close, transport errors and idle timeouts, sending `Last-Event-ID`. Backoff comes from `endpoint.retryPolicy` (default: unlimited exponential, 30s cap); a server `retry:` is the minimum delay.
 - **Auth.** Headers and pre-request middlewares are re-applied on every connect. On a non-2xx response, post-response middlewares run first; returning `.retryRequest` (e.g. after a token refresh) reconnects immediately.
 - **Idle timeout.** No bytes (heartbeat comments included) for `idleTimeout` seconds triggers a reconnect.
+- **Lifecycle.** `serverSentEventsWithLifecycle(with:idleTimeout:)` yields `SSEStreamItem`: `.event(SSEEvent)` interleaved, in order, with `.connection(.opened(attempt:))`, `.connection(.closed(reason))` and `.connection(.reconnecting(in:reason:))`. Reasons: `.streamEnded`, `.idleTimeout`, `.middlewareRetry`, `.failure(NetworkError)`, `.cancelled` (log only: the stream is already terminated). The same events are logged at `.info` under `[SSE]`.
 - **Ends** when the consuming task is cancelled or the server answers 204. Throws on non-retryable statuses, a non `text/event-stream` response, or exhausted retries.
 
 ## Error Handling

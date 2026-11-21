@@ -14,6 +14,43 @@ public struct SSEEvent: Equatable, Sendable {
   }
 }
 
+public enum SSEDisconnectReason: Equatable, Sendable, CustomStringConvertible {
+  case streamEnded
+  case idleTimeout
+  case middlewareRetry
+  case failure(NetworkError)
+  case cancelled
+
+  public var description: String {
+    switch self {
+    case .streamEnded: "stream closed by server"
+    case .idleTimeout: "idle timeout"
+    case .middlewareRetry: "middleware requested retry"
+    case .failure(let error): error.description
+    case .cancelled: "cancelled"
+    }
+  }
+}
+
+public enum SSEConnectionEvent: Equatable, Sendable, CustomStringConvertible {
+  case opened(attempt: Int)
+  case closed(SSEDisconnectReason)
+  case reconnecting(in: TimeInterval, reason: SSEDisconnectReason)
+
+  public var description: String {
+    switch self {
+    case .opened(let attempt): attempt == 0 ? "opened" : "opened after \(attempt) retries"
+    case .closed(let reason): "closed (\(reason))"
+    case .reconnecting(let delay, let reason): "reconnecting in \(String(format: "%.2f", delay))s (\(reason))"
+    }
+  }
+}
+
+public enum SSEStreamItem: Equatable, Sendable {
+  case event(SSEEvent)
+  case connection(SSEConnectionEvent)
+}
+
 struct SSEParser {
   private(set) var lastEventID = ""
   private(set) var reconnectionTime: TimeInterval?

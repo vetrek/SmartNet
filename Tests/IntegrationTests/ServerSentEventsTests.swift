@@ -74,6 +74,15 @@ final class TokenBox: @unchecked Sendable {
   }
 }
 
+final class ItemBox: @unchecked Sendable {
+  private let lock = NSLock()
+  private var stored = [SSEStreamItem]()
+
+  var items: [SSEStreamItem] { lock.withLock { stored } }
+
+  func append(_ item: SSEStreamItem) { lock.withLock { stored.append(item) } }
+}
+
 // MARK: - Tests
 
 @Suite("Server-Sent Events")
@@ -96,6 +105,15 @@ struct ServerSentEventsTests {
       if events.count == count { break }
     }
     return events
+  }
+
+  private func firstItems(_ count: Int, of stream: AsyncThrowingStream<SSEStreamItem, Error>) async throws -> [SSEStreamItem] {
+    var items = [SSEStreamItem]()
+    for try await item in stream {
+      items.append(item)
+      if items.count == count { break }
+    }
+    return items
   }
 
   private func waitUntil(timeout: TimeInterval = 2, _ condition: () -> Bool) async throws {
@@ -253,5 +271,94 @@ struct ServerSentEventsTests {
 
     #expect(events.map(\.data) == ["a"])
     #expect(SSEStubProtocol.requests(path).count == 2)
+  }
+
+    @Test("Interleaves lifecycle with events in order, reporting the server-close reason")
+  func lifecycleOnServerClose() async throws {
+    let path = "/sse/lifecycle-close"
+    SSEStubProtocol.register(path) { _, index in
+      index == 0 ? .stream("retry: 100\ndata: a\n\n") : .stream("data: b\n\n", close: false)
+    }
+
+    let items = try await firstItems(6, of: makeClient().serverSentEventsWithLifecycle(with: endpoint(path)))
+
+    #expect(items == [
+      .connection(.opened(attempt: 0)),
+      .event(SSEEvent(data: "a", retry: 0.1)),
+      .connection(.closed(.streamEnded)),
+      .connection(.reconnecting(in: 0.1, reason: .streamEnded)),
+      .connection(.opened(attempt: 1)),
+      .event(SSEEvent(data: "b"))
+    ])
+  }
+
+    @Test("Reports idle timeout as the close and reconnect reason")
+  func lifecycleIdleTimeout() async throws {
+    let path = "/sse/lifecycle-idle"
+    SSEStubProtocol.register(path) { _, _ in .stream("data: a\n\n", close: false) }
+
+    let items = try await firstItems(4, of: makeClient().serverSentEventsWithLifecycle(with: endpoint(path), idleTimeout: 0.3))
+
+    #expect(items[2] == .connection(.closed(.idleTimeout)))
+    #expect(items[3] == .connection(.reconnecting(in: 0, reason: .idleTimeout)))
+  }
+
+    @Test("Reports a middleware retry as the reconnect reason, without a closed event")
+  func lifecycleMiddlewareRetry() async throws {
+    let path = "/sse/lifecycle-auth"
+    let token = TokenBox("stale")
+    let client = makeClient()
+    client.addMiddleware(ApiClient.Middleware(
+      pathComponent: "/",
+      preRequestCallback: { $0.setValue("Bearer \(token.token)", forHTTPHeaderField: "Authorization") },
+      postResponseCallback: { _, response, _ in
+        guard (response as? HTTPURLResponse)?.statusCode == 401 else { return .next }
+        token.token = "fresh"
+        return .retryRequest
+      }
+    ))
+    SSEStubProtocol.register(path) { request, _ in
+      request.value(forHTTPHeaderField: "Authorization") == "Bearer fresh"
+        ? .stream("data: ok\n\n", close: false)
+        : .stream("", status: 401)
+    }
+
+    let items = try await firstItems(3, of: client.serverSentEventsWithLifecycle(with: endpoint(path, retryPolicy: nil)))
+
+    #expect(items == [
+      .connection(.reconnecting(in: 0, reason: .middlewareRetry)),
+      .connection(.opened(attempt: 1)),
+      .event(SSEEvent(data: "ok"))
+    ])
+  }
+
+    @Test("Reports transport failures and the attempt count on reopen")
+  func lifecycleTransportFailure() async throws {
+    let path = "/sse/lifecycle-flaky"
+    SSEStubProtocol.register(path) { _, index in
+      index == 0 ? .fail(.networkConnectionLost) : .stream("data: a\n\n", close: false)
+    }
+
+    let items = try await firstItems(2, of: makeClient().serverSentEventsWithLifecycle(with: endpoint(path)))
+
+    #expect(items == [
+      .connection(.reconnecting(in: 0, reason: .failure(.connectionLost))),
+      .connection(.opened(attempt: 1))
+    ])
+  }
+
+    @Test("Throws the last error after reporting the final reconnect")
+  func lifecycleTerminalFailure() async throws {
+    let path = "/sse/lifecycle-unavailable"
+    SSEStubProtocol.register(path) { _, _ in .stream("", status: 503) }
+    let received = ItemBox()
+
+    await #expect(throws: NetworkError.error(statusCode: 503, data: nil)) {
+      for try await item in makeClient().serverSentEventsWithLifecycle(with: endpoint(path, retryPolicy: ImmediateRetryPolicy(maxRetries: 1))) {
+        received.append(item)
+      }
+    }
+
+    #expect(received.items == [.connection(.reconnecting(in: 0, reason: .failure(.error(statusCode: 503, data: nil))))])
   }
 }
